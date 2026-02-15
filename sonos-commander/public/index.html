@@ -29,6 +29,7 @@
   .state { font-size:11px; padding:2px 8px; border-radius:10px; }
   .state.playing { background:rgba(54,179,126,0.2); color:var(--success); }
   .state.paused,.state.stopped { background:rgba(136,153,170,0.2); color:var(--muted); }
+  .state.error { background:rgba(255,86,48,0.2); color:#FF5630; }
   .speaker-track { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .input-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:rgba(0,153,153,0.2); color:var(--teal); font-weight:600; margin-left:6px; vertical-align:middle; }
   .speaker-vol { display:flex; align-items:center; gap:8px; margin-top:8px; }
@@ -253,7 +254,7 @@ async function startSleep(){
 
 function renderSpeakers(){
   document.getElementById('speakers-grid').innerHTML=rooms.map(n=>{
-    const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='playing'?'playing':'paused';
+    const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='error'?'error':(s.state==='playing'?'playing':(s.state||'stopped'));
     const inp=s.inputSource?'<span class="input-badge">'+esc(s.inputSource)+'</span>':'';
     const trackLine=s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track">🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</div>':'');
     return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+trackLine+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div></div>';
@@ -354,7 +355,16 @@ function renderLog(){
 async function clearLog(){await api('DELETE','/api/log');S.log=[];renderLog();toast('Log cleared');}
 
 refreshAll();
-setInterval(()=>{fetch('/api/sleep-timers').then(r=>r.json()).then(t=>{S.sleepTimers=t;renderSleepTimers();});},30000);
+// Auto-refresh dashboard: speakers + now-playing every 15s, sleep timers every 30s
+setInterval(()=>{
+  Promise.all([
+    fetch('/api/status').then(r=>r.json()),
+    fetch('/api/sleep-timers').then(r=>r.json())
+  ]).then(([st,sl])=>{
+    S.status=st;S.sleepTimers=sl;
+    renderNowPlaying();renderSleepTimers();renderSpeakers();
+  }).catch(()=>{});
+},15000);
 </script>
 </body>
 </html>
