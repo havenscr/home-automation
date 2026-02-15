@@ -111,12 +111,41 @@ async function discoverSpeakers() {
         }
       } catch (e) { console.error(`  Error: ${device.host}: ${e.message}`); }
     });
-    setTimeout(() => {
+    setTimeout(async () => {
       try { discovery.destroy(); } catch(e) {}
+      await ensureCoordinators();
       logActivity('discovery', `Found ${Object.keys(speakers).length} speakers`, { rooms: Object.keys(speakerInfo) });
       resolve(speakers);
     }, 12000);
   });
+}
+
+async function ensureCoordinators() {
+  // For stereo pairs, ensure we store the coordinator (master) not the slave
+  const anyRoom = Object.keys(speakers).find(n => !(speakerInfo[n]?.model?.indexOf('Boost') !== -1));
+  if (!anyRoom) return;
+  try {
+    const groups = await speakers[anyRoom].getAllGroups();
+    for (const group of groups) {
+      const coordIP = group.host;
+      const members = Array.isArray(group.ZoneGroupMember) ? group.ZoneGroupMember : [group.ZoneGroupMember];
+      for (const member of members) {
+        const room = member.ZoneName;
+        if (speakers[room] && speakers[room].host !== coordIP) {
+          console.log(`  ${room}: swapping to coordinator @ ${coordIP} (was ${speakers[room].host})`);
+          const coordSonos = new Sonos(coordIP);
+          speakers[room] = coordSonos;
+          speakerInfo[room].ip = coordIP;
+          try {
+            const desc = await coordSonos.deviceDescription();
+            speakerInfo[room].model = desc.modelName || speakerInfo[room].model;
+          } catch (e) {}
+        }
+      }
+    }
+  } catch (e) {
+    console.log('  Coordinator check failed: ' + e.message);
+  }
 }
 
 async function loadFavorites() {
@@ -138,14 +167,23 @@ async function loadFavorites() {
 async function getState(roomName) {
   const d = speakers[roomName];
   if (!d) return null;
-  try {
-    const [state, vol, track] = await Promise.all([
-      d.getCurrentState(), d.getVolume(), d.currentTrack().catch(()=>null)
-    ]);
-    return { state, volume: vol, track: track?.title, artist: track?.artist,
-             album: track?.album, albumArtURI: track?.albumArtURI,
-             duration: track?.duration, position: track?.position };
-  } catch (e) { return { state: 'error', error: e.message }; }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const [state, vol, track] = await Promise.all([
+        d.getCurrentState(), d.getVolume(), d.currentTrack().catch(()=>null)
+      ]);
+      const uri = track?.uri || '';
+      let inputSource = null;
+      if (uri.startsWith('x-rincon-stream:')) inputSource = 'Line In';
+      else if (uri.startsWith('x-sonos-vli:') || uri.startsWith('x-sonos-htastream:')) inputSource = 'TV';
+      return { state, volume: vol, track: track?.title, artist: track?.artist,
+               album: track?.album, albumArtURI: track?.albumArtURI,
+               duration: track?.duration, position: track?.position, inputSource };
+    } catch (e) {
+      if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      return { state: 'error', error: e.message };
+    }
+  }
 }
 
 // Helper: wrap async call with timeout
@@ -357,8 +395,14 @@ async function executeRoutine(id, options = {}) {
   if (routine.type === 'music') {
     if (!routine.favorite) throw new Error('No favorite configured');
     const coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
-    if (routine.groupAll) { console.log(`[Routine] Grouping all speakers to ${coord}`); await groupAllSpeakers(coord); console.log(`[Routine] Grouping done`); }
+    if (routine.groupAll) {
+      console.log(`[Routine] Grouping all speakers to ${coord}`);
+      await groupAllSpeakers(coord);
+      console.log(`[Routine] Grouping done, waiting for propagation`);
+      await new Promise(r => setTimeout(r, 800));
+    }
     for (const [n, d] of Object.entries(speakers)) { if (n.toLowerCase().includes('boost')) continue; try { await d.setVolume(routine.volume || 10); } catch(e){} }
+    await new Promise(r => setTimeout(r, 200));
     console.log(`[Routine] Playing favorite: ${routine.favorite} on ${coord}`);
     await playFavorite(routine.favorite, coord);
     console.log(`[Routine] playFavorite succeeded`);
@@ -400,22 +444,36 @@ async function executeRoutine(id, options = {}) {
   return result;
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function isBoost(name) {
+  const info = speakerInfo[name];
+  return info && info.model && info.model.indexOf('Boost') !== -1;
+}
+function speakerNames() { return Object.keys(speakers).filter(n => !isBoost(n)); }
+
 // ─── API: Speakers ──────────────────────────────────────────────────────────
-app.get('/api/speakers', (req, res) => res.json(speakerInfo));
+app.get('/api/speakers', (req, res) => {
+  const filtered = {};
+  for (const [name, info] of Object.entries(speakerInfo)) {
+    if (!isBoost(name)) filtered[name] = info;
+  }
+  res.json(filtered);
+});
 app.post('/api/speakers/discover', async (req, res) => {
   await discoverSpeakers(); await loadFavorites();
-  res.json({ speakers: Object.keys(speakerInfo), count: Object.keys(speakerInfo).length });
+  const names = speakerNames();
+  res.json({ speakers: names, count: names.length });
 });
 
 // ─── API: Status & Now Playing ──────────────────────────────────────────────
 app.get('/api/status', async (req, res) => {
   const result = {};
-  for (const name of Object.keys(speakers)) { result[name] = await getState(name); }
+  for (const name of speakerNames()) { result[name] = await getState(name); }
   res.json(result);
 });
 app.get('/api/now-playing', async (req, res) => {
   const result = {};
-  for (const name of Object.keys(speakers)) {
+  for (const name of speakerNames()) {
     const s = await getState(name);
     if (s && s.state === 'playing') result[name] = s;
   }

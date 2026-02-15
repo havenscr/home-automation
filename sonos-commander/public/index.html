@@ -30,6 +30,7 @@
   .state.playing { background:rgba(54,179,126,0.2); color:var(--success); }
   .state.paused,.state.stopped { background:rgba(136,153,170,0.2); color:var(--muted); }
   .speaker-track { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .input-badge { display:inline-block; font-size:10px; padding:1px 6px; border-radius:8px; background:rgba(0,153,153,0.2); color:var(--teal); font-weight:600; margin-left:6px; vertical-align:middle; }
   .speaker-vol { display:flex; align-items:center; gap:8px; margin-top:8px; }
   .speaker-vol input { flex:1; accent-color:var(--accent); }
   .speaker-vol span { font-size:12px; color:var(--muted); min-width:30px; }
@@ -230,7 +231,7 @@ function renderNowPlaying(){
   const p=Object.entries(S.status).filter(([_,s])=>s&&s.state==='playing');
   if(!p.length){a.innerHTML='';return;}
   const[n,s]=p[0];
-  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:36px">🎵</div><div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
+  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:36px">🎵</div><div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
 }
 
 function renderSleepTimers(){
@@ -253,7 +254,9 @@ async function startSleep(){
 function renderSpeakers(){
   document.getElementById('speakers-grid').innerHTML=rooms.map(n=>{
     const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='playing'?'playing':'paused';
-    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+(s.track?'<div class="speaker-track">🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</div>':'')+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div></div>';
+    const inp=s.inputSource?'<span class="input-badge">'+esc(s.inputSource)+'</span>':'';
+    const trackLine=s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track">🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</div>':'');
+    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+trackLine+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div></div>';
   }).join('');
 }
 
