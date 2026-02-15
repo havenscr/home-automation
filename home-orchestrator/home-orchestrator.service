@@ -1,0 +1,16 @@
+[Unit]
+Description=Home Orchestrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=claude
+WorkingDirectory=/opt/home-orchestrator
+ExecStart=/usr/bin/node /opt/home-orchestrator/server.js
+Restart=always
+RestartSec=10
+Environment=NODE_OPTIONS=--max-old-space-size=40
+
+[Install]
+WantedBy=multi-user.target

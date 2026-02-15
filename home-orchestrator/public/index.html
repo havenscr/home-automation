@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Home Orchestrator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--card:#1a1d27;--border:#2a2d3a;--text:#e4e4e7;--muted:#71717a;--teal:#009999;--teal-dim:#007a7a;--red:#ef4444;--green:#22c55e;--amber:#f59e0b}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);padding:16px;max-width:900px;margin:0 auto;font-size:14px}
+h1{font-size:20px;font-weight:600;margin-bottom:4px;color:var(--teal)}
+.subtitle{color:var(--muted);font-size:12px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.card h2{font-size:15px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-active{background:var(--green);color:#000}
+.badge-idle{background:var(--border);color:var(--muted)}
+.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:opacity 0.15s}
+.btn:hover{opacity:0.85}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.routine-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.routine-row:last-child{border-bottom:none}
+.routine-info{flex:1}
+.routine-name{font-weight:600;font-size:14px}
+.routine-meta{color:var(--muted);font-size:12px;margin-top:2px}
+.routine-actions{display:flex;gap:6px;align-items:center}
+.progress-bar{width:100%;height:6px;background:var(--border);border-radius:3px;margin-top:8px;overflow:hidden}
+.progress-fill{height:100%;background:var(--teal);border-radius:3px;transition:width 1s linear}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-value{font-size:22px;font-weight:700;color:var(--teal)}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.log-entry{font-family:'Fira Code',monospace;font-size:11px;color:var(--muted);padding:3px 0;border-bottom:1px solid var(--border)}
+.log-entry .ts{color:var(--teal);margin-right:8px}
+.log-entry .type{color:var(--amber);margin-right:8px;text-transform:uppercase;font-weight:600}
+.waypoint-preview{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.wp-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);position:relative}
+.wp-dot .wp-time{position:absolute;top:26px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--muted);white-space:nowrap}
+.track-lights{color:var(--muted);font-size:11px}
+#status-refresh{color:var(--muted);font-size:11px;text-align:right;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<h1>Home Orchestrator</h1>
+<div class="subtitle">Fade routines, Hue control, SwitchBot integration</div>
+
+<div class="stats" id="stats">
+  <div class="stat"><div class="stat-value" id="s-routines">-</div><div class="stat-label">Routines</div></div>
+  <div class="stat"><div class="stat-value" id="s-active">-</div><div class="stat-label">Active</div></div>
+  <div class="stat"><div class="stat-value" id="s-memory">-</div><div class="stat-label">Memory (MB)</div></div>
+  <div class="stat"><div class="stat-value" id="s-uptime">-</div><div class="stat-label">Uptime</div></div>
+</div>
+
+<div class="card">
+  <h2>Fade Routines</h2>
+  <div id="routines-list">Loading...</div>
+</div>
+
+<div class="card">
+  <h2>Activity Log</h2>
+  <div id="log-entries" style="max-height:250px;overflow-y:auto">Loading...</div>
+</div>
+
+<script>
+const API = '';
+let S = { routines: [], status: null, log: [] };
+
+async function api(path, opts) {
+  try {
+    const r = await fetch(API + path, opts);
+    return await r.json();
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+function fmtTime(sec) {
+  if (sec < 60) return sec + 's';
+  if (sec < 3600) return Math.floor(sec/60) + 'm ' + (sec%60) + 's';
+  return Math.floor(sec/3600) + 'h ' + Math.floor((sec%3600)/60) + 'm';
+}
+
+// Convert xy+bri to CSS color for preview dots
+function xyBriToHex(x, y, bri) {
+  const z = 1.0 - x - y;
+  const Y = Math.max(0.01, bri / 254);
+  const X2 = (Y / Math.max(0.01, y)) * x;
+  const Z2 = (Y / Math.max(0.01, y)) * z;
+  let r = X2 * 1.656492 - Y * 0.354851 - Z2 * 0.255038;
+  let g = -X2 * 0.707196 + Y * 1.655397 + Z2 * 0.036152;
+  let b = X2 * 0.051713 - Y * 0.121364 + Z2 * 1.011530;
+  [r, g, b] = [r, g, b].map(c => {
+    c = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(Math.max(0, c), 1/2.4) - 0.055;
+    return Math.max(0, Math.min(255, Math.round(c * 255)));
+  });
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function ctToXy(mirek) {
+  const k = 1000000 / mirek;
+  const k2 = k*k, k3 = k2*k;
+  let x, y;
+  x = k <= 4000 ? -0.2661239e9/k3 - 0.2343589e6/k2 + 0.8776956e3/k + 0.17991
+                 : -3.0258469e9/k3 + 2.1070379e6/k2 + 0.2226347e3/k + 0.24039;
+  y = k <= 2222 ? -1.1063814*x*x*x - 1.3481102*x*x + 2.1855583*x - 0.2021968
+   : k <= 4000  ? -0.9549476*x*x*x - 1.3741859*x*x + 2.0913702*x - 0.1674887
+                 : 3.081758*x*x*x - 5.8733867*x*x + 3.75113*x - 0.3700148;
+  return [Math.max(0,Math.min(1,x)), Math.max(0,Math.min(1,y))];
+}
+
+function wpColor(wp) {
+  const c = wp.color;
+  if (!c) return '#333';
+  let xy;
+  if (c.xy) xy = c.xy;
+  else if (c.ct) xy = ctToXy(c.ct);
+  else return '#666';
+  // Boost brightness for preview visibility
+  const previewBri = Math.max(60, wp.bri);
+  return xyBriToHex(xy[0], xy[1], previewBri);
+}
+
+function renderRoutines() {
+  const el = document.getElementById('routines-list');
+  if (!S.routines || S.routines.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);padding:10px">No routines configured</div>';
+    return;
+  }
+  el.innerHTML = S.routines.map(r => {
+    const active = S.status && S.status.activeRoutines && S.status.activeRoutines.find(a => a.id === r.id);
+    let progressHtml = '';
+    if (active) {
+      progressHtml = '<div class="progress-bar"><div class="progress-fill" style="width:' + active.progress + '%"></div></div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + active.progress + '% -- ' + fmtTime(active.remaining) + ' remaining</div>';
+    }
+    // Fetch full routine for waypoint preview
+    const detail = S.routineDetails && S.routineDetails[r.id];
+    let waypointHtml = '';
+    if (detail && detail.tracks) {
+      for (const track of detail.tracks) {
+        if (track.type === 'fade' && track.waypoints) {
+          waypointHtml += '<div class="track-lights">' + (track.lightNames || track.lights || []).join(', ') + '</div>';
+          waypointHtml += '<div class="waypoint-preview">';
+          for (const wp of track.waypoints) {
+            const color = wpColor(wp);
+            waypointHtml += '<div class="wp-dot" style="background:' + color + '" title="t=' + wp.time + 'm bri=' + wp.bri + '"><div class="wp-time">' + wp.time + 'm</div></div>';
+          }
+          waypointHtml += '</div>';
+        }
+      }
+    }
+    return '<div class="routine-row">'
+      + '<div class="routine-info">'
+      + '<div class="routine-name">' + r.name + ' <span class="badge ' + (active ? 'badge-active' : 'badge-idle') + '">' + (active ? 'RUNNING' : 'idle') + '</span></div>'
+      + '<div class="routine-meta">' + r.duration + ' ' + (r.durationUnit || 'min') + ' -- ' + r.trackCount + ' track(s), ' + r.lightCount + ' light(s)</div>'
+      + waypointHtml
+      + progressHtml
+      + '</div>'
+      + '<div class="routine-actions">'
+      + (active
+        ? '<button class="btn btn-red btn-sm" onclick="cancelRoutine(\'' + r.id + '\')">Cancel</button>'
+        : '<button class="btn btn-teal btn-sm" onclick="startRoutine(\'' + r.id + '\')">Start</button>')
+      + '<button class="btn btn-outline btn-sm" onclick="startRoutine(\'' + r.id + '\',2)">Test (2m)</button>'
+      + '</div></div>';
+  }).join('');
+}
+
+function renderLog() {
+  const el = document.getElementById('log-entries');
+  if (!S.log || S.log.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);padding:8px">No activity yet</div>';
+    return;
+  }
+  el.innerHTML = S.log.slice(0, 30).map(e => {
+    const ts = e.ts ? new Date(e.ts).toLocaleTimeString() : '';
+    return '<div class="log-entry"><span class="ts">' + ts + '</span><span class="type">' + (e.type || '') + '</span>' + (e.message || e.raw || '') + '</div>';
+  }).join('');
+}
+
+function renderStats() {
+  const s = S.status;
+  if (!s) return;
+  document.getElementById('s-routines').textContent = s.routineCount || 0;
+  document.getElementById('s-active').textContent = (s.activeRoutines || []).length;
+  document.getElementById('s-memory').textContent = s.memory ? s.memory.rss : '-';
+  document.getElementById('s-uptime').textContent = s.uptime ? fmtTime(s.uptime) : '-';
+}
+
+async function startRoutine(id, testDuration) {
+  const body = testDuration ? { testDuration } : {};
+  await api('/api/routines/' + id + '/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  refresh();
+}
+
+async function cancelRoutine(id) {
+  await api('/api/routines/' + id + '/cancel', { method: 'POST' });
+  refresh();
+}
+
+async function refresh() {
+  const [statusRes, routinesRes, logRes] = await Promise.all([
+    api('/api/status'),
+    api('/api/routines'),
+    api('/api/log?limit=30')
+  ]);
+  S.status = statusRes.ok ? statusRes : null;
+  S.routines = routinesRes.ok ? routinesRes.routines : [];
+  S.log = logRes.ok ? logRes.entries : [];
+
+  // Fetch full details for each routine (for waypoint preview)
+  S.routineDetails = {};
+  await Promise.all(S.routines.map(async r => {
+    const d = await api('/api/routines/' + r.id);
+    if (d.ok) S.routineDetails[r.id] = d;
+  }));
+
+  renderStats();
+  renderRoutines();
+  renderLog();
+}
+
+// Auto-refresh every 5s when a routine is active, otherwise 15s
+let refreshTimer = null;
+function scheduleRefresh() {
+  const hasActive = S.status && S.status.activeRoutines && S.status.activeRoutines.length > 0;
+  const interval = hasActive ? 5000 : 15000;
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(async () => {
+    await refresh();
+    scheduleRefresh();
+  }, interval);
+}
+
+refresh().then(scheduleRefresh);
+</script>
+</body>
+</html>

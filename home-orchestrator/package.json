@@ -1,0 +1,10 @@
+{
+  "name": "home-orchestrator",
+  "version": "1.0.0",
+  "description": "Local home automation orchestrator for Hue light fading, SwitchBot control, and routines",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "hue": {
+    "bridgeIp": "192.168.1.2",
+    "apiKey": "E7lBa9iSY7lS1gP0C3oA7jejPILI9uMEDuddakuc"
+  },
+  "switchbot": {
+    "token": "ad9978ad3b3ec0c3ce56b83307fd81b96c61448f0ec9d81419e812b76801688554ee37619268c0d4ba0d4f1766fcf925",
+    "secret": "5963d4582140c56049dfa1c7659fbf1c",
+    "sceneMap": {
+      "other_lights_day": ["T02-202303282221-50514785"],
+      "other_lights_evening": ["0facc546-4b4c-49de-a87e-7b3de0b82f48"],
+      "other_lights_latenight": ["84c6c4d7-4c73-4854-8860-7236a21cbdd4"],
+      "other_lights_off": ["T02-202310021650-42083997"]
+    }
+  },
+  "routines": {
+    "sunrise_default": {
+      "name": "Sunrise Wake-Up",
+      "duration": 13,
+      "durationUnit": "minutes",
+      "overrideDetection": true,
+      "tracks": [
+        {
+          "type": "fade",
+          "lights": [58],
+          "lightNames": ["Bed Lightstrip"],
+          "waypoints": [
+            { "time": 0,  "bri": 1,  "color": { "xy": [0.65, 0.33] } },
+            { "time": 3,  "bri": 3,  "color": { "xy": [0.60, 0.35] } },
+            { "time": 5,  "bri": 8,  "color": { "xy": [0.55, 0.38] } },
+            { "time": 7,  "bri": 15, "color": { "ct": 428 } },
+            { "time": 9,  "bri": 20, "color": { "ct": 395 } },
+            { "time": 11, "bri": 25, "color": { "ct": 395 } },
+            { "time": 13, "bri": 30, "color": { "ct": 395 } }
+          ]
+        }
+      ]
+    }
+  },
+  "schedules": {},
+  "log": {
+    "maxLines": 500,
+    "flushIntervalMs": 5000
+  }
+}
