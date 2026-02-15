@@ -233,26 +233,44 @@ function withTimeout(promise, ms, label) {
 async function groupAllSpeakers(coordName) {
   coordName = coordName || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
   if (!speakers[coordName]) throw new Error(`Coordinator "${coordName}" not found`);
-  const results = [];
-  for (const [name, device] of Object.entries(speakers)) {
-    if (name === coordName || name.toLowerCase().includes("boost")) continue;
-    if (name.toLowerCase().includes('boost')) continue;
-    try { await withTimeout(device.joinGroup(coordName), 5000, `join ${name}`); results.push({room:name,status:'joined'}); }
-    catch (e) { results.push({room:name,status:'error',error:e.message}); }
+  // Check which speakers are already in coordName's group (only if coordName is the actual coordinator)
+  let alreadyGrouped = new Set();
+  try {
+    const coordIP = speakerInfo[coordName]?.ip;
+    const groups = await speakers[coordName].getAllGroups();
+    for (const g of groups) {
+      if (g.host !== coordIP) continue; // Only skip if coordName is actually the group coordinator
+      const members = Array.isArray(g.ZoneGroupMember) ? g.ZoneGroupMember : [g.ZoneGroupMember];
+      members.forEach(m => { if (!m.Invisible) alreadyGrouped.add(m.ZoneName); });
+      break;
+    }
+  } catch (e) {}
+  const toJoin = Object.entries(speakers)
+    .filter(([name]) => name !== coordName && !isBoost(name) && !alreadyGrouped.has(name));
+  if (toJoin.length === 0) {
+    console.log('  All speakers already grouped under ' + coordName + ', skipping joins');
+    return [];
   }
-  return results;
+  console.log(`  Joining ${toJoin.length} speakers to ${coordName} (${Math.max(0, alreadyGrouped.size - 1)} already grouped)`);
+  const joins = toJoin.map(([name, device]) =>
+    withTimeout(device.joinGroup(coordName), 5000, `join ${name}`)
+      .then(() => ({ room: name, status: 'joined' }))
+      .catch(e => ({ room: name, status: 'error', error: e.message }))
+  );
+  return Promise.all(joins);
 }
 
 async function groupRooms(roomNames, coordName) {
   coordName = coordName || roomNames[0];
   if (!speakers[coordName]) throw new Error(`Coordinator "${coordName}" not found`);
-  const results = [];
-  for (const name of roomNames) {
-    if (name === coordName || !speakers[name]) continue;
-    try { await speakers[name].joinGroup(coordName); results.push({room:name,status:'joined'}); }
-    catch (e) { results.push({room:name,status:'error',error:e.message}); }
-  }
-  return results;
+  const joins = roomNames
+    .filter(name => name !== coordName && speakers[name])
+    .map(name =>
+      withTimeout(speakers[name].joinGroup(coordName), 5000, `join ${name}`)
+        .then(() => ({ room: name, status: 'joined' }))
+        .catch(e => ({ room: name, status: 'error', error: e.message }))
+    );
+  return Promise.all(joins);
 }
 
 async function ungroupAll() {
@@ -454,27 +472,27 @@ async function executeRoutine(id, options = {}) {
       if (speakers[coord]) try { await speakers[coord].setVolume(routine.volume || 10); } catch(e){}
     }
     await new Promise(r => setTimeout(r, 200));
-    console.log(`[Routine] Playing favorite: ${routine.favorite} on ${coord}`);
+    // Must use actual group coordinator for playback (calling play on a member causes it to leave the group)
+    const actualCoord = await findGroupCoordinator(coord);
+    if (actualCoord !== coord) console.log(`[Routine] Actual coordinator: ${actualCoord} (requested: ${coord})`);
+    console.log(`[Routine] Playing favorite: ${routine.favorite} on ${actualCoord}`);
     const fav = favorites.find(f => f.title === routine.favorite);
     const spotifyMatch = fav && fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
     if (routine.shuffle && spotifyMatch) {
       // Queue-based shuffle for Spotify: flush → queue → selectQueue → play → shuffle → next
-      // Must use actual group coordinator (may differ from coord due to stereo pairs)
-      const shuffleCoord = await findGroupCoordinator(coord);
-      console.log(`[Routine] Shuffle coord: ${shuffleCoord} (requested: ${coord})`);
       const spotifyUri = `spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`;
       console.log(`[Routine] Shuffle mode: queuing ${spotifyUri}`);
-      await speakers[shuffleCoord].flush();
-      const qResult = await speakers[shuffleCoord].queue(spotifyUri);
+      await speakers[actualCoord].flush();
+      const qResult = await speakers[actualCoord].queue(spotifyUri);
       console.log(`[Routine] Queued ${qResult.NumTracksAdded} tracks`);
-      await speakers[shuffleCoord].selectQueue();
-      await speakers[shuffleCoord].play();
+      await speakers[actualCoord].selectQueue();
+      await speakers[actualCoord].play();
       await new Promise(r => setTimeout(r, 1500));
-      await speakers[shuffleCoord].setPlayMode('SHUFFLE');
-      await speakers[shuffleCoord].next();
+      await speakers[actualCoord].setPlayMode('SHUFFLE');
+      await speakers[actualCoord].next();
       console.log(`[Routine] Shuffle enabled, skipped to random track`);
     } else {
-      await playFavorite(routine.favorite, coord);
+      await playFavorite(routine.favorite, actualCoord);
       console.log(`[Routine] playFavorite succeeded`);
       if (routine.shuffle) {
         console.log(`[Routine] Shuffle requested but favorite is not a Spotify playlist - skipping shuffle`);
