@@ -1,0 +1,278 @@
+{
+  "routines": {
+    "Music_Morning": {
+      "name": "Morning Music",
+      "type": "music",
+      "favorite": "Workday Lounge",
+      "volume": 5,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Day_Music": {
+      "name": "Day Music",
+      "type": "music",
+      "favorite": "Poolside: Miami Chill",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Evening_Music": {
+      "name": "Evening Music",
+      "type": "music",
+      "favorite": "Autumn Folk",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Late_Night_Music": {
+      "name": "Late Night Music",
+      "type": "music",
+      "favorite": "Jazz for Studying Radio",
+      "volume": 5,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Music_Workday": {
+      "name": "Workday Music",
+      "type": "music",
+      "favorite": "Synthwave - beats to chill/game to",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Upbeat_Music": {
+      "name": "Upbeat Music",
+      "type": "music",
+      "favorite": "Fiji Villa",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Reading_Music": {
+      "name": "Reading Music",
+      "type": "music",
+      "favorite": "Reading Chill Out",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "Romantic_Playlist": {
+      "name": "Romantic Playlist",
+      "type": "music",
+      "favorite": "Sexy Beats by Assia",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true
+    },
+    "White_Noise_Sleep": {
+      "name": "White Noise Sleep",
+      "type": "music",
+      "favorite": "100Hz - White Noise",
+      "volume": 5,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true,
+      "sleepTimer": {
+        "enabled": false,
+        "minutes": 60,
+        "fadeMinutes": 5
+      }
+    },
+    "Sonos_Off": {
+      "name": "Sonos Off",
+      "type": "control",
+      "action": "pauseAll",
+      "enabled": true
+    },
+    "Sonos_Group": {
+      "name": "Group All",
+      "type": "control",
+      "action": "groupAll",
+      "coordinator": "",
+      "enabled": true
+    },
+    "Sonos_Non_LR_Pause": {
+      "name": "Pause Non-LR",
+      "type": "control",
+      "action": "pauseExcept",
+      "exceptRooms": [],
+      "volumeRoom": "",
+      "volumeLevel": 45,
+      "enabled": true
+    },
+    "Sonos_Pause_Music_LR_and_Office": {
+      "name": "Pause Non-LR (Office On)",
+      "type": "control",
+      "action": "pauseExcept",
+      "exceptRooms": [],
+      "volumeRoom": "",
+      "volumeLevel": 45,
+      "enabled": true
+    },
+    "bedroom_tv_down": {
+      "name": "Bedroom TV Vol Down",
+      "type": "control",
+      "action": "volumeAdjust",
+      "targetRoom": "",
+      "volumeAdjust": -5,
+      "enabled": true
+    },
+    "bedroom_tv_up": {
+      "name": "Bedroom TV Vol Up",
+      "type": "control",
+      "action": "volumeAdjust",
+      "targetRoom": "",
+      "volumeAdjust": 5,
+      "enabled": true
+    },
+    "Fireplace_On": {
+      "name": "Fireplace On",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    },
+    "Fireplace_Off": {
+      "name": "Fireplace Off",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    },
+    "Candles_On": {
+      "name": "Candles On",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    },
+    "Candles_Off": {
+      "name": "Candles Off",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    },
+    "Office_Candles_On": {
+      "name": "Office Candles On",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    },
+    "Common_Candles_Off": {
+      "name": "Common Candles Off",
+      "type": "webhook",
+      "webhookUrl": "",
+      "webhookMethod": "POST",
+      "enabled": false,
+      "notes": "Configure with local smart plug IP/API"
+    }
+  },
+  "scenes": {
+    "background_work": {
+      "name": "Background Work",
+      "icon": "💻",
+      "description": "Low volume, single room",
+      "actions": [
+        {
+          "type": "ungroupAll"
+        },
+        {
+          "type": "setVolume",
+          "room": "",
+          "volume": 15
+        }
+      ]
+    },
+    "movie_night": {
+      "name": "Movie Night",
+      "icon": "🎬",
+      "description": "Playbase loud, others off",
+      "actions": [
+        {
+          "type": "pauseExcept",
+          "exceptRooms": []
+        },
+        {
+          "type": "setVolume",
+          "room": "",
+          "volume": 45
+        }
+      ]
+    },
+    "party": {
+      "name": "Party Mode",
+      "icon": "🎉",
+      "description": "All speakers, volume up",
+      "actions": [
+        {
+          "type": "groupAll"
+        },
+        {
+          "type": "setVolumeAll",
+          "volume": 25
+        }
+      ]
+    },
+    "recording": {
+      "name": "Recording Mode",
+      "icon": "🎙️",
+      "description": "Mute everything",
+      "actions": [
+        {
+          "type": "pauseAll"
+        }
+      ]
+    },
+    "late_night": {
+      "name": "Late Night",
+      "icon": "🌙",
+      "description": "All grouped, whisper vol",
+      "actions": [
+        {
+          "type": "groupAll"
+        },
+        {
+          "type": "setVolumeAll",
+          "volume": 5
+        }
+      ]
+    }
+  },
+  "groupPresets": {
+    "all": {
+      "name": "All Speakers",
+      "icon": "🏠",
+      "rooms": []
+    },
+    "office_kitchen": {
+      "name": "Office + Kitchen",
+      "icon": "☕",
+      "rooms": []
+    },
+    "bedrooms": {
+      "name": "Bedrooms Only",
+      "icon": "🛏️",
+      "rooms": []
+    },
+    "common_areas": {
+      "name": "Common Areas",
+      "icon": "🛋️",
+      "rooms": []
+    }
+  }
+}

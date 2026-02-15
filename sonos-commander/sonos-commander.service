@@ -1,0 +1,15 @@
+[Unit]
+Description=Sonos Commander
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/opt/sonos-commander
+ExecStart=/usr/bin/node /opt/sonos-commander/server.js
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonos Commander</title>
+<style>
+  :root { --teal:#009999; --dark-blue:#00587C; --bg:#0F1419; --card:#1A2332; --card-border:#2A3A4E; --text:#E8ECF1; --muted:#8899AA; --success:#36B37E; --warn:#FFAB00; --danger:#FF5630; --accent:var(--teal); --radius:8px; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:linear-gradient(135deg,var(--dark-blue),var(--teal)); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; }
+  .header h1 { font-size:20px; font-weight:600; }
+  .header .subtitle { font-size:12px; opacity:0.7; }
+  .header-actions { display:flex; gap:8px; }
+  .header-actions button { background:rgba(255,255,255,0.15); border:none; color:white; padding:6px 12px; border-radius:var(--radius); cursor:pointer; font-size:12px; }
+  .header-actions button:hover { background:rgba(255,255,255,0.25); }
+  .tabs { display:flex; background:var(--card); border-bottom:1px solid var(--card-border); overflow-x:auto; }
+  .tab { padding:12px 16px; cursor:pointer; font-size:13px; color:var(--muted); border-bottom:2px solid transparent; white-space:nowrap; transition:all 0.2s; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-content { display:none; padding:16px; }
+  .tab-content.active { display:block; }
+  .card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .card-title { font-size:14px; font-weight:600; }
+  .grid { display:grid; gap:12px; }
+  .grid-2 { grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); }
+  .grid-3 { grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); }
+  .state { font-size:11px; padding:2px 8px; border-radius:10px; }
+  .state.playing { background:rgba(54,179,126,0.2); color:var(--success); }
+  .state.paused,.state.stopped { background:rgba(136,153,170,0.2); color:var(--muted); }
+  .speaker-track { font-size:12px; color:var(--muted); margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .speaker-vol { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .speaker-vol input { flex:1; accent-color:var(--accent); }
+  .speaker-vol span { font-size:12px; color:var(--muted); min-width:30px; }
+  .speaker-ip { font-size:11px; color:var(--muted); opacity:0.5; }
+  .btn { border:none; padding:8px 16px; border-radius:var(--radius); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.2s; }
+  .btn-primary { background:var(--accent); color:white; }
+  .btn-primary:hover { filter:brightness(1.15); }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+  .btn-danger { background:var(--danger); color:white; }
+  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+  .btn-ghost:hover { color:var(--text); border-color:var(--muted); }
+  .btn-scene { background:var(--card); border:1px solid var(--card-border); color:var(--text); padding:16px; border-radius:var(--radius); cursor:pointer; text-align:center; transition:all 0.2s; }
+  .btn-scene:hover { border-color:var(--accent); background:rgba(0,153,153,0.1); }
+  .btn-scene .icon { font-size:28px; margin-bottom:6px; }
+  .btn-scene .label { font-size:13px; font-weight:600; }
+  .btn-scene .desc { font-size:11px; color:var(--muted); margin-top:4px; }
+  .quick-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .form-row { display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:120px; }
+  .form-group label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+  input,select,textarea { width:100%; background:var(--bg); border:1px solid var(--card-border); color:var(--text); padding:8px; border-radius:4px; font-size:13px; }
+  select { cursor:pointer; }
+  .badge { font-size:10px; padding:2px 8px; border-radius:10px; font-weight:600; text-transform:uppercase; }
+  .badge.music { background:#E3FCEF; color:var(--success); }
+  .badge.control { background:#DEEBFF; color:#0052CC; }
+  .badge.webhook { background:#FFF0E0; color:#B85C00; }
+  .toggle { position:relative; width:36px; height:20px; display:inline-block; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle .slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--card-border); border-radius:10px; transition:0.3s; }
+  .toggle .slider:before { content:""; position:absolute; height:14px; width:14px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+  .toggle input:checked+.slider { background:var(--accent); }
+  .toggle input:checked+.slider:before { transform:translateX(16px); }
+  .sleep-banner { background:linear-gradient(135deg,#1a1a3e,#2d1b69); border:1px solid #4a3a8e; border-radius:var(--radius); padding:12px 16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+  .sleep-banner .info { display:flex; align-items:center; gap:8px; }
+  .queue-item { display:flex; align-items:center; gap:8px; padding:8px; background:var(--bg); border-radius:4px; margin-bottom:6px; }
+  .queue-item .num { font-size:12px; color:var(--muted); min-width:20px; }
+  .queue-item select { flex:2; }
+  .queue-item input[type=number] { width:70px; }
+  .queue-item.active { border-left:3px solid var(--accent); }
+  .now-playing { background:linear-gradient(135deg,var(--dark-blue),#1a3a4e); border-radius:var(--radius); padding:16px; margin-bottom:16px; }
+  .now-playing .np-title { font-size:16px; font-weight:600; }
+  .now-playing .np-artist { font-size:13px; color:var(--muted); }
+  .now-playing .np-rooms { font-size:11px; color:var(--accent); margin-top:8px; }
+  .now-playing .np-controls { display:flex; gap:12px; margin-top:12px; align-items:center; }
+  .now-playing .np-controls button { background:rgba(255,255,255,0.1); border:none; color:white; width:36px; height:36px; border-radius:50%; cursor:pointer; font-size:16px; }
+  .log-entry { padding:6px 0; border-bottom:1px solid rgba(42,58,78,0.5); font-size:12px; display:flex; gap:8px; }
+  .log-entry .log-time { color:var(--muted); min-width:75px; font-family:monospace; font-size:11px; }
+  .log-entry .log-type { min-width:60px; font-weight:600; font-size:11px; }
+  .log-entry .log-type.routine { color:var(--accent); }
+  .log-entry .log-type.scene { color:#B8A9FF; }
+  .log-entry .log-type.sleep { color:#9B8EC4; }
+  .log-entry .log-type.incoming { color:var(--warn); }
+  .log-entry .log-type.discovery { color:var(--success); }
+  .chip-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { padding:4px 10px; background:var(--bg); border:1px solid var(--card-border); border-radius:16px; font-size:12px; cursor:pointer; transition:all 0.2s; }
+  .chip.selected { background:var(--accent); border-color:var(--accent); color:white; }
+  .section-title { font-size:16px; font-weight:600; margin-bottom:12px; }
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--card); border:1px solid var(--card-border); padding:12px 20px; border-radius:var(--radius); font-size:13px; z-index:1000; transform:translateY(100px); opacity:0; transition:all 0.3s; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.success { border-left:3px solid var(--success); }
+  .toast.error { border-left:3px solid var(--danger); }
+  .expandable-content { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
+  .expandable-content.open { max-height:600px; }
+  @media (max-width:600px) { .grid-2{grid-template-columns:1fr;} .form-row{flex-direction:column;} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div><h1>🔊 Sonos Commander</h1><div class="subtitle">v2.0 — Local Home Audio Control</div></div>
+  <div class="header-actions">
+    <button onclick="refreshAll()">↻ Refresh</button>
+    <button onclick="discover()">🔍 Discover</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="scenes">Scenes</div>
+  <div class="tab" data-tab="routines">Routines</div>
+  <div class="tab" data-tab="groups">Groups</div>
+  <div class="tab" data-tab="queue">Queue</div>
+  <div class="tab" data-tab="log">Activity Log</div>
+</div>
+
+<div class="tab-content active" id="tab-dashboard">
+  <div id="now-playing-area"></div>
+  <div id="sleep-timer-area"></div>
+  <div class="quick-bar">
+    <button class="btn btn-primary btn-sm" onclick="doAction('pause-all')">⏸ Pause All</button>
+    <button class="btn btn-ghost btn-sm" onclick="doAction('group-all')">🔗 Group All</button>
+    <button class="btn btn-ghost btn-sm" onclick="doAction('ungroup-all')">✂️ Ungroup</button>
+    <button class="btn btn-ghost btn-sm" onclick="showSleepModal()">🌙 Sleep Timer</button>
+  </div>
+  <div class="section-title">🎵 Quick Play</div>
+  <div class="quick-bar" id="quick-routines"></div>
+  <div class="section-title" style="margin-top:16px">📡 Speakers</div>
+  <div class="grid grid-2" id="speakers-grid"></div>
+</div>
+
+<div class="tab-content" id="tab-scenes">
+  <div class="section-title">🎬 Volume Scenes</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px">One-tap presets for common situations.</p>
+  <div class="grid grid-3" id="scenes-grid"></div>
+  <div style="margin-top:16px"><div class="section-title">Edit Scenes</div><div id="scenes-editor"></div></div>
+</div>
+
+<div class="tab-content" id="tab-routines">
+  <div class="section-title">⚡ Routines</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Triggered by Homebridge or the API. Click to expand and configure.</p>
+  <div id="routines-list"></div>
+</div>
+
+<div class="tab-content" id="tab-groups">
+  <div class="section-title">🔗 Speaker Group Presets</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Save speaker groupings. Click Apply to activate.</p>
+  <div id="groups-list"></div>
+</div>
+
+<div class="tab-content" id="tab-queue">
+  <div class="section-title">📋 Playlist Queue Builder</div>
+  <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Queue favorites in sequence with durations.</p>
+  <div id="active-queue-area"></div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Build a Queue</span><button class="btn btn-sm btn-ghost" onclick="addQueueRow()">+ Add Item</button></div>
+    <div id="queue-builder"></div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="startBuiltQueue()">▶ Start Queue</button>
+      <button class="btn btn-ghost" onclick="clearQueueBuilder()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-log">
+  <div class="card-header" style="margin-bottom:12px">
+    <span class="section-title" style="margin:0">📝 Activity Log</span>
+    <button class="btn btn-sm btn-ghost" onclick="clearLog()">Clear</button>
+  </div>
+  <div class="card" id="log-container" style="max-height:600px;overflow-y:auto"></div>
+</div>
+
+<div id="sleep-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center">
+  <div class="card" style="width:320px">
+    <div class="card-title" style="margin-bottom:12px">🌙 Sleep Timer</div>
+    <div class="form-group" style="margin-bottom:10px"><label>Duration (minutes)</label><input type="number" id="sleep-minutes" value="60" min="5" max="480" step="5"></div>
+    <div class="form-group" style="margin-bottom:12px"><label>Fade out (last N minutes)</label><input type="number" id="sleep-fade" value="5" min="0" max="30"></div>
+    <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="startSleep()">Start</button><button class="btn btn-ghost" onclick="closeSleepModal()">Cancel</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let S={speakers:{},status:{},routines:{},favorites:[],scenes:{},groupPresets:{},sleepTimers:{},queues:{},log:[]};
+let rooms=[], queueRows=[];
+const esc=s=>s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';
+
+function toast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(()=>t.className='toast',3000);}
+
+async function api(method,url,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(url,opts);const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Failed');
+  return d;
+}
+
+async function doAction(name,body){
+  try{await api('POST','/api/action/'+name,body);toast('Done');refreshAll();}catch(e){toast(e.message,'error');}
+}
+
+async function refreshAll(){
+  try{
+    const[sp,st,rt,fv,sc,gp,sl,qu,lg]=await Promise.all([
+      fetch('/api/speakers').then(r=>r.json()),fetch('/api/status').then(r=>r.json()),
+      fetch('/api/routines').then(r=>r.json()),fetch('/api/favorites').then(r=>r.json()),
+      fetch('/api/scenes').then(r=>r.json()),fetch('/api/group-presets').then(r=>r.json()),
+      fetch('/api/sleep-timers').then(r=>r.json()),fetch('/api/queues').then(r=>r.json()),
+      fetch('/api/log?limit=50').then(r=>r.json())
+    ]);
+    S={speakers:sp,status:st,routines:rt,favorites:fv,scenes:sc,groupPresets:gp,sleepTimers:sl,queues:qu,log:lg};
+    rooms=Object.keys(sp);renderAll();
+  }catch(e){console.error('Refresh:',e);}
+}
+
+async function discover(){toast('Discovering...');await api('POST','/api/speakers/discover');await refreshAll();toast('Found '+rooms.length+' speakers');}
+
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');document.getElementById('tab-'+t.dataset.tab).classList.add('active');
+}));
+
+function renderAll(){renderNowPlaying();renderSleepTimers();renderSpeakers();renderQuickPlay();renderScenes();renderScenesEditor();renderRoutines();renderGroups();renderActiveQueue();renderLog();}
+
+function renderNowPlaying(){
+  const a=document.getElementById('now-playing-area');
+  const p=Object.entries(S.status).filter(([_,s])=>s&&s.state==='playing');
+  if(!p.length){a.innerHTML='';return;}
+  const[n,s]=p[0];
+  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:36px">🎵</div><div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
+}
+
+function renderSleepTimers(){
+  const a=document.getElementById('sleep-timer-area');
+  const t=Object.entries(S.sleepTimers);
+  if(!t.length){a.innerHTML='';return;}
+  a.innerHTML=t.map(([id,s])=>{
+    const m=Math.max(0,Math.round((new Date(s.endsAt)-Date.now())/60000));
+    return '<div class="sleep-banner"><div class="info"><span style="font-size:20px">🌙</span><span style="font-size:14px;font-weight:600">Sleep in '+m+' min</span><span style="font-size:12px;color:var(--muted)">('+s.fadeMinutes+'min fade)</span></div><button class="btn btn-sm btn-danger" onclick="api(\'DELETE\',\'/api/sleep-timer/'+id+'\').then(refreshAll)">Cancel</button></div>';
+  }).join('');
+}
+
+function showSleepModal(){document.getElementById('sleep-modal').style.display='flex';}
+function closeSleepModal(){document.getElementById('sleep-modal').style.display='none';}
+async function startSleep(){
+  await api('POST','/api/sleep-timer',{minutes:parseInt(document.getElementById('sleep-minutes').value),fadeMinutes:parseInt(document.getElementById('sleep-fade').value)});
+  closeSleepModal();toast('Sleep timer started');refreshAll();
+}
+
+function renderSpeakers(){
+  document.getElementById('speakers-grid').innerHTML=rooms.map(n=>{
+    const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='playing'?'playing':'paused';
+    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+(s.track?'<div class="speaker-track">🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</div>':'')+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div></div>';
+  }).join('');
+}
+
+function renderQuickPlay(){
+  const el=document.getElementById('quick-routines');
+  el.innerHTML=Object.entries(S.routines).filter(([_,r])=>r.type==='music'&&r.enabled).map(([id,r])=>'<button class="btn btn-ghost btn-sm" onclick="api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Playing: '+esc(r.name)+'\');refreshAll()})">'+esc(r.name)+'</button>').join('');
+}
+
+function renderScenes(){
+  document.getElementById('scenes-grid').innerHTML=Object.entries(S.scenes).map(([id,s])=>'<button class="btn-scene" onclick="api(\'POST\',\'/api/scenes/'+id+'/execute\').then(()=>{toast(\'Scene: '+esc(s.name)+'\');refreshAll()})"><div class="icon">'+(s.icon||'🎵')+'</div><div class="label">'+esc(s.name)+'</div><div class="desc">'+esc(s.description||'')+'</div></button>').join('');
+}
+
+function renderScenesEditor(){
+  document.getElementById('scenes-editor').innerHTML=Object.entries(S.scenes).map(([id,s])=>{
+    const acts=(s.actions||[]).map(a=>a.type+(a.volume?' →'+a.volume:'')).join(', ');
+    return '<div class="card"><div class="card-header"><span>'+(s.icon||'')+' <strong>'+esc(s.name)+'</strong> <span style="font-size:11px;color:var(--muted)">'+esc(acts)+'</span></span><button class="btn btn-sm btn-ghost" onclick="this.parentElement.nextElementSibling.classList.toggle(\'open\')">Edit</button></div><div class="expandable-content"><div class="form-row" style="margin-top:10px"><div class="form-group"><label>Name</label><input value="'+esc(s.name)+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(s.icon||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Description</label><input value="'+esc(s.description||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{description:this.value})"></div></div></div>';
+  }).join('');
+}
+
+function renderRoutines(){
+  const el=document.getElementById('routines-list');
+  const ro=s=>rooms.map(n=>'<option value="'+esc(n)+'"'+(s===n?' selected':'')+'>'+esc(n)+'</option>').join('');
+  const fo=s=>S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(s===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('');
+
+  el.innerHTML=Object.entries(S.routines).map(([id,r])=>{
+    let ed='';
+    if(r.type==='music'){
+      ed='<div class="form-row"><div class="form-group"><label>Favorite</label><select onchange="uR(\''+id+'\',\'favorite\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
+        +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked)"><span class="slider"></span></label></div></div>'
+        +'<div class="form-row"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>';
+    } else if(r.type==='control'){
+      if(r.action==='pauseExcept'){
+        ed='<div class="form-group"><label>Except Rooms (keep playing)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleExcept(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div class="form-row" style="margin-top:8px"><div class="form-group"><label>Volume Room</label><select onchange="uR(\''+id+'\',\'volumeRoom\',this.value)"><option value="">None</option>'+ro(r.volumeRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volumeLevel||45)+'" onchange="uR(\''+id+'\',\'volumeLevel\',+this.value)"></div></div>';
+      } else if(r.action==='volumeAdjust'){
+        ed='<div class="form-row"><div class="form-group"><label>Target Room</label><select onchange="uR(\''+id+'\',\'targetRoom\',this.value)"><option value="">--</option>'+ro(r.targetRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Adjust (+/-)</label><input type="number" min="-50" max="50" value="'+(r.volumeAdjust||5)+'" onchange="uR(\''+id+'\',\'volumeAdjust\',+this.value)"></div></div>';
+      } else if(r.action==='groupAll'){
+        ed='<div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div>';
+      }
+    } else if(r.type==='webhook'){
+      ed='<div class="form-row"><div class="form-group" style="flex:2"><label>URL</label><input type="text" value="'+esc(r.webhookUrl||'')+'" placeholder="http://..." onchange="uR(\''+id+'\',\'webhookUrl\',this.value)"></div><div class="form-group" style="max-width:80px"><label>Method</label><select onchange="uR(\''+id+'\',\'webhookMethod\',this.value)"><option'+(r.webhookMethod==='POST'?' selected':'')+'>POST</option><option'+(r.webhookMethod==='GET'?' selected':'')+'>GET</option></select></div></div>'+(r.notes?'<div style="font-size:11px;color:var(--muted)">💡 '+esc(r.notes)+'</div>':'');
+    }
+
+    return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="this.parentElement.querySelector(\'.expandable-content\').classList.toggle(\'open\')"><span class="badge '+r.type+'">'+r.type+'</span><span style="flex:1;font-size:13px">'+esc(r.name)+'</span><span style="font-size:11px;color:var(--muted);font-family:monospace">'+id+'</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="uR(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Ran: '+esc(r.name)+'\');refreshAll()})">▶</button></div><div class="expandable-content"><div style="padding-top:12px">'+ed+'</div></div></div>';
+  }).join('');
+}
+
+async function uR(id,k,v){await api('PUT','/api/routines/'+id,{[k]:v});S.routines[id]={...S.routines[id],[k]:v};}
+async function uRS(id,k,v){const r=S.routines[id];const st={...(r.sleepTimer||{enabled:false,minutes:60,fadeMinutes:5}),[k]:v};await api('PUT','/api/routines/'+id,{sleepTimer:st});r.sleepTimer=st;}
+async function toggleExcept(id,room){const r=S.routines[id];let a=[...(r.exceptRooms||[])];if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);await uR(id,'exceptRooms',a);renderRoutines();}
+
+function renderGroups(){
+  document.getElementById('groups-list').innerHTML=Object.entries(S.groupPresets).map(([id,p])=>
+    '<div class="card"><div class="card-header"><span>'+(p.icon||'🔗')+' <strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);margin-left:8px">'+((p.rooms||[]).length?p.rooms.join(', '):'All speakers')+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="this.closest(\'.card\').querySelector(\'.expandable-content\').classList.toggle(\'open\')">Edit</button><button class="btn btn-sm btn-primary" onclick="api(\'POST\',\'/api/group-presets/'+id+'/apply\').then(()=>{toast(\'Applied: '+esc(p.name)+'\');refreshAll()})">Apply</button></div></div><div class="expandable-content"><div style="padding-top:10px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(p.name)+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(p.icon||'')+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Rooms (click to toggle)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((p.rooms||[]).includes(n)?'selected':'')+'" onclick="togglePresetRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div></div></div></div>'
+  ).join('');
+}
+
+async function togglePresetRoom(id,room){
+  const p=S.groupPresets[id];let a=[...(p.rooms||[])];
+  if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);
+  await api('PUT','/api/group-presets/'+id,{rooms:a});
+  S.groupPresets[id].rooms=a;renderGroups();
+}
+
+// Queue
+function addQueueRow(){
+  queueRows.push({favorite:'',durationMinutes:30});
+  renderQueueBuilder();
+}
+function clearQueueBuilder(){queueRows=[];renderQueueBuilder();}
+function renderQueueBuilder(){
+  const el=document.getElementById('queue-builder');
+  const fo=s=>S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(s===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('');
+  el.innerHTML=queueRows.map((q,i)=>'<div class="queue-item"><span class="num">'+(i+1)+'</span><select onchange="queueRows['+i+'].favorite=this.value"><option value="">-- Favorite --</option>'+fo(q.favorite)+'</select><input type="number" min="5" max="480" value="'+q.durationMinutes+'" onchange="queueRows['+i+'].durationMinutes=+this.value" title="Minutes"><span style="font-size:11px;color:var(--muted)">min</span><button class="btn btn-sm btn-ghost" onclick="queueRows.splice('+i+',1);renderQueueBuilder()">✕</button></div>').join('')||(('<div style="font-size:12px;color:var(--muted);padding:8px">Click "+ Add Item" to build a queue</div>'));
+}
+async function startBuiltQueue(){
+  const items=queueRows.filter(q=>q.favorite);
+  if(!items.length){toast('Add items first','error');return;}
+  await api('POST','/api/queue',{items});toast('Queue started');refreshAll();
+}
+function renderActiveQueue(){
+  const el=document.getElementById('active-queue-area');
+  const qs=Object.entries(S.queues);
+  if(!qs.length){el.innerHTML='';return;}
+  el.innerHTML=qs.map(([id,q])=>'<div class="card"><div class="card-header"><span class="card-title">▶ Active Queue</span><div style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="api(\'POST\',\'/api/queue/'+id+'/skip\').then(refreshAll)">⏭ Skip</button><button class="btn btn-sm btn-danger" onclick="api(\'DELETE\',\'/api/queue/'+id+'\').then(refreshAll)">Stop</button></div></div>'+q.items.map((item,i)=>'<div class="queue-item'+(i===q.currentIndex?' active':'')+'"><span class="num">'+(i+1)+'</span><span style="flex:1;font-size:13px">'+esc(item.favorite)+'</span><span style="font-size:11px;color:var(--muted)">'+(item.durationMinutes||'∞')+'min</span></div>').join('')+'</div>').join('');
+}
+
+function renderLog(){
+  const el=document.getElementById('log-container');
+  el.innerHTML=(S.log||[]).map(e=>{
+    const t=new Date(e.ts);const ts=t.toLocaleTimeString('en-US',{hour12:false});
+    return '<div class="log-entry"><span class="log-time">'+ts+'</span><span class="log-type '+(e.type||'')+'">'+esc(e.type||'')+'</span><span>'+esc(e.message||'')+'</span></div>';
+  }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px">No activity yet</div>';
+}
+
+async function clearLog(){await api('DELETE','/api/log');S.log=[];renderLog();toast('Log cleared');}
+
+refreshAll();
+setInterval(()=>{fetch('/api/sleep-timers').then(r=>r.json()).then(t=>{S.sleepTimers=t;renderSleepTimers();});},30000);
+</script>
+</body>
+</html>
