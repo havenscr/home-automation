@@ -300,8 +300,10 @@ function renderRoutines(){
   el.innerHTML=Object.entries(S.routines).map(([id,r])=>{
     let ed='';
     if(r.type==='music'){
-      ed='<div class="form-row"><div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uR(\''+id+'\',\'favorite\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
-        +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked);renderRoutines()"><span class="slider"></span></label></div></div>'
+      const selFav=S.favorites.find(f=>f.title===r.favorite);
+      const canShuffle=!r.favorite||!selFav||!!selFav.shuffleable;
+      ed='<div class="form-row"><div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uR(\''+id+'\',\'favorite\',this.value);updateShuffleToggle(\''+id+'\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
+        +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked);renderRoutines()"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px" id="shuffle-'+id+'"><label>Shuffle</label><label class="toggle"><input type="checkbox" '+(r.shuffle&&canShuffle?'checked':'')+' '+(canShuffle?'':'disabled')+' onchange="uR(\''+id+'\',\'shuffle\',this.checked)"><span class="slider"'+(canShuffle?'':' style="opacity:0.3;cursor:not-allowed"')+'></span></label>'+(canShuffle?'':'<div class="shuffle-na" style="font-size:9px;color:var(--muted);margin-top:2px">N/A for radio</div>')+'</div></div>'
         +'<div class="form-group" style="margin-top:4px"><label>Speakers <span style="font-size:10px;color:var(--muted)">'+(r.groupAll?'(Group All is on — overrides selection)':'(select rooms, or enable Group All)')+'</span></label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.rooms||[]).includes(n)?'selected':'')+'" onclick="toggleRoutineRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>'
         +'<div class="form-row" style="margin-top:8px"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>';
     } else if(r.type==='control'){
@@ -437,6 +439,21 @@ async function toggleRoutineRoom(id,room){
   const r=S.routines[id];let a=[...(r.rooms||[])];
   if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);
   await uR(id,'rooms',a);renderRoutines();
+}
+
+// ─── Shuffle Toggle (conditional on favorite type) ──────────────────────────
+function updateShuffleToggle(id,favTitle){
+  const selFav=S.favorites.find(f=>f.title===favTitle);
+  const can=!favTitle||!selFav||!!selFav.shuffleable;
+  const el=document.getElementById('shuffle-'+id);
+  if(!el)return;
+  const inp=el.querySelector('input[type=checkbox]');
+  const slider=el.querySelector('.slider');
+  if(inp){inp.disabled=!can;if(!can&&inp.checked){inp.checked=false;uR(id,'shuffle',false);}}
+  if(slider){slider.style.opacity=can?'':'0.3';slider.style.cursor=can?'':'not-allowed';}
+  const existing=el.querySelector('.shuffle-na');
+  if(!can&&!existing){const d=document.createElement('div');d.className='shuffle-na';d.style.cssText='font-size:9px;color:var(--muted);margin-top:2px';d.textContent='N/A for radio';el.appendChild(d);}
+  else if(can&&existing){existing.remove();}
 }
 
 // ─── Config Export/Import ───────────────────────────────────────────────────

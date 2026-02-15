@@ -168,13 +168,32 @@ async function loadFavorites() {
   for (const room of rooms) {
     try {
       const favs = await speakers[room].getFavorites();
-      favorites = (favs.items || []).map(f => ({ title: f.title, uri: f.uri, metadata: f.metadata || '' }));
+      favorites = (favs.items || []).map(f => {
+        const uri = f.uri || '';
+        const isSpotify = uri.startsWith('x-rincon-cpcontainer:') && uri.includes('spotify');
+        return { title: f.title, uri, metadata: f.metadata || '', type: isSpotify ? 'spotify' : (uri.startsWith('x-sonosapi-radio:') ? 'radio' : 'other'), shuffleable: isSpotify };
+      });
       console.log('Loaded ' + favorites.length + ' favorites from ' + room);
       return favorites;
     } catch (e) { console.log('Favorites skip ' + room + ': ' + e.message); }
   }
   console.error('Could not load favorites from any speaker');
   return [];
+}
+
+// Find the actual group coordinator for a speaker (may differ from requested coord due to stereo pairs)
+async function findGroupCoordinator(roomName) {
+  try {
+    const groups = await speakers[roomName].getAllGroups();
+    for (const g of groups) {
+      const members = Array.isArray(g.ZoneGroupMember) ? g.ZoneGroupMember : [g.ZoneGroupMember];
+      if (members.some(m => m.ZoneName === roomName)) {
+        const coordEntry = Object.entries(speakerInfo).find(([n, i]) => i.ip === g.host && !isBoost(n));
+        return coordEntry ? coordEntry[0] : roomName;
+      }
+    }
+  } catch (e) {}
+  return roomName;
 }
 
 // ─── Core Sonos Actions ─────────────────────────────────────────────────────
@@ -436,12 +455,35 @@ async function executeRoutine(id, options = {}) {
     }
     await new Promise(r => setTimeout(r, 200));
     console.log(`[Routine] Playing favorite: ${routine.favorite} on ${coord}`);
-    await playFavorite(routine.favorite, coord);
-    console.log(`[Routine] playFavorite succeeded`);
+    const fav = favorites.find(f => f.title === routine.favorite);
+    const spotifyMatch = fav && fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
+    if (routine.shuffle && spotifyMatch) {
+      // Queue-based shuffle for Spotify: flush → queue → selectQueue → play → shuffle → next
+      // Must use actual group coordinator (may differ from coord due to stereo pairs)
+      const shuffleCoord = await findGroupCoordinator(coord);
+      console.log(`[Routine] Shuffle coord: ${shuffleCoord} (requested: ${coord})`);
+      const spotifyUri = `spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`;
+      console.log(`[Routine] Shuffle mode: queuing ${spotifyUri}`);
+      await speakers[shuffleCoord].flush();
+      const qResult = await speakers[shuffleCoord].queue(spotifyUri);
+      console.log(`[Routine] Queued ${qResult.NumTracksAdded} tracks`);
+      await speakers[shuffleCoord].selectQueue();
+      await speakers[shuffleCoord].play();
+      await new Promise(r => setTimeout(r, 1500));
+      await speakers[shuffleCoord].setPlayMode('SHUFFLE');
+      await speakers[shuffleCoord].next();
+      console.log(`[Routine] Shuffle enabled, skipped to random track`);
+    } else {
+      await playFavorite(routine.favorite, coord);
+      console.log(`[Routine] playFavorite succeeded`);
+      if (routine.shuffle) {
+        console.log(`[Routine] Shuffle requested but favorite is not a Spotify playlist - skipping shuffle`);
+      }
+    }
     if (routine.sleepTimer && routine.sleepTimer.enabled) {
       startSleepTimer(id, routine.sleepTimer.minutes || 60, routine.sleepTimer.fadeMinutes || 5);
     }
-    result = { played: routine.favorite, volume: routine.volume, rooms: routine.rooms };
+    result = { played: routine.favorite, volume: routine.volume, rooms: routine.rooms, shuffle: !!routine.shuffle };
   } else if (routine.type === 'control') {
     switch (routine.action) {
       case 'pauseAll': await pauseAll(); break;
