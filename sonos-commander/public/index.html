@@ -449,7 +449,7 @@ function updateShuffleToggle(id,favTitle){
   if(!el)return;
   const inp=el.querySelector('input[type=checkbox]');
   const slider=el.querySelector('.slider');
-  if(inp){inp.disabled=!can;if(!can&&inp.checked){inp.checked=false;uR(id,'shuffle',false);}}
+  if(inp){const wasDisabled=inp.disabled;inp.disabled=!can;if(!can&&inp.checked){inp.checked=false;uR(id,'shuffle',false);}else if(wasDisabled&&can&&!inp.checked){inp.checked=true;uR(id,'shuffle',true);}}
   if(slider){slider.style.opacity=can?'':'0.3';slider.style.cursor=can?'':'not-allowed';}
   const existing=el.querySelector('.shuffle-na');
   if(!can&&!existing){const d=document.createElement('div');d.className='shuffle-na';d.style.cssText='font-size:9px;color:var(--muted);margin-top:2px';d.textContent='N/A for radio';el.appendChild(d);}
