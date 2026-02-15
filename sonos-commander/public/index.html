@@ -103,6 +103,9 @@
 <div class="header">
   <div><h1>🔊 Sonos Commander</h1><div class="subtitle">v2.0 — Local Home Audio Control</div></div>
   <div class="header-actions">
+    <button onclick="exportConfig()">Export</button>
+    <button onclick="document.getElementById('config-import').click()">Import</button>
+    <input type="file" id="config-import" accept=".json" style="display:none" onchange="importConfig(this)">
     <button onclick="refreshAll()">↻ Refresh</button>
     <button onclick="discover()">🔍 Discover</button>
   </div>
@@ -232,7 +235,8 @@ function renderNowPlaying(){
   const p=Object.entries(S.status).filter(([_,s])=>s&&s.state==='playing');
   if(!p.length){a.innerHTML='';return;}
   const[n,s]=p[0];
-  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px"><div style="font-size:36px">🎵</div><div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
+  const art=s.albumArtURI?'<img src="'+esc(s.albumArtURI)+'" style="width:64px;height:64px;border-radius:6px;object-fit:cover" onerror="this.style.display=\'none\'">':'<div style="font-size:36px">🎵</div>';
+  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px">'+art+'<div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+(s.album?' — '+esc(s.album):'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
 }
 
 function renderSleepTimers(){
@@ -256,8 +260,10 @@ function renderSpeakers(){
   document.getElementById('speakers-grid').innerHTML=rooms.map(n=>{
     const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='error'?'error':(s.state==='playing'?'playing':(s.state||'stopped'));
     const inp=s.inputSource?'<span class="input-badge">'+esc(s.inputSource)+'</span>':'';
-    const trackLine=s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track">🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</div>':'');
-    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+trackLine+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div></div>';
+    const art=s.albumArtURI&&s.state==='playing'?'<img src="'+esc(s.albumArtURI)+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover" onerror="this.style.display=\'none\'">':'';
+    const trackLine=s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track" style="display:flex;align-items:center;gap:6px">'+art+'<span>🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</span></div>':'');
+    const volBtns='<div style="display:flex;gap:4px;margin-top:4px">'+[5,10,25,50].map(v=>'<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" onclick="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:'+v+'}).then(refreshAll)">'+v+'</button>').join('')+'</div>';
+    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+trackLine+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div>'+volBtns+'</div>';
   }).join('');
 }
 
@@ -277,7 +283,7 @@ function renderScenesEditor(){
       let detail='';
       if(a.type==='setVolume'||a.type==='setVolumeAll') detail='<div class="form-group" style="max-width:70px"><label>Vol</label><input type="number" min="0" max="100" value="'+(a.volume||10)+'" onchange="uSA(\''+id+'\','+i+',\'volume\',+this.value)"></div>'+(a.type==='setVolume'?'<div class="form-group"><label>Room</label><select onchange="uSA(\''+id+'\','+i+',\'room\',this.value)"><option value="">All</option>'+rooms.map(n=>'<option value="'+esc(n)+'"'+(a.room===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>':'');
       else if(a.type==='groupAll') detail='<div class="form-group"><label>Coordinator</label><select onchange="uSA(\''+id+'\','+i+',\'coordinator\',this.value)"><option value="">Auto</option>'+rooms.map(n=>'<option value="'+esc(n)+'"'+(a.coordinator===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
-      else if(a.type==='playFavorite') detail='<div class="form-group"><label>Favorite</label><select onchange="uSA(\''+id+'\','+i+',\'favorite\',this.value)"><option value="">--</option>'+S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(a.favorite===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('')+'</select></div>';
+      else if(a.type==='playFavorite') detail='<div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uSA(\''+id+'\','+i+',\'favorite\',this.value)"><option value="">--</option>'+S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(a.favorite===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('')+'</select></div>';
       else if(a.type==='delay') detail='<div class="form-group" style="max-width:80px"><label>Seconds</label><input type="number" min="1" max="60" value="'+(a.seconds||1)+'" onchange="uSA(\''+id+'\','+i+',\'seconds\',+this.value)"></div>';
       else if(a.type==='pauseExcept') detail='<div class="form-group"><label>Keep</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((a.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleSAExcept(\''+id+'\','+i+',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>';
       return '<div class="form-row" style="align-items:flex-end"><span style="font-size:11px;color:var(--muted);min-width:18px">'+(i+1)+'</span><div class="form-group" style="max-width:140px"><label>Action</label><select onchange="uSA(\''+id+'\','+i+',\'type\',this.value);renderScenesEditor()">'+actionTypes.map(t=>'<option value="'+t+'"'+(a.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+detail+'<button class="btn btn-sm btn-ghost" onclick="rmSA(\''+id+'\','+i+')" style="margin-bottom:6px">✕</button></div>';
@@ -294,9 +300,10 @@ function renderRoutines(){
   el.innerHTML=Object.entries(S.routines).map(([id,r])=>{
     let ed='';
     if(r.type==='music'){
-      ed='<div class="form-row"><div class="form-group"><label>Favorite</label><select onchange="uR(\''+id+'\',\'favorite\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
-        +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked)"><span class="slider"></span></label></div></div>'
-        +'<div class="form-row"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>';
+      ed='<div class="form-row"><div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uR(\''+id+'\',\'favorite\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
+        +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked);renderRoutines()"><span class="slider"></span></label></div></div>'
+        +'<div class="form-group" style="margin-top:4px"><label>Speakers <span style="font-size:10px;color:var(--muted)">'+(r.groupAll?'(Group All is on — overrides selection)':'(select rooms, or enable Group All)')+'</span></label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.rooms||[]).includes(n)?'selected':'')+'" onclick="toggleRoutineRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>'
+        +'<div class="form-row" style="margin-top:8px"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>';
     } else if(r.type==='control'){
       if(r.action==='pauseExcept'){
         ed='<div class="form-group"><label>Except Rooms (keep playing)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleExcept(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div class="form-row" style="margin-top:8px"><div class="form-group"><label>Volume Room</label><select onchange="uR(\''+id+'\',\'volumeRoom\',this.value)"><option value="">None</option>'+ro(r.volumeRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volumeLevel||45)+'" onchange="uR(\''+id+'\',\'volumeLevel\',+this.value)"></div></div>';
@@ -413,6 +420,37 @@ function renderLog(){
 }
 
 async function clearLog(){await api('DELETE','/api/log');S.log=[];renderLog();toast('Log cleared');}
+
+// ─── Favorites Search Filter ────────────────────────────────────────────────
+function filterFavOpts(input){
+  const sel=input.nextElementSibling;
+  if(!sel||sel.tagName!=='SELECT')return;
+  const val=input.value.toLowerCase();
+  for(const opt of sel.options){
+    if(opt.value===''){opt.style.display='';continue;}
+    opt.style.display=opt.textContent.toLowerCase().includes(val)?'':'none';
+  }
+}
+
+// ─── Per-Routine Speaker Selection ──────────────────────────────────────────
+async function toggleRoutineRoom(id,room){
+  const r=S.routines[id];let a=[...(r.rooms||[])];
+  if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);
+  await uR(id,'rooms',a);renderRoutines();
+}
+
+// ─── Config Export/Import ───────────────────────────────────────────────────
+function exportConfig(){window.open('/api/config/export');}
+async function importConfig(input){
+  const file=input.files[0];if(!file)return;
+  try{
+    const data=JSON.parse(await file.text());
+    const r=await api('POST','/api/config/import',data);
+    toast('Imported: '+r.routines+' routines, '+r.scenes+' scenes, '+r.groupPresets+' presets');
+    await refreshAll();
+  }catch(e){toast('Import failed: '+e.message,'error');}
+  input.value='';
+}
 
 refreshAll();
 // Auto-refresh dashboard: speakers + now-playing every 15s, sleep timers every 30s

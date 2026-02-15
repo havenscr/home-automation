@@ -121,28 +121,42 @@ async function discoverSpeakers() {
 }
 
 async function ensureCoordinators() {
-  // For stereo pairs, ensure we store the coordinator (master) not the slave
-  const anyRoom = Object.keys(speakers).find(n => !(speakerInfo[n]?.model?.indexOf('Boost') !== -1));
+  // For stereo pairs / surround setups, ensure we store the coordinator (master) not the slave/satellite.
+  // Uses each member's Location URL (always points to the correct device for that room,
+  // even when speakers are in a multi-room group) instead of group.host (which is the
+  // multi-room group coordinator and would incorrectly point all speakers to one IP).
+  const anyRoom = Object.keys(speakers).find(n => !isBoost(n));
   if (!anyRoom) return;
   try {
     const groups = await speakers[anyRoom].getAllGroups();
     for (const group of groups) {
-      const coordIP = group.host;
       const members = Array.isArray(group.ZoneGroupMember) ? group.ZoneGroupMember : [group.ZoneGroupMember];
+      const processed = new Set();
       for (const member of members) {
         const room = member.ZoneName;
-        if (speakers[room] && speakers[room].host !== coordIP) {
-          console.log(`  ${room}: swapping to coordinator @ ${coordIP} (was ${speakers[room].host})`);
-          const coordSonos = new Sonos(coordIP);
-          speakers[room] = coordSonos;
-          speakerInfo[room].ip = coordIP;
+        if (!speakers[room] || isBoost(room)) continue;
+        // Skip invisible members (stereo pair slaves, surround satellites)
+        if (member.Invisible) continue;
+        // Skip rooms already processed (safety for duplicate entries)
+        if (processed.has(room)) continue;
+        processed.add(room);
+        // Extract IP from member's own Location URL (e.g. http://192.168.1.31:1400/xml/...)
+        const locMatch = member.Location && member.Location.match(/\/\/([^:\/]+)/);
+        if (!locMatch) continue;
+        const memberIP = locMatch[1];
+        if (speakers[room].host !== memberIP) {
+          console.log(`  ${room}: swapping to ${memberIP} (was ${speakers[room].host})`);
+          const memberSonos = new Sonos(memberIP);
+          speakers[room] = memberSonos;
+          speakerInfo[room].ip = memberIP;
           try {
-            const desc = await coordSonos.deviceDescription();
+            const desc = await memberSonos.deviceDescription();
             speakerInfo[room].model = desc.modelName || speakerInfo[room].model;
           } catch (e) {}
         }
       }
     }
+    console.log('  Final speaker IPs: ' + Object.entries(speakerInfo).filter(([n]) => !isBoost(n)).map(([n,i]) => `${n}=${i.ip}`).join(', '));
   } catch (e) {
     console.log('  Coordinator check failed: ' + e.message);
   }
@@ -176,8 +190,11 @@ async function getState(roomName) {
       let inputSource = null;
       if (uri.startsWith('x-rincon-stream:')) inputSource = 'Line In';
       else if (uri.startsWith('x-sonos-vli:') || uri.startsWith('x-sonos-htastream:')) inputSource = 'TV';
+      // Resolve relative album art URLs to full URLs via the speaker's IP
+      let artURI = track?.albumArtURI || null;
+      if (artURI && artURI.startsWith('/')) artURI = 'http://' + d.host + ':1400' + artURI;
       return { state, volume: vol, track: track?.title, artist: track?.artist,
-               album: track?.album, albumArtURI: track?.albumArtURI,
+               album: track?.album, albumArtURI: artURI,
                duration: track?.duration, position: track?.position, inputSource };
     } catch (e) {
       if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
@@ -400,14 +417,23 @@ async function executeRoutine(id, options = {}) {
 
   if (routine.type === 'music') {
     if (!routine.favorite) throw new Error('No favorite configured');
-    const coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
-    if (routine.groupAll) {
+    let coord;
+    if (routine.rooms && routine.rooms.length > 0) {
+      coord = routine.coordinator || routine.rooms[0];
+      console.log(`[Routine] Grouping selected rooms [${routine.rooms.join(', ')}] to ${coord}`);
+      await groupRooms(routine.rooms, coord);
+      await new Promise(r => setTimeout(r, 800));
+      for (const n of routine.rooms) { if (speakers[n]) try { await speakers[n].setVolume(routine.volume || 10); } catch(e){} }
+    } else if (routine.groupAll) {
+      coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
       console.log(`[Routine] Grouping all speakers to ${coord}`);
       await groupAllSpeakers(coord);
-      console.log(`[Routine] Grouping done, waiting for propagation`);
       await new Promise(r => setTimeout(r, 800));
+      for (const [n, d] of Object.entries(speakers)) { if (n.toLowerCase().includes('boost')) continue; try { await d.setVolume(routine.volume || 10); } catch(e){} }
+    } else {
+      coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
+      if (speakers[coord]) try { await speakers[coord].setVolume(routine.volume || 10); } catch(e){}
     }
-    for (const [n, d] of Object.entries(speakers)) { if (n.toLowerCase().includes('boost')) continue; try { await d.setVolume(routine.volume || 10); } catch(e){} }
     await new Promise(r => setTimeout(r, 200));
     console.log(`[Routine] Playing favorite: ${routine.favorite} on ${coord}`);
     await playFavorite(routine.favorite, coord);
@@ -415,7 +441,7 @@ async function executeRoutine(id, options = {}) {
     if (routine.sleepTimer && routine.sleepTimer.enabled) {
       startSleepTimer(id, routine.sleepTimer.minutes || 60, routine.sleepTimer.fadeMinutes || 5);
     }
-    result = { played: routine.favorite, volume: routine.volume };
+    result = { played: routine.favorite, volume: routine.volume, rooms: routine.rooms };
   } else if (routine.type === 'control') {
     switch (routine.action) {
       case 'pauseAll': await pauseAll(); break;
@@ -643,6 +669,23 @@ app.get('/api/log', (req, res) => {
 app.delete('/api/log', (req, res) => {
   try { fs.writeFileSync(LOG_FILE, ''); } catch(e) {}
   res.json({ cleared: true });
+});
+
+// ─── API: Config Export/Import ──────────────────────────────────────────────
+app.get('/api/config/export', (req, res) => {
+  res.setHeader('Content-Disposition', 'attachment; filename=sonos-commander-config.json');
+  res.json(config);
+});
+app.post('/api/config/import', (req, res) => {
+  try {
+    const imported = req.body;
+    if (imported.routines) config.routines = imported.routines;
+    if (imported.scenes) config.scenes = imported.scenes;
+    if (imported.groupPresets) config.groupPresets = imported.groupPresets;
+    saveConfig();
+    logActivity('config', 'Config imported', { routines: Object.keys(config.routines).length, scenes: Object.keys(config.scenes).length });
+    res.json({ ok: true, routines: Object.keys(config.routines).length, scenes: Object.keys(config.scenes).length, groupPresets: Object.keys(config.groupPresets).length });
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // ─── Startup ────────────────────────────────────────────────────────────────
