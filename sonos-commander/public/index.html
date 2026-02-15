@@ -136,17 +136,17 @@
   <div class="section-title">🎬 Volume Scenes</div>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px">One-tap presets for common situations.</p>
   <div class="grid grid-3" id="scenes-grid"></div>
-  <div style="margin-top:16px"><div class="section-title">Edit Scenes</div><div id="scenes-editor"></div></div>
+  <div style="margin-top:16px"><div class="card-header"><span class="section-title" style="margin:0">Edit Scenes</span><button class="btn btn-sm btn-primary" onclick="addScene()">+ New Scene</button></div><div id="scenes-editor"></div></div>
 </div>
 
 <div class="tab-content" id="tab-routines">
-  <div class="section-title">⚡ Routines</div>
+  <div class="card-header" style="margin-bottom:12px"><span class="section-title" style="margin:0">⚡ Routines</span><button class="btn btn-sm btn-primary" onclick="addRoutine()">+ New Routine</button></div>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Triggered by Homebridge or the API. Click to expand and configure.</p>
   <div id="routines-list"></div>
 </div>
 
 <div class="tab-content" id="tab-groups">
-  <div class="section-title">🔗 Speaker Group Presets</div>
+  <div class="card-header" style="margin-bottom:12px"><span class="section-title" style="margin:0">🔗 Speaker Group Presets</span><button class="btn btn-sm btn-primary" onclick="addGroup()">+ New Preset</button></div>
   <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Save speaker groupings. Click Apply to activate.</p>
   <div id="groups-list"></div>
 </div>
@@ -271,9 +271,18 @@ function renderScenes(){
 }
 
 function renderScenesEditor(){
+  const actionTypes=['ungroupAll','groupAll','pauseAll','pauseExcept','setVolume','setVolumeAll','playFavorite','delay'];
   document.getElementById('scenes-editor').innerHTML=Object.entries(S.scenes).map(([id,s])=>{
-    const acts=(s.actions||[]).map(a=>a.type+(a.volume?' →'+a.volume:'')).join(', ');
-    return '<div class="card"><div class="card-header"><span>'+(s.icon||'')+' <strong>'+esc(s.name)+'</strong> <span style="font-size:11px;color:var(--muted)">'+esc(acts)+'</span></span><button class="btn btn-sm btn-ghost" onclick="this.parentElement.nextElementSibling.classList.toggle(\'open\')">Edit</button></div><div class="expandable-content"><div class="form-row" style="margin-top:10px"><div class="form-group"><label>Name</label><input value="'+esc(s.name)+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(s.icon||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Description</label><input value="'+esc(s.description||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{description:this.value})"></div></div></div>';
+    const actRows=(s.actions||[]).map((a,i)=>{
+      let detail='';
+      if(a.type==='setVolume'||a.type==='setVolumeAll') detail='<div class="form-group" style="max-width:70px"><label>Vol</label><input type="number" min="0" max="100" value="'+(a.volume||10)+'" onchange="uSA(\''+id+'\','+i+',\'volume\',+this.value)"></div>'+(a.type==='setVolume'?'<div class="form-group"><label>Room</label><select onchange="uSA(\''+id+'\','+i+',\'room\',this.value)"><option value="">All</option>'+rooms.map(n=>'<option value="'+esc(n)+'"'+(a.room===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>':'');
+      else if(a.type==='groupAll') detail='<div class="form-group"><label>Coordinator</label><select onchange="uSA(\''+id+'\','+i+',\'coordinator\',this.value)"><option value="">Auto</option>'+rooms.map(n=>'<option value="'+esc(n)+'"'+(a.coordinator===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
+      else if(a.type==='playFavorite') detail='<div class="form-group"><label>Favorite</label><select onchange="uSA(\''+id+'\','+i+',\'favorite\',this.value)"><option value="">--</option>'+S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(a.favorite===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('')+'</select></div>';
+      else if(a.type==='delay') detail='<div class="form-group" style="max-width:80px"><label>Seconds</label><input type="number" min="1" max="60" value="'+(a.seconds||1)+'" onchange="uSA(\''+id+'\','+i+',\'seconds\',+this.value)"></div>';
+      else if(a.type==='pauseExcept') detail='<div class="form-group"><label>Keep</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((a.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleSAExcept(\''+id+'\','+i+',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>';
+      return '<div class="form-row" style="align-items:flex-end"><span style="font-size:11px;color:var(--muted);min-width:18px">'+(i+1)+'</span><div class="form-group" style="max-width:140px"><label>Action</label><select onchange="uSA(\''+id+'\','+i+',\'type\',this.value);renderScenesEditor()">'+actionTypes.map(t=>'<option value="'+t+'"'+(a.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+detail+'<button class="btn btn-sm btn-ghost" onclick="rmSA(\''+id+'\','+i+')" style="margin-bottom:6px">✕</button></div>';
+    }).join('');
+    return '<div class="card"><div class="card-header"><span>'+(s.icon||'')+' <strong>'+esc(s.name)+'</strong></span><button class="btn btn-sm btn-ghost" onclick="this.parentElement.nextElementSibling.classList.toggle(\'open\')">Edit</button></div><div class="expandable-content"><div class="form-row" style="margin-top:10px"><div class="form-group"><label>Name</label><input value="'+esc(s.name)+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(s.icon||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Description</label><input value="'+esc(s.description||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{description:this.value})"></div><div style="margin-top:10px"><label style="font-size:11px;text-transform:uppercase;color:var(--muted)">Actions</label>'+actRows+'<button class="btn btn-sm btn-ghost" onclick="addSA(\''+id+'\')" style="margin-top:6px">+ Add Action</button></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="delScene(\''+id+'\')">Delete Scene</button></div></div></div>';
   }).join('');
 }
 
@@ -300,7 +309,7 @@ function renderRoutines(){
       ed='<div class="form-row"><div class="form-group" style="flex:2"><label>URL</label><input type="text" value="'+esc(r.webhookUrl||'')+'" placeholder="http://..." onchange="uR(\''+id+'\',\'webhookUrl\',this.value)"></div><div class="form-group" style="max-width:80px"><label>Method</label><select onchange="uR(\''+id+'\',\'webhookMethod\',this.value)"><option'+(r.webhookMethod==='POST'?' selected':'')+'>POST</option><option'+(r.webhookMethod==='GET'?' selected':'')+'>GET</option></select></div></div>'+(r.notes?'<div style="font-size:11px;color:var(--muted)">💡 '+esc(r.notes)+'</div>':'');
     }
 
-    return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="this.parentElement.querySelector(\'.expandable-content\').classList.toggle(\'open\')"><span class="badge '+r.type+'">'+r.type+'</span><span style="flex:1;font-size:13px">'+esc(r.name)+'</span><span style="font-size:11px;color:var(--muted);font-family:monospace">'+id+'</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="uR(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Ran: '+esc(r.name)+'\');refreshAll()})">▶</button></div><div class="expandable-content"><div style="padding-top:12px">'+ed+'</div></div></div>';
+    return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="this.parentElement.querySelector(\'.expandable-content\').classList.toggle(\'open\')"><span class="badge '+r.type+'">'+r.type+'</span><span style="flex:1;font-size:13px">'+esc(r.name)+'</span><span style="font-size:11px;color:var(--muted);font-family:monospace">'+id+'</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="uR(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Ran: '+esc(r.name)+'\');refreshAll()})">▶</button></div><div class="expandable-content"><div style="padding-top:12px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(r.name)+'" onchange="uR(\''+id+'\',\'name\',this.value)"></div><div class="form-group" style="max-width:140px"><label>Type</label><select onchange="uR(\''+id+'\',\'type\',this.value);refreshAll()"><option value="music"'+(r.type==='music'?' selected':'')+'>Music</option><option value="control"'+(r.type==='control'?' selected':'')+'>Control</option><option value="webhook"'+(r.type==='webhook'?' selected':'')+'>Webhook</option></select></div></div>'+ed+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delRoutine(\''+id+'\')">Delete Routine</button></div></div></div></div>';
   }).join('');
 }
 
@@ -310,7 +319,7 @@ async function toggleExcept(id,room){const r=S.routines[id];let a=[...(r.exceptR
 
 function renderGroups(){
   document.getElementById('groups-list').innerHTML=Object.entries(S.groupPresets).map(([id,p])=>
-    '<div class="card"><div class="card-header"><span>'+(p.icon||'🔗')+' <strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);margin-left:8px">'+((p.rooms||[]).length?p.rooms.join(', '):'All speakers')+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="this.closest(\'.card\').querySelector(\'.expandable-content\').classList.toggle(\'open\')">Edit</button><button class="btn btn-sm btn-primary" onclick="api(\'POST\',\'/api/group-presets/'+id+'/apply\').then(()=>{toast(\'Applied: '+esc(p.name)+'\');refreshAll()})">Apply</button></div></div><div class="expandable-content"><div style="padding-top:10px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(p.name)+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(p.icon||'')+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Rooms (click to toggle)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((p.rooms||[]).includes(n)?'selected':'')+'" onclick="togglePresetRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div></div></div></div>'
+    '<div class="card"><div class="card-header"><span>'+(p.icon||'🔗')+' <strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);margin-left:8px">'+((p.rooms||[]).length?p.rooms.join(', '):'All speakers')+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="this.closest(\'.card\').querySelector(\'.expandable-content\').classList.toggle(\'open\')">Edit</button><button class="btn btn-sm btn-primary" onclick="api(\'POST\',\'/api/group-presets/'+id+'/apply\').then(()=>{toast(\'Applied: '+esc(p.name)+'\');refreshAll()})">Apply</button></div></div><div class="expandable-content"><div style="padding-top:10px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(p.name)+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(p.icon||'')+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Rooms (click to toggle)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((p.rooms||[]).includes(n)?'selected':'')+'" onclick="togglePresetRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="delGroup(\''+id+'\')">Delete Preset</button></div></div></div></div>'
   ).join('');
 }
 
@@ -319,6 +328,57 @@ async function togglePresetRoom(id,room){
   if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);
   await api('PUT','/api/group-presets/'+id,{rooms:a});
   S.groupPresets[id].rooms=a;renderGroups();
+}
+
+// ─── Create / Delete ────────────────────────────────────────────────────────
+async function addRoutine(){
+  const id='custom_'+Date.now();
+  await api('POST','/api/routines',{id,name:'New Routine',type:'music',favorite:'',volume:10,groupAll:true,coordinator:'',enabled:false});
+  await refreshAll();renderRoutines();toast('Routine created');
+}
+async function delRoutine(id){
+  if(!confirm('Delete routine "'+id+'"?')) return;
+  await api('DELETE','/api/routines/'+id);delete S.routines[id];renderRoutines();renderQuickPlay();toast('Deleted');
+}
+async function addScene(){
+  const id='scene_'+Date.now();
+  await api('POST','/api/scenes',{id,name:'New Scene',icon:'🎵',description:'',actions:[]});
+  await refreshAll();renderScenesEditor();renderScenes();toast('Scene created');
+}
+async function delScene(id){
+  if(!confirm('Delete scene "'+id+'"?')) return;
+  await api('DELETE','/api/scenes/'+id);delete S.scenes[id];renderScenesEditor();renderScenes();toast('Deleted');
+}
+async function addGroup(){
+  const id='preset_'+Date.now();
+  await api('POST','/api/group-presets',{id,name:'New Preset',icon:'🔗',rooms:[]});
+  await refreshAll();renderGroups();toast('Preset created');
+}
+async function delGroup(id){
+  if(!confirm('Delete preset "'+id+'"?')) return;
+  await api('DELETE','/api/group-presets/'+id);delete S.groupPresets[id];renderGroups();toast('Deleted');
+}
+
+// ─── Scene Action Editing ───────────────────────────────────────────────────
+async function uSA(sceneId,idx,key,val){
+  const s=S.scenes[sceneId];const a=[...(s.actions||[])];
+  if(key==='type'){a[idx]={type:val};}else{a[idx]={...a[idx],[key]:val};}
+  await api('PUT','/api/scenes/'+sceneId,{actions:a});s.actions=a;
+}
+async function addSA(sceneId){
+  const s=S.scenes[sceneId];const a=[...(s.actions||[]),{type:'setVolumeAll',volume:10}];
+  await api('PUT','/api/scenes/'+sceneId,{actions:a});s.actions=a;renderScenesEditor();
+}
+async function rmSA(sceneId,idx){
+  const s=S.scenes[sceneId];const a=[...(s.actions||[])];a.splice(idx,1);
+  await api('PUT','/api/scenes/'+sceneId,{actions:a});s.actions=a;renderScenesEditor();
+}
+async function toggleSAExcept(sceneId,idx,room){
+  const s=S.scenes[sceneId];const a=[...(s.actions||[])];
+  let er=[...(a[idx].exceptRooms||[])];
+  if(er.includes(room))er=er.filter(x=>x!==room);else er.push(room);
+  a[idx]={...a[idx],exceptRooms:er};
+  await api('PUT','/api/scenes/'+sceneId,{actions:a});s.actions=a;renderScenesEditor();
 }
 
 // Queue
