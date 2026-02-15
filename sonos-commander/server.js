@@ -244,8 +244,14 @@ async function playFavorite(favName, coordName) {
   coordName = coordName || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
   const device = speakers[coordName];
   if (!device) throw new Error(`Speaker "${coordName}" not found`);
-  await device.setAVTransportURI({ uri: fav.uri, metadata: fav.metadata });
-  await device.play();
+  // Spotify URIs need special handling -- extract spotify:type:id and use native play()
+  const spotifyMatch = fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
+  if (spotifyMatch) {
+    await device.play(`spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`);
+  } else {
+    await device.setAVTransportURI({ uri: fav.uri, metadata: fav.metadata });
+    await device.play();
+  }
   return { playing: favName, on: coordName };
 }
 
