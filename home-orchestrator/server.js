@@ -668,6 +668,34 @@ app.post('/api/color/preview', (req, res) => {
   }
 });
 
+// ─── Sonos Commander Proxy ───────────────────────────────────────────────────
+const SONOS_BASE = 'http://localhost:5005';
+
+app.use('/api/sonos', (req, res) => {
+  const target = `${SONOS_BASE}${req.originalUrl.replace('/api/sonos', '/api')}`;
+  const url = new URL(target);
+  const options = {
+    hostname: url.hostname,
+    port: url.port,
+    path: url.pathname + url.search,
+    method: req.method,
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 15000
+  };
+  const proxy = http.request(options, (proxyRes) => {
+    let data = '';
+    proxyRes.on('data', chunk => data += chunk);
+    proxyRes.on('end', () => {
+      res.status(proxyRes.statusCode);
+      try { res.json(JSON.parse(data)); } catch (e) { res.send(data); }
+    });
+  });
+  proxy.on('error', (e) => res.status(502).json({ ok: false, error: `Sonos Commander: ${e.message}` }));
+  proxy.on('timeout', () => { proxy.destroy(); res.status(504).json({ ok: false, error: 'Sonos Commander timeout' }); });
+  if (req.body && Object.keys(req.body).length > 0) proxy.write(JSON.stringify(req.body));
+  proxy.end();
+});
+
 // ─── Startup ────────────────────────────────────────────────────────────────
 async function start() {
   loadConfig();
