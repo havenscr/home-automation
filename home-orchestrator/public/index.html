@@ -186,8 +186,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="form-row">
     <div style="max-width:100px"><label>Time (min)</label><input type="number" id="wp-time" min="0" max="120" step="0.5"></div>
     <div>
-      <label>Brightness <span id="wp-bri-label" class="bri-label">1</span></label>
-      <input type="range" id="wp-bri" min="1" max="254" value="1" oninput="document.getElementById('wp-bri-label').textContent=this.value;updateWpPreview()">
+      <label>Brightness <span id="wp-bri-label" class="bri-label">1%</span></label>
+      <input type="range" id="wp-bri" min="1" max="100" value="1" oninput="document.getElementById('wp-bri-label').textContent=this.value+'%';updateWpPreview()">
     </div>
   </div>
 
@@ -276,7 +276,7 @@ function wpHex(wp) {
   else if(c.ct) xy=ctToXy(c.ct);
   else if(c.hs) xy=hsToXy(c.hs.hue,c.hs.sat);
   else return'#666';
-  return xyBriToHex(xy[0],xy[1],Math.max(60,wp.bri));
+  return xyBriToHex(xy[0],xy[1],Math.max(60,pctToHueBri(wp.bri)));
 }
 
 // ── Tab Switching ──
@@ -424,7 +424,7 @@ async function openEditor(routineId) {
 function closeEditor() { document.getElementById('editor-modal').classList.remove('open'); }
 
 function addTrack() {
-  editingTracks.push({type:'fade',lights:[],lightNames:[],waypoints:[{time:0,bri:1,color:{xy:[0.65,0.33]}},{time:parseFloat(document.getElementById('ed-duration').value)||13,bri:254,color:{ct:300}}]});
+  editingTracks.push({type:'fade',lights:[],lightNames:[],waypoints:[{time:0,bri:1,color:{xy:[0.65,0.33]}},{time:parseFloat(document.getElementById('ed-duration').value)||13,bri:100,color:{ct:300}}]});
   renderTracks();
 }
 
@@ -438,7 +438,8 @@ function renderTracks() {
         const colorDesc=wp.color.ct?wp.color.ct+' mirek':wp.color.xy?'xy ['+wp.color.xy.map(v=>v.toFixed(2)).join(', ')+']':wp.color.hs?'hue '+Math.round(wp.color.hs.hue/65535*360)+'deg':'?';
         return '<div class="wp-row" onclick="openWpEditor('+ti+','+wi+')" style="cursor:pointer">'
           +'<div class="color-swatch" style="background:'+hex+'"></div>'
-          +'<div style="flex:1"><div style="font-size:12px"><strong>'+wp.time+'m</strong> &mdash; bri: '+wp.bri+' &mdash; '+colorDesc+'</div></div>'
+          +'<div style="flex:1"><div style="font-size:12px"><strong>'+wp.time+'m</strong> &mdash; '+wp.bri+'% &mdash; '+colorDesc+'</div></div>'
+          +'<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();testWpInline('+ti+','+wi+')" style="flex-shrink:0">Test</button>'
           +'</div>';
       }).join('');
       return '<div class="track-card"><div class="track-header"><h3>Track '+(ti+1)+': Fade</h3><div>'
@@ -452,7 +453,7 @@ function renderTracks() {
         +'<button class="btn-ghost" onclick="removeTrack('+ti+')" style="color:var(--red)">&times;</button></div>'
         +'<div class="form-row"><div style="max-width:100px"><label>At (min)</label><input type="number" value="'+(t.time||0)+'" onchange="editingTracks['+ti+'].time=parseFloat(this.value)"></div></div>'
         +'<label>Lights</label><div class="light-selector" id="track-lights-'+ti+'"></div>'
-        +'<div class="form-row" style="margin-top:8px"><div style="max-width:100px"><label>Brightness</label><input type="number" value="'+((t.state&&t.state.bri)||254)+'" min="1" max="254" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.bri=parseInt(this.value)"></div>'
+        +'<div class="form-row" style="margin-top:8px"><div style="max-width:100px"><label>Brightness %</label><input type="number" value="'+((t.state&&t.state.bri)||100)+'" min="1" max="100" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.bri=parseInt(this.value)"></div>'
         +'<div style="max-width:120px"><label>Color Temp</label><input type="number" value="'+((t.state&&t.state.ct)||300)+'" min="153" max="500" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.ct=parseInt(this.value)"></div></div></div>';
     }
     return '';
@@ -477,7 +478,7 @@ window.onLightToggle=function(cb){
 };
 
 function addTrackInstant() {
-  editingTracks.push({type:'instant',lights:[],time:0,state:{on:true,bri:254,ct:300}});
+  editingTracks.push({type:'instant',lights:[],time:0,state:{on:true,bri:100,ct:300}});
   renderTracks();
 }
 
@@ -487,7 +488,7 @@ function addWaypoint(ti) {
   const track=editingTracks[ti];
   const lastWp=track.waypoints[track.waypoints.length-1];
   const newTime=lastWp?(lastWp.time+2):0;
-  track.waypoints.push({time:newTime,bri:lastWp?Math.min(254,lastWp.bri+30):50,color:lastWp?JSON.parse(JSON.stringify(lastWp.color)):{ct:300}});
+  track.waypoints.push({time:newTime,bri:lastWp?Math.min(100,lastWp.bri+10):50,color:lastWp?JSON.parse(JSON.stringify(lastWp.color)):{ct:300}});
   track.waypoints.sort((a,b)=>a.time-b.time);
   renderTracks();
 }
@@ -498,7 +499,7 @@ function openWpEditor(ti, wi) {
   const wp=editingTracks[ti].waypoints[wi];
   document.getElementById('wp-time').value=wp.time;
   document.getElementById('wp-bri').value=wp.bri;
-  document.getElementById('wp-bri-label').textContent=wp.bri;
+  document.getElementById('wp-bri-label').textContent=wp.bri+'%';
   if(wp.color.ct){
     setColorMode('ct');
     document.getElementById('wp-ct').value=wp.color.ct;
@@ -541,18 +542,34 @@ function updateWpPreview() {
   let xy;
   if(color.ct) xy=ctToXy(color.ct);
   else if(color.hs) xy=hsToXy(color.hs.hue,color.hs.sat);
-  const hex=xy?xyBriToHex(xy[0],xy[1],Math.max(60,bri)):'#333';
+  const hex=xy?xyBriToHex(xy[0],xy[1],Math.max(60,pctToHueBri(bri))):'#333';
   document.getElementById('wp-preview-swatch').style.background=hex;
 }
+function pctToHueBri(pct){return Math.max(1,Math.min(254,Math.round(pct*2.54)));}
+
 async function testWaypoint() {
   if(editingWpTrackIdx===null)return;
   const track=editingTracks[editingWpTrackIdx];
   if(!track.lights||!track.lights.length){alert('No lights selected for this track');return;}
   const color=getWpColor();
-  const bri=parseInt(document.getElementById('wp-bri').value);
+  const bri=pctToHueBri(parseInt(document.getElementById('wp-bri').value));
   const state={on:true,bri,transitiontime:5};
   if(color.ct) state.ct=color.ct;
   else if(color.hs){state.hue=color.hs.hue;state.sat=color.hs.sat;}
+  for(const lid of track.lights){
+    await api('/api/hue/lights/'+lid+'/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+  }
+}
+
+async function testWpInline(ti, wi) {
+  const track=editingTracks[ti];
+  if(!track.lights||!track.lights.length){alert('No lights selected for this track');return;}
+  const wp=track.waypoints[wi];
+  const bri=pctToHueBri(wp.bri);
+  const state={on:true,bri,transitiontime:5};
+  if(wp.color.ct) state.ct=wp.color.ct;
+  else if(wp.color.hs){state.hue=wp.color.hs.hue;state.sat=wp.color.hs.sat;}
+  else if(wp.color.xy){state.xy=wp.color.xy;}
   for(const lid of track.lights){
     await api('/api/hue/lights/'+lid+'/state',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
   }

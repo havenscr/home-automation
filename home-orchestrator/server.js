@@ -185,6 +185,9 @@ function interpolateColor(c1, c2, t) {
   return t < 0.5 ? resolveColor(c1) : resolveColor(c2);
 }
 
+// Convert brightness percentage (1-100) to Hue bri (1-254)
+function pctToHueBri(pct) { return Math.max(1, Math.min(254, Math.round(pct * 2.54))); }
+
 // Convert xy to approximate hex for UI display
 function xyBriToHex(x, y, bri) {
   const z = 1.0 - x - y;
@@ -238,11 +241,12 @@ function startRoutine(routineId, options = {}) {
       const wp0 = track.waypoints[0];
       const colorState = resolveColor(wp0.color);
       for (const lightId of track.lights) {
-        const lightState = { on: true, bri: wp0.bri, transitiontime: 20, ...colorState };
+        const hueBri = pctToHueBri(wp0.bri);
+        const lightState = { on: true, bri: hueBri, transitiontime: 20, ...colorState };
         hueLightState(lightId, lightState).catch(e =>
           console.log(`[Fade] Initial set error light ${lightId}:`, e.message)
         );
-        state.lastExpected[lightId] = wp0.bri;
+        state.lastExpected[lightId] = hueBri;
       }
     }
   }
@@ -262,7 +266,7 @@ function startRoutine(routineId, options = {}) {
           const final = track.waypoints[track.waypoints.length - 1];
           const colorState = resolveColor(final.color);
           for (const lightId of track.lights) {
-            hueLightState(lightId, { on: true, bri: final.bri, transitiontime: 10, ...colorState }).catch(() => {});
+            hueLightState(lightId, { on: true, bri: pctToHueBri(final.bri), transitiontime: 10, ...colorState }).catch(() => {});
           }
         }
       }
@@ -318,8 +322,9 @@ async function processFadeTrack(track, elapsedMin, totalDurationMin, state, rout
   const segDuration = segEnd - segStart;
   const t = segDuration > 0 ? Math.max(0, Math.min(1, (elapsedMin - segStart) / segDuration)) : 1;
 
-  // Interpolate brightness and color
-  const bri = Math.round(prev.bri + (next.bri - prev.bri) * t);
+  // Interpolate brightness (in percentage space) and color
+  const briPct = prev.bri + (next.bri - prev.bri) * t;
+  const bri = pctToHueBri(briPct);
   const color = interpolateColor(prev.color, next.color, t);
   const colorState = color.xy ? { xy: color.xy } : color.ct ? { ct: color.ct } : {};
 
@@ -333,7 +338,7 @@ async function processFadeTrack(track, elapsedMin, totalDurationMin, state, rout
         const current = await hueGetLight(lightId);
         const actualBri = current && current.state && current.state.bri;
         const expectedBri = state.lastExpected[lightId];
-        // If light is off or brightness differs by >20, user overrode
+        // If light is off or brightness differs by >20 Hue units, user overrode
         if (current && current.state && !current.state.on) {
           logActivity('fade', `Override: light ${lightId} turned off, cancelling`, { routineId: state.id });
           cancelRoutine(state.id);
@@ -347,7 +352,7 @@ async function processFadeTrack(track, elapsedMin, totalDurationMin, state, rout
       } catch (e) { /* ignore read errors */ }
     }
 
-    // Send new state
+    // Send new state (bri already converted to Hue scale)
     hueLightState(lightId, { on: true, bri, transitiontime: tt, ...colorState }).catch(e =>
       console.log(`[Fade] Tick error light ${lightId}:`, e.message)
     );
@@ -364,6 +369,7 @@ function processInstantTrack(track, elapsedMin, state) {
   if (elapsedMin >= triggerTime && !state.firedInstants.has(key)) {
     state.firedInstants.add(key);
     const lightState = { ...track.state };
+    if (lightState.bri !== undefined) lightState.bri = pctToHueBri(lightState.bri);
     if (lightState.ct || lightState.xy || lightState.bri !== undefined) {
       lightState.on = lightState.on !== undefined ? lightState.on : true;
     }
@@ -661,7 +667,7 @@ app.post('/api/color/preview', (req, res) => {
   const { color, bri } = req.body;
   const xy = colorToXy(color);
   if (xy) {
-    const hex = xyBriToHex(xy[0], xy[1], bri || 254);
+    const hex = xyBriToHex(xy[0], xy[1], pctToHueBri(bri || 100));
     res.json({ ok: true, xy, hex });
   } else {
     res.json({ ok: true, xy: null, hex: '#000000' });
