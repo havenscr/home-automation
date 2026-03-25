@@ -7,12 +7,20 @@ Available memory is ~400MB. Every byte counts.
 
 ## SSH Access
 
+**CRITICAL: Use Windows native OpenSSH, NOT Git's SSH.** Git's SSH binary silently eats stdout.
+
 ```bash
-ssh claude@192.168.1.61
+# Always use these full paths:
+/c/Windows/System32/OpenSSH/ssh.exe claude@192.168.1.61
+/c/Windows/System32/OpenSSH/scp.exe  # for file transfers
+
+# Suppress the Pi's "Please note" SSH warning with 2>/dev/null
+/c/Windows/System32/OpenSSH/ssh.exe claude@192.168.1.61 "command here" 2>/dev/null
 ```
 
 Key auth is configured. Use the `claude` user for all SSH operations.
 Project files live at `/opt/sonos-commander/` on the Pi.
+Home Orchestrator files live at `/opt/home-orchestrator/` on the Pi.
 Homebridge config is at `/var/lib/homebridge/config.json`.
 
 **CRITICAL: Never run more than 2 parallel SSH connections to the Pi.** The Pi 3B+ has limited SSH capacity. Use sequential commands or chain with `&&` in a single session.
@@ -75,26 +83,42 @@ Homebridge config is at `/var/lib/homebridge/config.json`.
 
 ### HomeKit Integration
 - Homebridge dummy switches are the bridge between HomeKit and custom services
-- Each switch triggers a `curl` POST to the local API
-- Stateless switches (`"stateful": false`) with a 1-second timer work best
-- Name convention: `SC - Routine Name` for Sonos Commander switches
+- Platform: `HomebridgeDummy`, switches live in `accessories` array
+- Each switch uses `commandOn` field with a curl command — this fires automatically when toggled in HomeKit
+- Timer: `{"delay": 1, "units": "SECONDS"}` for stateless behavior
+- Example switch:
+  ```json
+  {
+    "id": "ho-sunset-start",
+    "name": "Dummy - Fade Start Sunset",
+    "type": "Switch",
+    "timer": {"delay": 1, "units": "SECONDS", "random": false},
+    "commandOn": "/usr/bin/curl -s -X POST http://localhost:5006/api/routines/sunset_transition/start",
+    "disableLogging": false
+  }
+  ```
+- Name convention: `Dummy - <Description>` for all switches, `SC - Routine Name` for Sonos Commander
 - Keep dummy switch count reasonable — too many clutters the Home app
+- Config is at `/var/lib/homebridge/config.json` (needs `sudo` to write)
 
 ## Testing Changes
 
 ```bash
+# Shorthand for SSH (always use Windows native OpenSSH):
+PI="/c/Windows/System32/OpenSSH/ssh.exe claude@192.168.1.61"
+
 # After editing code locally, deploy and test:
-ssh claude@192.168.1.61 "sudo systemctl restart sonos-commander"
-ssh claude@192.168.1.61 "sudo journalctl -u sonos-commander -n 20 --no-pager"
+$PI "sudo systemctl restart sonos-commander" 2>/dev/null
+$PI "sudo journalctl -u sonos-commander -n 20 --no-pager" 2>/dev/null
 
 # Test a specific routine
-ssh claude@192.168.1.61 "curl -s -X POST http://localhost:5005/api/trigger/Day_Music"
+$PI "curl -s -X POST http://localhost:5005/api/trigger/Day_Music" 2>/dev/null
 
 # Check speaker discovery
-ssh claude@192.168.1.61 "curl -s http://localhost:5005/api/speakers"
+$PI "curl -s http://localhost:5005/api/speakers" 2>/dev/null
 
 # Check current playback
-ssh claude@192.168.1.61 "curl -s http://localhost:5005/api/status"
+$PI "curl -s http://localhost:5005/api/status" 2>/dev/null
 ```
 
 ## File Deployment
@@ -102,11 +126,11 @@ ssh claude@192.168.1.61 "curl -s http://localhost:5005/api/status"
 The source of truth is this git repo. To deploy changes to the Pi:
 
 ```bash
-# Deploy a specific file
-ssh claude@192.168.1.61 "cat > /opt/sonos-commander/server.js" < sonos-commander/server.js
+# Deploy a specific file (use Windows native scp)
+/c/Windows/System32/OpenSSH/scp.exe sonos-commander/server.js claude@192.168.1.61:/opt/sonos-commander/server.js
 
 # Deploy and restart
-ssh claude@192.168.1.61 "cat > /opt/sonos-commander/server.js" < sonos-commander/server.js && ssh claude@192.168.1.61 "sudo systemctl restart sonos-commander"
+/c/Windows/System32/OpenSSH/scp.exe sonos-commander/server.js claude@192.168.1.61:/opt/sonos-commander/server.js && /c/Windows/System32/OpenSSH/ssh.exe claude@192.168.1.61 "sudo systemctl restart sonos-commander" 2>/dev/null
 ```
 
 ## Common Pitfalls

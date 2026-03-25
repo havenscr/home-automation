@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Home Hub</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23009999'/><path d='M16 3L2 16h4v13h9v-9h2v9h9V16h4L16 3z' fill='white'/></svg>">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0f1117;--card:#1a1d27;--card2:#22252f;--border:#2a2d3a;--text:#e4e4e7;--muted:#71717a;--teal:#009999;--teal-dim:#007a7a;--red:#ef4444;--green:#22c55e;--amber:#f59e0b;--blue:#3b82f6}
@@ -11,8 +12,8 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
 a{color:var(--teal);text-decoration:none}
 
 /* ── Tabs ── */
-.tab-bar{display:flex;background:var(--card);border-bottom:1px solid var(--border);padding:0 16px;position:sticky;top:0;z-index:100}
-.tab-btn{padding:12px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.15s}
+.tab-bar{display:flex;background:var(--card);border-bottom:1px solid var(--border);padding:0 16px;position:sticky;top:0;z-index:100;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
+.tab-btn{padding:12px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
 .tab-btn:hover{color:var(--text)}
 .tab-btn.active{color:var(--teal);border-bottom-color:var(--teal)}
 .tab-content{display:none;padding:16px;max-width:960px;margin:0 auto}
@@ -106,14 +107,83 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
 .light-group-label{font-size:11px;color:var(--teal);font-weight:600;margin:6px 0 2px;text-transform:uppercase}
 .light-option{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;cursor:pointer}
 .light-option input{accent-color:var(--teal)}
+
+/* ── Scene Cards ── */
+.scene-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:768px){.scene-grid{grid-template-columns:repeat(3,1fr)}}
+.scene-card{background:var(--card);border:2px solid var(--border);border-radius:12px;padding:20px 16px;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+.scene-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px}
+.scene-card:hover{border-color:var(--muted)}
+.scene-card.scene-active{border-color:var(--green);box-shadow:0 0 16px rgba(34,197,94,0.25)}
+.scene-card-name{font-size:15px;font-weight:700;line-height:1.2}
+.scene-card-desc{font-size:12px;color:var(--muted);line-height:1.4}
+.scene-card-actions{margin-top:auto;padding-top:8px;display:flex;gap:8px}
+.scene-card-actions .btn{flex:1}
+.scene-detail{margin-top:8px;padding:10px;background:var(--card2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.6;display:none}
+.scene-detail.open{display:block}
+.scene-detail-label{color:var(--text);font-weight:600;display:inline}
+.scene-detail-row{margin-bottom:4px}
+.scene-toggle{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 0;text-decoration:underline}
+.scene-toggle:hover{color:var(--text)}
+
+/* ── Samsung TV ── */
+.tv-input-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.tv-input-btn{background:var(--card2);border:2px solid var(--border);border-radius:10px;padding:20px 12px;text-align:center;cursor:pointer;transition:border-color 0.2s,box-shadow 0.2s}
+.tv-input-btn:hover{border-color:var(--muted)}
+.tv-input-btn.active{border-color:var(--teal);box-shadow:0 0 12px rgba(0,153,153,0.3)}
+.tv-input-label{font-size:15px;font-weight:700;margin-bottom:4px}
+.tv-input-port{font-size:11px;color:var(--muted)}
+.tv-ctrl-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tv-ctrl-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text);transition:border-color 0.15s}
+.tv-ctrl-btn:hover{border-color:var(--teal);color:var(--teal)}
+.tv-status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.tv-status-on{background:var(--green)}
+.tv-status-off{background:var(--red)}
+.tv-status-unknown{background:var(--muted)}
+
+/* Scene mood colors - top accent bars */
+.scene-romantic::before{background:linear-gradient(90deg,#e11d48,#f472b6)}
+.scene-romantic .scene-card-name{color:#f472b6}
+.scene-movie::before{background:linear-gradient(90deg,#1e3a5f,#3b82f6)}
+.scene-movie .scene-card-name{color:#60a5fa}
+.scene-party::before{background:linear-gradient(90deg,#f59e0b,#ef4444,#8b5cf6,#22c55e)}
+.scene-party .scene-card-name{color:#f59e0b}
+.scene-thunderstorm::before{background:linear-gradient(90deg,#475569,#64748b)}
+.scene-thunderstorm .scene-card-name{color:#94a3b8}
+.scene-redalert::before{background:linear-gradient(90deg,#dc2626,#ef4444)}
+.scene-redalert .scene-card-name{color:#ef4444}
+.scene-evening::before{background:linear-gradient(90deg,#6d28d9,#c084fc,#f59e0b)}
+.scene-evening .scene-card-name{color:#c084fc}
+.scene-aurora::before{background:linear-gradient(90deg,#06b6d4,#8b5cf6,#10b981)}
+.scene-aurora .scene-card-name{color:#67e8f9}
+.scene-stormsend::before{background:linear-gradient(90deg,#475569,#f59e0b)}
+.scene-stormsend .scene-card-name{color:#fbbf24}
+.scene-fireplace::before{background:linear-gradient(90deg,#b45309,#f59e0b)}
+.scene-fireplace .scene-card-name{color:#fbbf24}
+.scene-disco::before{background:linear-gradient(90deg,#ec4899,#8b5cf6,#06b6d4,#10b981,#f59e0b)}
+.scene-disco .scene-card-name{color:#f0abfc}
+/* ── Drag & Reorder ── */
+[draggable]{cursor:grab}
+[draggable]:active{cursor:grabbing}
+.dragging{opacity:0.3}
+.drag-over{border-top:2px solid var(--teal)!important}
+.drag-over-card{outline:2px solid var(--teal);outline-offset:-2px}
+.reorder-arrows{display:none;flex-direction:column;gap:2px;margin-right:8px}
+.reorder-arrows button{background:none;border:none;color:var(--muted);font-size:14px;padding:0 4px;cursor:pointer;line-height:1}
+.reorder-arrows button:hover{color:var(--teal)}
+@media(max-width:768px){.reorder-arrows{display:flex}}
+.tab-bar::-webkit-scrollbar{display:none}
+@media(max-width:600px){.tab-btn{padding:10px 14px;font-size:12px}}
 </style>
 </head>
 <body>
 
 <div class="tab-bar">
   <div class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</div>
+  <div class="tab-btn" onclick="switchTab('scenes')">Scenes</div>
   <div class="tab-btn" onclick="switchTab('routines')">Fade Routines</div>
   <div class="tab-btn" onclick="switchTab('sonos')">Sonos</div>
+  <div class="tab-btn" onclick="switchTab('tv')">Samsung TV</div>
 </div>
 
 <!-- ═══ DASHBOARD TAB ═══ -->
@@ -128,10 +198,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     <h2>Quick Actions</h2>
     <div id="quick-actions">Loading...</div>
   </div>
+  <div class="card" id="gradient-card">
+    <h2>Daytime Gradient</h2>
+    <div id="gradient-status">Loading...</div>
+    <div id="gradient-settings" style="display:none;border-top:1px solid var(--border);margin-top:12px;padding-top:12px"></div>
+  </div>
   <div class="card">
     <h2>Activity Log</h2>
     <div id="log-entries" style="max-height:300px;overflow-y:auto">Loading...</div>
   </div>
+</div>
+
+<!-- ═══ SCENES TAB ═══ -->
+<div class="tab-content" id="tab-scenes">
+  <h2 style="font-size:17px;margin-bottom:12px">Scenes</h2>
+  <div class="scene-grid" id="scene-grid">Loading...</div>
 </div>
 
 <!-- ═══ ROUTINES TAB ═══ -->
@@ -151,6 +232,97 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div id="sonos-routines">Loading...</div>
 </div>
 
+<!-- ═══ SAMSUNG TV TAB ═══ -->
+<div class="tab-content" id="tab-tv">
+  <h2 style="font-size:17px;margin-bottom:12px">Samsung TV <span id="tv-status-badge" style="font-size:12px;font-weight:400;color:var(--muted)"></span></h2>
+  <div class="card">
+    <h2>Input Source</h2>
+    <div class="tv-input-grid" id="tv-input-grid">Loading...</div>
+  </div>
+  <div class="card">
+    <h2>Power</h2>
+    <div class="tv-ctrl-row">
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/smartpower/on')">Smart On</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/smartpower/off')">Smart Off</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/power/on')" style="font-size:11px">WoL</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Ambient Mode</h2>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 8px 0">Enters ambient with your configured scene + optional Sonos follow-up.</p>
+    <div class="tv-ctrl-row">
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/ambient')">Enter Ambient</div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:6px;align-items:center">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Scene:</label>
+      <select id="ambientSceneSelect" style="flex:1;padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--fg);font-size:12px"></select>
+    </div>
+    <div style="margin-top:6px;display:flex;gap:6px;align-items:center">
+      <label style="font-size:11px;color:var(--muted);white-space:nowrap">Sonos:</label>
+      <select id="ambientRoutineSelect" style="flex:1;padding:4px 6px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--fg);font-size:12px"></select>
+    </div>
+    <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+      <div class="tv-ctrl-btn" style="padding:4px 14px;font-size:11px" onclick="saveAmbientConfig()">Save</div>
+      <p id="ambientRoutineStatus" style="font-size:10px;color:var(--muted);margin:0"></p>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Picture Mode</h2>
+    <div class="tv-ctrl-row" id="tv-picture-modes">
+      <div class="tv-ctrl-btn" onclick="tvSetPictureMode('Dynamic')">Dynamic</div>
+      <div class="tv-ctrl-btn" onclick="tvSetPictureMode('Standard')">Standard</div>
+      <div class="tv-ctrl-btn" onclick="tvSetPictureMode('Movie')">Movie</div>
+      <div class="tv-ctrl-btn" onclick="tvSetPictureMode('FILMMAKER MODE')">Filmmaker</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Evening Mode <span id="tv-evening-badge" style="font-size:11px;font-weight:400"></span></h2>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 8px 0">Dims TV via energy saving. Auto-resets at 5AM.</p>
+    <div class="tv-ctrl-row">
+      <div class="tv-ctrl-btn" onclick="tvEveningMode(true)">Evening On</div>
+      <div class="tv-ctrl-btn" onclick="tvEveningMode(false)">Evening Off</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Volume</h2>
+    <div class="tv-ctrl-row">
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_VOLUP')">Vol +</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_VOLDOWN')">Vol -</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_MUTE')">Mute</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <input type="range" id="tv-vol-slider" min="0" max="100" value="15" style="flex:1;accent-color:var(--teal)">
+      <span id="tv-vol-label" style="font-size:12px;min-width:24px;text-align:right">15</span>
+      <div class="tv-ctrl-btn" onclick="tvSetVolume()" style="padding:6px 12px;font-size:11px">Set</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Navigation</h2>
+    <div class="tv-ctrl-row">
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_HOME')">Home</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_MENU')">Menu</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_RETURN')">Back</div>
+      <div class="tv-ctrl-btn" onclick="tvCmd('/api/tv/key/KEY_SOURCE')">Source</div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>SmartThings</h2>
+    <div id="tv-st-status" style="font-size:12px;color:var(--muted)">Loading...</div>
+    <div style="margin-top:8px">
+      <div class="tv-ctrl-btn" onclick="tvRefreshToken()" style="display:inline-block;font-size:11px;padding:6px 12px">Refresh OAuth Token</div>
+      <span id="tv-refresh-result" style="font-size:11px;margin-left:8px"></span>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Connection Info</h2>
+    <div id="tv-info" style="font-size:12px;color:var(--muted)">Loading...</div>
+  </div>
+  <div class="card">
+    <h2>Webhooks <span style="font-size:11px;font-weight:400;color:var(--muted)">(for Homebridge dummy switches)</span></h2>
+    <div id="tv-webhooks" style="font-size:12px"></div>
+  </div>
+</div>
+
 <!-- ═══ ROUTINE EDITOR MODAL ═══ -->
 <div class="modal-overlay" id="editor-modal">
 <div class="modal">
@@ -162,6 +334,37 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
   <div class="form-row">
     <div><label>Name</label><input type="text" id="ed-name" placeholder="My Fade Routine"></div>
     <div style="max-width:120px"><label>Duration (min)</label><input type="number" id="ed-duration" min="1" max="120" value="13"></div>
+  </div>
+
+  <div style="margin:12px 0;padding:12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+    <label style="margin-bottom:8px;display:block;font-weight:600">Sonos / Music</label>
+    <div class="form-row">
+      <div class="form-group" style="flex:1"><label>Sonos Routine</label>
+        <input type="text" id="ed-sonos-routine" value="" placeholder="e.g. Red_Alert_Music" style="width:100%">
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <label style="font-size:11px;color:var(--muted)">Spotify Track Queue</label>
+      <div id="ed-spotify-queue"></div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input type="text" id="ed-spotify-new" placeholder="spotify:track:... or Spotify URL" style="flex:1;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">
+        <button class="btn btn-outline btn-sm" onclick="addSpotifyTrack()">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin:12px 0;padding:12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+      <input type="checkbox" id="ed-exclude-enabled" onchange="toggleExcludeConfig()"> Exclude Lights on Override
+    </label>
+    <div id="ed-exclude-config" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div style="margin:12px 0;padding:12px;background:var(--bg);border-radius:6px;border:1px solid var(--border)">
+    <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer">
+      <input type="checkbox" id="ed-drift-enabled" onchange="toggleDriftConfig()"> Drift Detection (auto-exclude adjusted lights)
+    </label>
+    <div id="ed-drift-config" style="display:none;margin-top:10px"></div>
   </div>
 
   <div id="ed-tracks"></div>
@@ -191,33 +394,42 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;heigh
     </div>
   </div>
 
-  <div class="color-mode-tabs">
-    <div class="color-mode-tab active" onclick="setColorMode('ct')">Color Temp</div>
-    <div class="color-mode-tab" onclick="setColorMode('color')">Color</div>
+  <div id="wp-effect-section" style="display:none;margin:8px 0">
+    <label>Effect</label>
+    <select id="wp-effect" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">
+      <option value="">-- None --</option>
+    </select>
   </div>
 
-  <div id="wp-ct-picker">
-    <label>Color Temperature <span id="wp-ct-label">395 mirek (~2532K)</span></label>
-    <div class="ct-slider-wrap">
-      <div class="ct-slider-bg"></div>
-      <input type="range" min="153" max="500" value="395" id="wp-ct" oninput="updateCtLabel();updateWpPreview()">
+  <div id="wp-color-section">
+    <div class="color-mode-tabs">
+      <div class="color-mode-tab active" onclick="setColorMode('ct')">Color Temp</div>
+      <div class="color-mode-tab" onclick="setColorMode('color')">Color</div>
     </div>
-  </div>
 
-  <div id="wp-color-picker" style="display:none">
-    <label>Hue <span id="wp-hue-label">0</span></label>
-    <div class="hue-slider-wrap">
-      <div class="hue-slider-bg"></div>
-      <input type="range" min="0" max="65535" value="0" id="wp-hue" oninput="document.getElementById('wp-hue-label').textContent=Math.round(this.value/65535*360)+'deg';updateWpPreview()">
+    <div id="wp-ct-picker">
+      <label>Color Temperature <span id="wp-ct-label">~2532K</span></label>
+      <div class="ct-slider-wrap">
+        <div class="ct-slider-bg"></div>
+        <input type="range" min="153" max="500" value="395" id="wp-ct" oninput="updateCtLabel();updateWpPreview()">
+      </div>
     </div>
-    <label style="margin-top:8px">Saturation <span id="wp-sat-label">254</span></label>
-    <input type="range" min="0" max="254" value="254" id="wp-sat" oninput="document.getElementById('wp-sat-label').textContent=this.value;updateWpPreview()" style="width:100%">
+
+    <div id="wp-color-picker" style="display:none">
+      <label>Hue <span id="wp-hue-label">0</span></label>
+      <div class="hue-slider-wrap">
+        <div class="hue-slider-bg"></div>
+        <input type="range" min="0" max="65535" value="0" id="wp-hue" oninput="document.getElementById('wp-hue-label').textContent=Math.round(this.value/65535*360)+'deg';updateWpPreview()">
+      </div>
+      <label style="margin-top:8px">Saturation <span id="wp-sat-label">254</span></label>
+      <input type="range" min="0" max="254" value="254" id="wp-sat" oninput="document.getElementById('wp-sat-label').textContent=this.value;updateWpPreview()" style="width:100%">
+    </div>
   </div>
 
   <div style="display:flex;align-items:center;gap:12px;margin:12px 0">
     <label style="margin:0">Preview:</label>
     <div class="color-swatch" id="wp-preview-swatch"></div>
-    <button class="btn btn-outline btn-sm" onclick="testWaypoint()">Test on Light</button>
+    <button class="btn btn-outline btn-sm" id="wp-test-btn" onclick="testWaypoint()">Test on Light</button>
   </div>
 
   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
@@ -232,6 +444,9 @@ const API = '';
 let S = { routines: [], routineDetails: {}, status: null, log: [], speakers: [], sonosRoutines: [], hueLights: null, hueGroups: null };
 let editingRoutineId = null;
 let editingTracks = [];
+let editingSpotifyQueue = [];
+let editingExcludeRules = [];
+let editingDriftDetection = null;
 let editingWpTrackIdx = null, editingWpIdx = null;
 let currentColorMode = 'ct';
 
@@ -278,12 +493,24 @@ function wpHex(wp) {
   else return'#666';
   return xyBriToHex(xy[0],xy[1],Math.max(60,pctToHueBri(wp.bri)));
 }
+function esc(s) { var d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+function isBrightnessOnlyTrack(track) {
+  return track.type==='homebridge'||track.type==='caseta-hap'||track.type==='nanoleaf'||(track.type==='fade'&&track.brightnessOnly);
+}
+function briSwatchHex(briPct) {
+  var v=Math.round(briPct*2.55);
+  var hex=Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0');
+  return '#'+hex+hex+hex;
+}
 
 // ── Tab Switching ──
+var TAB_LABELS = {dashboard:'Dashboard',scenes:'Scenes',routines:'Fade Routines',sonos:'Sonos',tv:'Samsung TV'};
 function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', b.textContent.toLowerCase().includes(name.substring(0,4))));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.textContent === TAB_LABELS[name]));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-'+name));
   if (name==='sonos') loadSonos();
+  if (name==='scenes') loadScenes();
+  if (name==='tv') loadTv();
 }
 
 // ── Refresh ──
@@ -294,9 +521,15 @@ async function refresh() {
   S.log = logRes.ok ? logRes.entries : [];
   S.routineDetails = {};
   await Promise.all(S.routines.map(async r => { const d = await api('/api/routines/'+r.id); if(d.ok) S.routineDetails[r.id]=d; }));
+  try { var tvInfo=await api('/api/tv/info'); if(tvInfo.ok&&tvInfo.inputs) window.samsungInputs=tvInfo.inputs; } catch(e){}
+  try { var nlEff=await api('/api/nanoleaf/effects'); if(nlEff.ok&&nlEff.effects) window.nanoleafEffects=nlEff.effects; } catch(e){}
   renderAll();
 }
-function renderAll() { renderStats(); renderQuickActions(); renderRoutinesList(); renderLog(); }
+function renderAll() {
+  renderStats(); renderQuickActions(); renderGradient(); renderRoutinesList(); renderLog();
+  // Refresh scene cards if the scenes tab is currently visible
+  if (document.getElementById('tab-scenes').classList.contains('active')) loadScenes();
+}
 
 function renderStats() {
   if(!S.status) return;
@@ -308,9 +541,14 @@ function renderStats() {
 function renderQuickActions() {
   const el=document.getElementById('quick-actions');
   if(!S.routines.length){el.innerHTML='<div style="color:var(--muted)">No routines yet. Create one in the Fade Routines tab.</div>';return;}
-  el.innerHTML=S.routines.map(r=>{
+  el.innerHTML=S.routines.map((r,i)=>{
     const active=S.status&&S.status.activeRoutines&&S.status.activeRoutines.find(a=>a.id===r.id);
-    let html='<div class="routine-row"><div class="routine-info"><div class="routine-name">'+r.name+' <span class="badge '+(active?'badge-active':'badge-idle')+'">'+(active?'RUNNING':'idle')+'</span></div>';
+    let html='<div class="routine-row" draggable="true" data-id="'+r.id+'">';
+    html+='<div class="reorder-arrows">';
+    if(i>0) html+='<button onclick="moveItem(\'quick-actions\',\''+r.id+'\',-1,saveRoutineOrder)">&#9650;</button>';
+    if(i<S.routines.length-1) html+='<button onclick="moveItem(\'quick-actions\',\''+r.id+'\',1,saveRoutineOrder)">&#9660;</button>';
+    html+='</div>';
+    html+='<div class="routine-info"><div class="routine-name">'+r.name+' <span class="badge '+(active?'badge-active':'badge-idle')+'">'+(active?'RUNNING':'idle')+'</span></div>';
     if(active) html+='<div class="progress-bar"><div class="progress-fill" style="width:'+active.progress+'%"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+active.progress+'% &mdash; '+fmtTime(active.remaining)+' remaining</div>';
     html+='</div><div class="routine-actions">';
     if(active) html+='<button class="btn btn-red btn-sm" onclick="cancelRoutine(\''+r.id+'\')">Cancel</button>';
@@ -319,12 +557,298 @@ function renderQuickActions() {
     html+='</div></div>';
     return html;
   }).join('');
+  initDrag('quick-actions',saveRoutineOrder);
+}
+
+function renderGradient() {
+  const el=document.getElementById('gradient-status');
+  const g=S.status&&S.status.daytimeGradient;
+  if(!g){el.innerHTML='<span style="color:var(--muted)">No status</span>';return;}
+  let html='';
+  // Status + controls row
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  if(g.running) {
+    html+='<div><span class="badge badge-active">RUNNING</span> <span style="font-size:12px;color:var(--muted);margin-left:8px">'+g.uptime+' min</span></div>';
+    html+='<div style="display:flex;gap:6px"><button class="btn btn-red btn-sm" onclick="toggleGradient(false)">Stop</button>';
+    html+='<button class="btn btn-outline btn-sm" onclick="testGradient()">Test (60s)</button>';
+    html+='<button class="btn btn-outline btn-sm" onclick="toggleGradientSettings()">Settings</button></div>';
+  } else {
+    html+='<span style="color:var(--muted)">Not running</span>';
+    html+='<div style="display:flex;gap:6px"><button class="btn btn-teal btn-sm" onclick="toggleGradient(true)">Start</button>';
+    html+='<button class="btn btn-outline btn-sm" onclick="testGradient()">Test (60s)</button>';
+    html+='<button class="btn btn-outline btn-sm" onclick="toggleGradientSettings()">Settings</button></div>';
+  }
+  html+='</div>';
+  // Test progress (when test is running)
+  if(g.testing) {
+    const pct=g.testPct||0, elapsed=g.testElapsed||0, total=g.testTotal||60;
+    html+='<div style="margin-bottom:12px">';
+    html+='<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px">';
+    html+='<span style="color:var(--teal);font-weight:600">TEST IN PROGRESS</span>';
+    html+='<span style="color:var(--muted)">'+elapsed+'s / '+total+'s</span></div>';
+    // Progress bar
+    html+='<div style="position:relative;height:10px;border-radius:5px;background:var(--card-bg);border:1px solid var(--border);overflow:hidden">';
+    html+='<div style="height:100%;width:'+pct+'%;background:linear-gradient(to right,#cce5ff,var(--teal),#ffd6a0);border-radius:5px;transition:width 2s linear"></div>';
+    html+='</div>';
+    // Phase labels
+    html+='<div style="font-size:12px;margin-top:8px;color:var(--text)">';
+    if(g.testPhases) {
+      g.testPhases.forEach(function(p,i) {
+        var active=i===g.testPhaseIdx, done=i<g.testPhaseIdx;
+        var color=active?'var(--teal)':done?'var(--muted)':'color-mix(in srgb, var(--muted) 50%, transparent)';
+        var icon=done?'&#10003; ':active?'&#9654; ':'&bull; ';
+        html+='<div style="color:'+color+';padding:2px 0'+(active?';font-weight:600':'')+'">';
+        html+=icon+'Phase '+(i+1)+': '+p.label+' <span style="font-size:10px;color:var(--muted)">('+p.at+'s - '+(p.at+p.dur)+'s)</span></div>';
+      });
+    }
+    html+='</div></div>';
+  }
+  // Live stats (only when running, not during test)
+  if(g.running && !g.testing) {
+    const sunnyCt=window._gradCfg?window._gradCfg.sunnyColor.ct:233;
+    const cloudyCt=window._gradCfg?window._gradCfg.cloudyColor.ct:343;
+    const sunnyCap=window._gradCfg?window._gradCfg.sunnyCapPct||0:0;
+    const cloudCap=window._gradCfg?window._gradCfg.cloudCapPct||70:70;
+    const ctRange=cloudyCt-sunnyCt, pos=ctRange?Math.round(((g.currentCt||sunnyCt)-sunnyCt)/ctRange*100):0;
+    html+='<div style="display:flex;gap:16px;font-size:13px;margin-bottom:10px">';
+    html+='<div>Clouds: <strong>'+g.cloudPct+'%</strong></div>';
+    html+='<div>CT: <strong>~'+Math.round(1e6/(g.currentCt||sunnyCt))+'K</strong> / ~'+Math.round(1e6/(g.targetCt||sunnyCt))+'K</div>';
+    html+='</div>';
+    html+='<div style="position:relative;height:8px;border-radius:4px;background:linear-gradient(to right,#cce5ff,#ffd6a0);overflow:visible">';
+    html+='<div style="position:absolute;left:'+pos+'%;top:-2px;width:12px;height:12px;border-radius:50%;background:var(--teal);border:2px solid white;transform:translateX(-50%)"></div>';
+    html+='</div>';
+    html+='<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>Sunny (~'+Math.round(1e6/sunnyCt)+'K) &le;'+sunnyCap+'%</span><span>&ge;'+cloudCap+'% Cloudy (~'+Math.round(1e6/cloudyCt)+'K)</span></div>';
+    if(g.weatherError) html+='<div style="color:#e74c3c;font-size:11px;margin-top:6px">Weather error: '+g.weatherError+'</div>';
+  }
+  el.innerHTML=html;
+}
+
+async function toggleGradientSettings() {
+  const panel=document.getElementById('gradient-settings');
+  if(!panel) return;
+  if(panel.style.display!=='none'){panel.style.display='none';return;}
+  panel.style.display='block';
+  // Load config + available lights + HB accessories
+  const [cfgRes, lightsRes, hbRes]=await Promise.all([api('/api/daytime-gradient/config'),api('/api/hue/lights'),api('/api/homebridge/accessories')]);
+  if(!cfgRes.ok){panel.innerHTML='<div style="color:var(--red)">Failed to load config</div>';return;}
+  const cfg=cfgRes.config;
+  window._gradCfg=cfg;
+  const lights=lightsRes.ok?lightsRes.lights:{};
+  const selectedSet=new Set((cfg.lights||[]).map(String));
+  let html='';
+  // Light picker
+  html+='<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Lights</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  for(const[id,l] of Object.entries(lights)){
+    if(!l.type||l.type==='On/Off plug-in unit') continue;
+    const checked=selectedSet.has(id)?'checked':'';
+    html+='<label style="display:flex;align-items:center;gap:4px;font-size:12px;background:var(--card2);padding:4px 8px;border-radius:4px;cursor:pointer">';
+    html+='<input type="checkbox" data-light-id="'+id+'" '+checked+'> '+esc(l.name)+' <span style="color:var(--muted)">('+id+')</span></label>';
+  }
+  html+='</div></div>';
+  // Color range
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Sunny CT (cool white)</label>';
+  html+='<input type="range" id="grad-sunny-ct" min="153" max="500" value="'+cfg.sunnyColor.ct+'" style="width:100%" oninput="document.getElementById(\'grad-sunny-val\').textContent=\'~\'+Math.round(1e6/this.value)+\'K\'">';
+  html+='<div style="font-size:11px;color:var(--muted)"><span id="grad-sunny-val">~'+(Math.round(1000000/cfg.sunnyColor.ct))+'K</span></div></div>';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Cloudy CT (warm white)</label>';
+  html+='<input type="range" id="grad-cloudy-ct" min="153" max="500" value="'+cfg.cloudyColor.ct+'" style="width:100%" oninput="document.getElementById(\'grad-cloudy-val\').textContent=\'~\'+Math.round(1e6/this.value)+\'K\'">';
+  html+='<div style="font-size:11px;color:var(--muted)"><span id="grad-cloudy-val">~'+(Math.round(1000000/cfg.cloudyColor.ct))+'K</span></div></div>';
+  html+='</div>';
+  // Sunny cap + Cloud cap + brightness
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Sunny Cap %</label>';
+  html+='<input type="number" id="grad-sunny-cap" value="'+(cfg.sunnyCapPct||0)+'" min="0" max="90" step="5" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:11px;color:var(--muted);margin-left:6px">Fully sunny at this %</span></div>';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Cloud Cap %</label>';
+  html+='<input type="number" id="grad-cloud-cap" value="'+cfg.cloudCapPct+'" min="10" max="100" step="5" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:11px;color:var(--muted);margin-left:6px">Fully cloudy at this %</span></div>';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Brightness</label>';
+  html+='<input type="number" id="grad-brightness" value="'+cfg.brightness+'" min="1" max="100" step="5" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:11px;color:var(--muted);margin-left:6px">%</span></div>';
+  html+='</div>';
+  // Override sensitivity
+  html+='<div style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Override Sensitivity</div>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Auto-stops when lights are changed externally. Requires 2 consecutive detections to avoid false positives from API flicker.</div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">';
+  html+='<div><label style="font-size:11px;display:block;margin-bottom:2px">CT threshold</label>';
+  var ctRange=cfg.cloudyColor.ct-cfg.sunnyColor.ct||110;
+  var ctPct=Math.round((cfg.overrideThreshold||50)/ctRange*100);
+  html+='<input type="number" id="grad-override-ct" data-ct-range="'+ctRange+'" value="'+ctPct+'" min="5" max="100" step="5" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:10px;color:var(--muted)"> %</span></div>';
+  html+='<div><label style="font-size:11px;display:block;margin-bottom:2px">Brightness threshold</label>';
+  html+='<input type="number" id="grad-override-bri" value="'+cfg.overrideBriThreshold+'" min="5" max="100" step="5" style="width:60px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:10px;color:var(--muted)"> %</span></div>';
+  html+='<div><label style="font-size:11px;display:block;margin-bottom:2px">Check every</label>';
+  html+='<input type="number" id="grad-override-every" value="'+cfg.overrideCheckEvery+'" min="1" max="10" style="width:50px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:10px;color:var(--muted)"> ticks</span></div>';
+  html+='</div></div>';
+  // Timing
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Weather poll</label>';
+  html+='<input type="number" id="grad-poll" value="'+cfg.weatherPollMinutes+'" min="1" max="30" style="width:50px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:11px;color:var(--muted);margin-left:6px">min</span></div>';
+  html+='<div><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Tick interval</label>';
+  html+='<input type="number" id="grad-tick" value="'+cfg.tickSeconds+'" min="10" max="120" step="10" style="width:50px;background:var(--card2);border:1px solid var(--border);color:var(--text);padding:4px 6px;border-radius:4px">';
+  html+='<span style="font-size:11px;color:var(--muted);margin-left:6px">sec</span></div>';
+  html+='</div>';
+  // Exclude on override
+  var excRule=(cfg.excludeOnOverride&&cfg.excludeOnOverride[0])||null;
+  var excEnabled=!!excRule;
+  var excAccs=hbRes&&hbRes.ok?hbRes.accessories:[];
+  html+='<div style="margin-bottom:12px;padding:10px;background:var(--card2);border-radius:6px;border:1px solid var(--border)">';
+  html+='<label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;font-size:12px">';
+  html+='<input type="checkbox" id="grad-exclude-enabled" '+(excEnabled?'checked':'')+' onchange="document.getElementById(\'grad-exclude-config\').style.display=this.checked?\'block\':\'none\'"> Exclude Lights on Override</label>';
+  html+='<div id="grad-exclude-config" style="display:'+(excEnabled?'block':'none')+';margin-top:10px">';
+  // Trigger
+  html+='<div style="margin-bottom:8px;padding:8px;background:var(--bg);border-radius:4px;border-left:3px solid var(--teal)">';
+  html+='<div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:4px">TRIGGER</div>';
+  html+='<label style="font-size:11px;display:block;margin-bottom:3px">When this accessory is on, or turns on:</label>';
+  html+='<select id="grad-exclude-accessory" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:12px">';
+  html+='<option value="">-- Select --</option>';
+  for(var ai=0;ai<excAccs.length;ai++){
+    var sel2=excRule&&excAccs[ai].name===excRule.hbAccessory?'selected':'';
+    html+='<option value="'+esc(excAccs[ai].name)+'" '+sel2+'>'+esc(excAccs[ai].name)+'</option>';
+  }
+  if(excRule&&excRule.hbAccessory&&!excAccs.some(function(a){return a.name===excRule.hbAccessory;})){
+    html+='<option value="'+esc(excRule.hbAccessory)+'" selected>'+esc(excRule.hbAccessory)+'</option>';
+  }
+  html+='</select></div>';
+  // Skip lights
+  var excLightSet=new Set(excRule?(excRule.lights||[]).map(String):[]);
+  html+='<div style="margin-bottom:8px;padding:8px;background:var(--bg);border-radius:4px;border-left:3px solid #e74c3c">';
+  html+='<div style="font-size:11px;font-weight:600;color:#e74c3c;margin-bottom:4px">SKIP THESE LIGHTS</div>';
+  html+='<div style="font-size:10px;color:var(--muted);margin-bottom:4px">Left untouched while trigger is on</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto">';
+  for(var eid in lights){
+    if(!lights[eid].type||lights[eid].type==='On/Off plug-in unit') continue;
+    var echk=excLightSet.has(eid)?'checked':'';
+    html+='<label style="display:flex;align-items:center;gap:3px;font-size:11px;background:var(--card2);padding:2px 5px;border-radius:4px;cursor:pointer">';
+    html+='<input type="checkbox" data-grad-exclude-light="'+eid+'" '+echk+'> '+esc(lights[eid].name)+' <span style="color:var(--muted)">('+eid+')</span></label>';
+  }
+  html+='</div></div>';
+  html+='</div></div>';
+  // Save button
+  html+='<div style="display:flex;gap:8px">';
+  html+='<button class="btn btn-teal btn-sm" onclick="saveGradientConfig()">Save Settings</button>';
+  html+='<button class="btn btn-outline btn-sm" onclick="document.getElementById(\'gradient-settings\').style.display=\'none\'">Cancel</button>';
+  html+='</div>';
+  panel.innerHTML=html;
+}
+
+async function saveGradientConfig() {
+  const lights=Array.from(document.querySelectorAll('#gradient-settings [data-light-id]:checked')).map(function(el){return parseInt(el.dataset.lightId);});
+  const updates={
+    lights:lights,
+    sunnyColor:{ct:parseInt(document.getElementById('grad-sunny-ct').value)},
+    cloudyColor:{ct:parseInt(document.getElementById('grad-cloudy-ct').value)},
+    sunnyCapPct:parseInt(document.getElementById('grad-sunny-cap').value),
+    cloudCapPct:parseInt(document.getElementById('grad-cloud-cap').value),
+    brightness:parseInt(document.getElementById('grad-brightness').value),
+    overrideThreshold:Math.round(parseInt(document.getElementById('grad-override-ct').value)/100*parseInt(document.getElementById('grad-override-ct').dataset.ctRange)),
+    overrideBriThreshold:parseInt(document.getElementById('grad-override-bri').value),
+    overrideCheckEvery:parseInt(document.getElementById('grad-override-every').value),
+    weatherPollMinutes:parseInt(document.getElementById('grad-poll').value),
+    tickSeconds:parseInt(document.getElementById('grad-tick').value)
+  };
+  // Exclude on override
+  var exCb=document.getElementById('grad-exclude-enabled');
+  if(exCb&&exCb.checked){
+    var accSel=document.getElementById('grad-exclude-accessory');
+    var accName=accSel?accSel.value:'';
+    var exLights=Array.from(document.querySelectorAll('[data-grad-exclude-light]:checked')).map(function(el){return parseInt(el.dataset.gradExcludeLight);});
+    if(accName&&exLights.length) updates.excludeOnOverride=[{hbAccessory:accName,lights:exLights,description:'Excluded when '+accName+' is on'}];
+    else updates.excludeOnOverride=[];
+  } else {
+    updates.excludeOnOverride=[];
+  }
+  await api('/api/daytime-gradient/config',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updates)});
+  document.getElementById('gradient-settings').style.display='none';
+  refresh();
+}
+
+async function toggleGradient(start) {
+  await api('/api/daytime-gradient/'+(start?'start':'stop'),{method:'POST'});
+  refresh();
+}
+
+async function testGradient() {
+  const btn=event.target;btn.disabled=true;btn.textContent='Testing...';
+  const r=await api('/api/daytime-gradient/test',{method:'POST'});
+  if(!r.ok) {btn.disabled=false;btn.textContent='Test (60s)';alert('Test failed: '+(r.error||'unknown'));return;}
+  setTimeout(()=>{btn.disabled=false;btn.textContent='Test (60s)';},60000);
+}
+
+// ── Drag & Reorder ──
+function initDrag(containerId, saveCallback) {
+  const container=document.getElementById(containerId);
+  if(!container) return;
+  let dragId=null;
+  container.addEventListener('dragstart',function(e){
+    const el=e.target.closest('[data-id]');
+    if(!el) return;
+    dragId=el.dataset.id;
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed='move';
+  });
+  container.addEventListener('dragend',function(e){
+    dragId=null;
+    container.querySelectorAll('.dragging,.drag-over,.drag-over-card').forEach(function(el){el.classList.remove('dragging','drag-over','drag-over-card');});
+  });
+  container.addEventListener('dragover',function(e){
+    e.preventDefault();
+    e.dataTransfer.dropEffect='move';
+    container.querySelectorAll('.drag-over,.drag-over-card').forEach(function(el){el.classList.remove('drag-over','drag-over-card');});
+    var target=e.target.closest('[data-id]');
+    if(target&&target.dataset.id!==dragId){
+      var rect=target.getBoundingClientRect();
+      var isGrid=window.getComputedStyle(container).display.includes('grid');
+      if(isGrid) target.classList.add('drag-over-card');
+      else if(e.clientY<rect.top+rect.height/2) target.classList.add('drag-over');
+      else if(target.nextElementSibling) target.nextElementSibling.classList.add('drag-over');
+    }
+  });
+  container.addEventListener('drop',function(e){
+    e.preventDefault();
+    var target=e.target.closest('[data-id]');
+    if(!target||!dragId||target.dataset.id===dragId) return;
+    var items=Array.from(container.querySelectorAll('[data-id]'));
+    var ids=items.map(function(el){return el.dataset.id;});
+    var fromIdx=ids.indexOf(dragId);
+    var toIdx=ids.indexOf(target.dataset.id);
+    if(fromIdx<0||toIdx<0) return;
+    ids.splice(fromIdx,1);
+    ids.splice(toIdx,0,dragId);
+    saveCallback(ids);
+  });
+}
+
+function moveItem(containerId,itemId,dir,saveCallback) {
+  var items=Array.from(document.getElementById(containerId).querySelectorAll('[data-id]'));
+  var ids=items.map(function(el){return el.dataset.id;});
+  var idx=ids.indexOf(itemId);
+  if(idx<0) return;
+  var newIdx=idx+dir;
+  if(newIdx<0||newIdx>=ids.length) return;
+  ids.splice(idx,1);
+  ids.splice(newIdx,0,itemId);
+  saveCallback(ids);
+}
+
+async function saveRoutineOrder(ids) {
+  await api('/api/routines/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:ids})});
+  refresh();
+}
+
+async function saveSceneOrder(ids) {
+  await api('/api/scenes/reorder',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:ids})});
+  refresh();
 }
 
 function renderRoutinesList() {
   const el=document.getElementById('routines-list');
   if(!S.routines.length){el.innerHTML='<div class="card" style="text-align:center;color:var(--muted);padding:40px">No routines yet. Click "+ New Routine" to create one.</div>';return;}
-  el.innerHTML=S.routines.map(r=>{
+  el.innerHTML=S.routines.map((r,i)=>{
     const d=S.routineDetails[r.id];
     const active=S.status&&S.status.activeRoutines&&S.status.activeRoutines.find(a=>a.id===r.id);
     let wpHtml='';
@@ -339,20 +863,45 @@ function renderRoutinesList() {
           wpHtml+='</div>';
         } else if(t.type==='instant') {
           wpHtml+='<div style="font-size:11px;color:var(--amber);margin-top:4px">Instant at '+t.time+'m: lights ['+(t.lights||[]).join(',')+']</div>';
+        } else if(t.type==='tv') {
+          var tvDesc=(t.actions||[]).map(function(a){return a.time+'m: '+(a.action==='input'?a.value:a.action)}).join(', ');
+          wpHtml+='<div style="font-size:11px;color:#47d1d1;margin-top:4px">TV: '+(tvDesc||'no actions')+'</div>';
         }
       }
     }
     let progressHtml='';
     if(active) progressHtml='<div class="progress-bar"><div class="progress-fill" style="width:'+active.progress+'%"></div></div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+active.progress+'% &mdash; '+fmtTime(active.remaining)+' remaining</div>';
-    return '<div class="card"><div class="routine-row"><div class="routine-info"><div class="routine-name">'+r.name+' <span class="badge '+(active?'badge-active':'badge-idle')+'">'+(active?'RUNNING':'idle')+'</span></div>'
+    return '<div class="card" draggable="true" data-id="'+r.id+'"><div class="routine-row"><div class="reorder-arrows">'
+      +(i>0?'<button onclick="moveItem(\'routines-list\',\''+r.id+'\',-1,saveRoutineOrder)">&#9650;</button>':'')
+      +(i<S.routines.length-1?'<button onclick="moveItem(\'routines-list\',\''+r.id+'\',1,saveRoutineOrder)">&#9660;</button>':'')
+      +'</div><div class="routine-info"><div class="routine-name">'+r.name+' <span class="badge '+(active?'badge-active':'badge-idle')+'">'+(active?'RUNNING':'idle')+'</span></div>'
       +'<div class="routine-meta">'+r.duration+' min &mdash; '+r.trackCount+' track(s), '+r.lightCount+' light(s)</div>'
       +wpHtml+progressHtml
       +'</div><div class="routine-actions">'
       +(active?'<button class="btn btn-red btn-sm" onclick="cancelRoutine(\''+r.id+'\')">Cancel</button>':'<button class="btn btn-teal btn-sm" onclick="startRoutine(\''+r.id+'\')">Start</button>')
       +'<button class="btn btn-outline btn-sm" onclick="startRoutine(\''+r.id+'\',2)">Test</button>'
       +'<button class="btn btn-blue btn-sm" onclick="openEditor(\''+r.id+'\')">Edit</button>'
-      +'</div></div></div>';
+      +'</div></div>'
+      +'<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px">'
+      +'<div class="webhook-toggle" onclick="event.stopPropagation();this.classList.toggle(\'open\');this.nextElementSibling.style.display=this.classList.contains(\'open\')?\'block\':\'none\'" style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none">'
+      +'\u25b8 Webhook URLs</div>'
+      +'<div style="display:none;margin-top:8px">'
+      +'<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Start:</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<code style="flex:1;font-size:10px;background:var(--bg);border:1px solid var(--border);padding:5px 8px;border-radius:4px;word-break:break-all">http://192.168.1.61:5006/api/routines/'+r.id+'/start</code>'
+      +'<button class="btn btn-sm btn-outline" onclick="event.stopPropagation();copyUrl(this,\'http://192.168.1.61:5006/api/routines/'+r.id+'/start\')">Copy</button>'
+      +'</div></div>'
+      +'<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Cancel:</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<code style="flex:1;font-size:10px;background:var(--bg);border:1px solid var(--border);padding:5px 8px;border-radius:4px;word-break:break-all">http://192.168.1.61:5006/api/routines/'+r.id+'/cancel</code>'
+      +'<button class="btn btn-sm btn-outline" onclick="event.stopPropagation();copyUrl(this,\'http://192.168.1.61:5006/api/routines/'+r.id+'/cancel\')">Copy</button>'
+      +'</div></div>'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.5;background:rgba(0,153,153,0.08);padding:6px 8px;border-radius:4px">'
+      +'Homebridge: Add a Dummy Switch with commandOn = Start URL, commandOff = Cancel URL.</div>'
+      +'</div></div>'
+      +'</div>';
   }).join('');
+  initDrag('routines-list',saveRoutineOrder);
 }
 
 function renderLog() {
@@ -371,6 +920,15 @@ async function startRoutine(id, testDuration) {
   refresh();
 }
 async function cancelRoutine(id) { await api('/api/routines/'+id+'/cancel',{method:'POST'}); refresh(); }
+
+async function copyUrl(btn, url) {
+  try { await navigator.clipboard.writeText(url); } catch(e) {
+    const ta=document.createElement('textarea');ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  }
+  const orig=btn.textContent;btn.textContent='Copied!';btn.style.background='var(--teal)';btn.style.color='#fff';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},2000);
+}
 
 // ── Hue Lights Data ──
 async function loadHueLights() {
@@ -403,25 +961,129 @@ function renderLightSelector(containerId, selectedIds) {
 // ── Routine Editor ──
 async function openEditor(routineId) {
   await loadHueLights();
+  // Load Caseta HAP devices + Homebridge accessories
+  try {
+    var casetaRes=await api('/api/caseta-hap/devices');
+    window.casetaHapDevices=casetaRes.ok?casetaRes.devices:[];
+  } catch(e) { window.casetaHapDevices=[]; }
+  try {
+    var hbRes=await api('/api/homebridge/accessories');
+    window.hbAccessories=hbRes.ok?hbRes.accessories:[];
+  } catch(e) { window.hbAccessories=[]; }
   editingRoutineId=routineId||null;
   if(routineId&&S.routineDetails[routineId]){
     const r=S.routineDetails[routineId];
     document.getElementById('ed-name').value=r.name||'';
     document.getElementById('ed-duration').value=r.duration||13;
     editingTracks=JSON.parse(JSON.stringify(r.tracks||[]));
+    editingSpotifyQueue=(r.sonos&&r.sonos.spotifyQueue)?r.sonos.spotifyQueue.slice():[];
+    editingExcludeRules=r.excludeOnOverride?JSON.parse(JSON.stringify(r.excludeOnOverride)):[];
+    editingDriftDetection=r.driftDetection?JSON.parse(JSON.stringify(r.driftDetection)):null;
+    document.getElementById('ed-exclude-enabled').checked=editingExcludeRules.length>0;
+    document.getElementById('ed-drift-enabled').checked=!!(editingDriftDetection&&editingDriftDetection.enabled);
     document.getElementById('editor-title').textContent='Edit Routine';
     document.getElementById('ed-delete-btn').style.display='';
+    setTimeout(function(){
+      var sonosInput=document.getElementById('ed-sonos-routine');
+      if(sonosInput) sonosInput.value=(r.sonos&&r.sonos.routine)||'';
+      renderSpotifyQueue();
+    },0);
   } else {
     document.getElementById('ed-name').value='';
     document.getElementById('ed-duration').value=13;
     editingTracks=[];
+    editingSpotifyQueue=[];
+    editingExcludeRules=[];
+    editingDriftDetection=null;
+    document.getElementById('ed-exclude-enabled').checked=false;
+    document.getElementById('ed-drift-enabled').checked=false;
     document.getElementById('editor-title').textContent='New Routine';
     document.getElementById('ed-delete-btn').style.display='none';
+    setTimeout(function(){
+      var sonosInput=document.getElementById('ed-sonos-routine');
+      if(sonosInput) sonosInput.value='';
+      renderSpotifyQueue();
+    },0);
   }
   renderTracks();
+  toggleExcludeConfig();
+  toggleDriftConfig();
   document.getElementById('editor-modal').classList.add('open');
 }
 function closeEditor() { document.getElementById('editor-modal').classList.remove('open'); }
+
+function toggleExcludeConfig() {
+  var enabled=document.getElementById('ed-exclude-enabled').checked;
+  var panel=document.getElementById('ed-exclude-config');
+  if(!enabled){panel.style.display='none';return;}
+  panel.style.display='block';
+  var rule=editingExcludeRules[0]||{hbAccessory:'',lights:[],description:''};
+  var lights=S.hueLights||{};
+  var selectedSet=new Set((rule.lights||[]).map(String));
+  var accs=window.hbAccessories||[];
+  var html='';
+  // Trigger section
+  html+='<div style="margin-bottom:10px;padding:8px;background:var(--card-bg);border-radius:4px;border-left:3px solid var(--teal)">';
+  html+='<div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:6px">TRIGGER</div>';
+  html+='<label style="font-size:12px;display:block;margin-bottom:4px">When this accessory is on, or turns on:</label>';
+  html+='<select id="ed-exclude-accessory" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">';
+  html+='<option value="">-- Select Homebridge Accessory --</option>';
+  for(var i=0;i<accs.length;i++){
+    var sel=accs[i].name===rule.hbAccessory?'selected':'';
+    html+='<option value="'+esc(accs[i].name)+'" '+sel+'>'+esc(accs[i].name)+'</option>';
+  }
+  // Keep custom value if not in dropdown
+  if(rule.hbAccessory&&!accs.some(function(a){return a.name===rule.hbAccessory;})){
+    html+='<option value="'+esc(rule.hbAccessory)+'" selected>'+esc(rule.hbAccessory)+'</option>';
+  }
+  html+='</select></div>';
+  // Excluded lights section
+  html+='<div style="margin-bottom:10px;padding:8px;background:var(--card-bg);border-radius:4px;border-left:3px solid #e74c3c">';
+  html+='<div style="font-size:11px;font-weight:600;color:#e74c3c;margin-bottom:6px">SKIP THESE LIGHTS</div>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px">These lights will be left untouched for the rest of the routine</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow-y:auto">';
+  for(var id in lights){
+    if(!lights[id].type||lights[id].type==='On/Off plug-in unit') continue;
+    var chk=selectedSet.has(id)?'checked':'';
+    html+='<label style="display:flex;align-items:center;gap:3px;font-size:11px;background:var(--bg);padding:3px 6px;border-radius:4px;cursor:pointer">';
+    html+='<input type="checkbox" data-exclude-light="'+id+'" '+chk+'> '+esc(lights[id].name)+' <span style="color:var(--muted)">('+id+')</span></label>';
+  }
+  html+='</div></div>';
+  // Description
+  html+='<div><label style="font-size:12px;display:block;margin-bottom:4px">Note</label>';
+  html+='<input type="text" id="ed-exclude-desc" value="'+esc(rule.description||'')+'" placeholder="e.g. Office lights excluded when key lights are on" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px"></div>';
+  panel.innerHTML=html;
+}
+
+function toggleDriftConfig() {
+  var enabled=document.getElementById('ed-drift-enabled').checked;
+  var panel=document.getElementById('ed-drift-config');
+  if(!enabled){panel.style.display='none';return;}
+  panel.style.display='block';
+  var dd=editingDriftDetection||{enabled:true,thresholdPct:8,lights:[]};
+  var lights=S.hueLights||{};
+  var selectedSet=new Set((dd.lights||[]).map(String));
+  var html='';
+  // Threshold
+  html+='<div style="margin-bottom:10px;padding:8px;background:var(--card-bg);border-radius:4px;border-left:3px solid var(--teal)">';
+  html+='<div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:6px">THRESHOLD</div>';
+  html+='<label style="font-size:12px;display:block;margin-bottom:4px">Skip light if brightness deviates by more than:</label>';
+  html+='<input type="number" id="ed-drift-threshold" min="1" max="50" value="'+(dd.thresholdPct||8)+'" style="width:60px;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">';
+  html+=' <span style="font-size:11px;color:var(--muted)">% (default 8)</span></div>';
+  // Lights
+  html+='<div style="padding:8px;background:var(--card-bg);border-radius:4px;border-left:3px solid var(--teal)">';
+  html+='<div style="font-size:11px;font-weight:600;color:var(--teal);margin-bottom:6px">MONITOR THESE LIGHTS</div>';
+  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:6px">Leave all unchecked to auto-monitor all lights in fade tracks</div>';
+  html+='<div style="display:flex;flex-wrap:wrap;gap:4px;max-height:150px;overflow-y:auto">';
+  for(var id in lights){
+    if(!lights[id].type||lights[id].type==='On/Off plug-in unit') continue;
+    var chk=selectedSet.has(id)?'checked':'';
+    html+='<label style="display:flex;align-items:center;gap:3px;font-size:11px;background:var(--bg);padding:3px 6px;border-radius:4px;cursor:pointer">';
+    html+='<input type="checkbox" data-drift-light="'+id+'" '+chk+'> '+esc(lights[id].name)+' <span style="color:var(--muted)">('+id+')</span></label>';
+  }
+  html+='</div></div>';
+  panel.innerHTML=html;
+}
 
 function addTrack() {
   editingTracks.push({type:'fade',lights:[],lightNames:[],waypoints:[{time:0,bri:1,color:{xy:[0.65,0.33]}},{time:parseFloat(document.getElementById('ed-duration').value)||13,bri:100,color:{ct:300}}]});
@@ -431,40 +1093,162 @@ function addTrack() {
 function renderTracks() {
   const el=document.getElementById('ed-tracks');
   el.innerHTML=editingTracks.map((t,ti)=>{
+    // ── Track type selector ──
+    var typeSelect='<select onchange="changeTrackType('+ti+',this.value)" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:2px 6px;border-radius:4px;font-size:12px">'
+      +'<option value="fade"'+(t.type==='fade'?' selected':'')+'>Fade</option>'
+      +'<option value="homebridge"'+(t.type==='homebridge'?' selected':'')+'>Homebridge</option>'
+      +'<option value="caseta-hap"'+(t.type==='caseta-hap'?' selected':'')+'>Caseta HAP</option>'
+      +'<option value="nanoleaf"'+(t.type==='nanoleaf'?' selected':'')+'>Nanoleaf</option>'
+      +'<option value="tv"'+(t.type==='tv'?' selected':'')+'>Samsung TV</option>'
+      +'<option value="thunderstorm"'+(t.type==='thunderstorm'?' selected':'')+'>Thunderstorm</option>'
+      +'<option value="pulse"'+(t.type==='pulse'?' selected':'')+'>Pulse</option>'
+      +'</select>';
+
+    // ── Dynamic start toggle ──
+    var dynamicStartHtml='';
+    if(t.type==='fade'||t.type==='caseta-hap'||t.type==='homebridge'){
+      dynamicStartHtml='<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;margin:6px 0">'
+        +'<input type="checkbox" '+(t.dynamicStart?'checked':'')+' onchange="editingTracks['+ti+'].dynamicStart=this.checked">'
+        +' Dynamic start (read current light state at t=0)</label>';
+    }
+
+    // ── Brightness-only toggle (fade only) ──
+    var briOnlyHtml='';
     if(t.type==='fade'){
-      const lightNames=t.lights.map(id=>S.hueLights&&S.hueLights[id]?S.hueLights[id].name:'Light '+id);
-      let wpHtml=t.waypoints.map((wp,wi)=>{
-        const hex=wpHex(wp);
-        const colorDesc=wp.color.ct?wp.color.ct+' mirek':wp.color.xy?'xy ['+wp.color.xy.map(v=>v.toFixed(2)).join(', ')+']':wp.color.hs?'hue '+Math.round(wp.color.hs.hue/65535*360)+'deg':'?';
+      briOnlyHtml='<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;margin:4px 0">'
+        +'<input type="checkbox" '+(t.brightnessOnly?'checked':'')+' onchange="editingTracks['+ti+'].brightnessOnly=this.checked;renderTracks()">'
+        +' Brightness only (preserve Hue scenes)</label>';
+    }
+
+    // ── Waypoints (shared rendering) ──
+    var briOnly=isBrightnessOnlyTrack(t);
+    var wpHtml=(t.waypoints||[]).map(function(wp,wi){
+      if(briOnly){
+        var bVal=(t.type==='fade'?wp.bri:wp.brightness)||0;
+        var effectLabel=wp.effect?' &mdash; '+esc(wp.effect):'';
+        return '<div class="wp-row" onclick="openWpEditor('+ti+','+wi+')" style="cursor:pointer">'
+          +'<div class="color-swatch" style="background:'+briSwatchHex(bVal)+'"></div>'
+          +'<div style="flex:1"><div style="font-size:12px"><strong>'+wp.time+'m</strong> &mdash; '+bVal+'%'+effectLabel+'</div></div>'
+          +'</div>';
+      } else {
+        var hex=wpHex(wp);
+        var c=wp.color||{};
+        var colorDesc=c.ct?'~'+Math.round(1e6/c.ct)+'K':c.xy?'xy ['+c.xy.map(function(v){return v.toFixed(2)}).join(', ')+']':c.hs?'hue '+Math.round(c.hs.hue/65535*360)+'deg':'?';
         return '<div class="wp-row" onclick="openWpEditor('+ti+','+wi+')" style="cursor:pointer">'
           +'<div class="color-swatch" style="background:'+hex+'"></div>'
           +'<div style="flex:1"><div style="font-size:12px"><strong>'+wp.time+'m</strong> &mdash; '+wp.bri+'% &mdash; '+colorDesc+'</div></div>'
           +'<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();testWpInline('+ti+','+wi+')" style="flex-shrink:0">Test</button>'
           +'</div>';
-      }).join('');
-      return '<div class="track-card"><div class="track-header"><h3>Track '+(ti+1)+': Fade</h3><div>'
-        +'<button class="btn btn-outline btn-sm" onclick="addWaypoint('+ti+')">+ Waypoint</button> '
-        +'<button class="btn-ghost" onclick="removeTrack('+ti+')" style="color:var(--red)">&times;</button></div></div>'
+      }
+    }).join('');
+
+    // ── Track header (shared) ──
+    var header='<div class="track-card" data-track="'+ti+'"><div class="track-header"><h3>Track '+(ti+1)+': '+typeSelect+'</h3><div>'
+      +'<button class="btn btn-outline btn-sm" onclick="addWaypoint('+ti+')">+ Waypoint</button> '
+      +'<button class="btn-ghost" onclick="removeTrack('+ti+')" style="color:var(--red)">&times;</button></div></div>'
+      +dynamicStartHtml+briOnlyHtml;
+
+    // ── Track body (type-specific) ──
+    if(t.type==='fade'){
+      return header
         +'<label>Lights</label><div class="light-selector" id="track-lights-'+ti+'"></div>'
         +wpHtml+'</div>';
     }
+    if(t.type==='homebridge'){
+      return header
+        +'<div style="margin:8px 0"><label style="font-size:11px;color:var(--muted)">Homebridge Accessory Name</label>'
+        +'<input type="text" value="'+esc(t.accessory||'')+'" placeholder="e.g. Caseta Fade Level" '
+        +'onchange="editingTracks['+ti+'].accessory=this.value" '
+        +'style="width:100%;margin-top:4px;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px"></div>'
+        +wpHtml+'</div>';
+    }
+    if(t.type==='caseta-hap'){
+      var deviceHtml=(window.casetaHapDevices||[]).map(function(d){
+        return '<label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:2px 0">'
+          +'<input type="checkbox" value="'+d.key+'" '+((t.devices||[]).includes(d.key)?'checked':'')+' onchange="updateCasetaDevices('+ti+')">'
+          +esc(d.name)+'</label>';
+      }).join('');
+      return header
+        +'<label>Devices</label><div style="margin:4px 0 8px">'+deviceHtml+'</div>'
+        +wpHtml+'</div>';
+    }
+    if(t.type==='nanoleaf'){
+      var effectHtml='<div style="margin:8px 0"><label style="font-size:11px;color:var(--muted)">Effect per waypoint: edit waypoint to set effect name (e.g. "Flames", "Fireworks", "Aurora")</label></div>';
+      return header+effectHtml+wpHtml+'</div>';
+    }
+    if(t.type==='tv'){
+      var actionsHtml=(t.actions||[]).map(function(a,ai){
+        return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'
+          +'<input type="number" value="'+(a.time||0)+'" step="0.1" min="0" style="width:60px;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px;border-radius:4px;font-size:12px" onchange="editingTracks['+ti+'].actions['+ai+'].time=parseFloat(this.value)">'
+          +'<span style="font-size:11px;color:var(--muted)">min</span>'
+          +'<span style="flex:1;font-size:12px">'
+          +(a.action==='input'?'Input: '+a.value:a.action==='power_on'?'Power ON (WoL)':a.action==='power_off'?'Power OFF':a.action==='key'?'Key: '+a.value:a.action)
+          +'</span>'
+          +'<button class="btn-ghost" onclick="editingTracks['+ti+'].actions.splice('+ai+',1);renderTracks()" style="color:var(--red);font-size:16px">&times;</button>'
+          +'</div>';
+      }).join('');
+      var inputOpts=Object.entries(window.samsungInputs||{HDMI1:'HDMI 1',HDMI2:'HDMI 2',HDMI3:'HDMI 3',HDMI4:'HDMI 4'}).map(function(e){
+        return '<option value="'+e[0]+'">'+e[1]+' ('+e[0]+')</option>';
+      }).join('');
+      return header
+        +'<div style="margin:8px 0;font-size:11px;color:var(--muted)">TV Actions (fire at specified time):</div>'
+        +actionsHtml
+        +'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">'
+        +'<button class="btn btn-outline btn-sm" onclick="addTvAction('+ti+',\'power_on\')">+ Power On</button>'
+        +'<button class="btn btn-outline btn-sm" onclick="addTvAction('+ti+',\'power_off\')">+ Power Off</button>'
+        +'<select id="tv-input-sel-'+ti+'" style="background:var(--bg);color:var(--text);border:1px solid var(--border);padding:4px 6px;border-radius:4px;font-size:12px">'+inputOpts+'</select>'
+        +'<button class="btn btn-outline btn-sm" onclick="addTvInputAction('+ti+')">+ Input</button>'
+        +'</div></div>';
+    }
     if(t.type==='instant'){
-      return '<div class="track-card"><div class="track-header"><h3>Track '+(ti+1)+': Instant On</h3>'
+      return '<div class="track-card" data-track="'+ti+'"><div class="track-header"><h3>Track '+(ti+1)+': Instant On</h3>'
         +'<button class="btn-ghost" onclick="removeTrack('+ti+')" style="color:var(--red)">&times;</button></div>'
         +'<div class="form-row"><div style="max-width:100px"><label>At (min)</label><input type="number" value="'+(t.time||0)+'" onchange="editingTracks['+ti+'].time=parseFloat(this.value)"></div></div>'
         +'<label>Lights</label><div class="light-selector" id="track-lights-'+ti+'"></div>'
         +'<div class="form-row" style="margin-top:8px"><div style="max-width:100px"><label>Brightness %</label><input type="number" value="'+((t.state&&t.state.bri)||100)+'" min="1" max="100" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.bri=parseInt(this.value)"></div>'
-        +'<div style="max-width:120px"><label>Color Temp</label><input type="number" value="'+((t.state&&t.state.ct)||300)+'" min="153" max="500" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.ct=parseInt(this.value)"></div></div></div>';
+        +'<div style="max-width:120px"><label>Color Temp (K)</label><input type="number" value="'+Math.round(1e6/((t.state&&t.state.ct)||300))+'" min="2000" max="6500" step="100" onchange="if(!editingTracks['+ti+'].state)editingTracks['+ti+'].state={};editingTracks['+ti+'].state.ct=Math.round(1e6/parseInt(this.value))"></div></div></div>';
+    }
+    if(t.type==='thunderstorm'){
+      if(!t.ambientState) t.ambientState={on:true,bri:8,xy:[0.25,0.28],transitiontime:20};
+      if(!t.flashState) t.flashState={on:true,ct:153,transitiontime:0};
+      return header
+        +'<div style="margin:8px 0">'
+        +'<div class="form-row"><div style="max-width:140px"><label>Group ID</label>'
+        +'<input type="number" value="'+(t.groupId||'')+'" min="1" placeholder="Hue group" onchange="editingTracks['+ti+'].groupId=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div><div style="max-width:140px"><label>Flash Max Bri %</label>'
+        +'<input type="number" value="'+(t.flashMaxBri||67)+'" min="1" max="100" onchange="editingTracks['+ti+'].flashMaxBri=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div></div>'
+        +'<div class="form-row"><div style="max-width:140px"><label>Min Interval (s)</label>'
+        +'<input type="number" value="'+(t.minFlashInterval||4)+'" min="1" step="1" onchange="editingTracks['+ti+'].minFlashInterval=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div><div style="max-width:140px"><label>Max Interval (s)</label>'
+        +'<input type="number" value="'+(t.maxFlashInterval||15)+'" min="1" step="1" onchange="editingTracks['+ti+'].maxFlashInterval=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div></div>'
+        +'<div class="form-row"><div style="max-width:140px"><label>Ambient Bri %</label>'
+        +'<input type="number" value="'+(t.ambientState.bri||8)+'" min="0" max="100" onchange="editingTracks['+ti+'].ambientState.bri=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div></div>'
+        +'</div></div>';
+    }
+    if(t.type==='pulse'){
+      if(!t.baseState) t.baseState={on:true,bri:100,xy:[0.68,0.31]};
+      return header
+        +'<div style="margin:8px 0">'
+        +'<div class="form-row"><div style="max-width:140px"><label>Group ID</label>'
+        +'<input type="number" value="'+(t.groupId||'')+'" min="1" placeholder="Hue group" onchange="editingTracks['+ti+'].groupId=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div><div style="max-width:140px"><label>Base Bri %</label>'
+        +'<input type="number" value="'+(t.baseState.bri||100)+'" min="1" max="100" onchange="editingTracks['+ti+'].baseState.bri=parseInt(this.value)" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);padding:6px 8px;border-radius:4px;font-size:12px">'
+        +'</div></div>'
+        +'</div></div>';
     }
     return '';
   }).join('');
   // Render light selectors after DOM is ready
   setTimeout(()=>{
     editingTracks.forEach((t,ti)=>{
-      renderLightSelector('track-lights-'+ti, t.lights||[]);
-      // Wire up checkbox changes
-      const sel=document.getElementById('track-lights-'+ti);
-      if(sel) sel.setAttribute('data-track',ti);
+      if(t.type==='fade'||t.type==='instant'){
+        renderLightSelector('track-lights-'+ti, t.lights||[]);
+        const sel=document.getElementById('track-lights-'+ti);
+        if(sel) sel.setAttribute('data-track',ti);
+      }
     });
   },0);
 }
@@ -482,13 +1266,84 @@ function addTrackInstant() {
   renderTracks();
 }
 
+function addTvAction(ti, action) {
+  if(!editingTracks[ti].actions) editingTracks[ti].actions=[];
+  var lastTime=editingTracks[ti].actions.length>0?editingTracks[ti].actions[editingTracks[ti].actions.length-1].time:0;
+  editingTracks[ti].actions.push({time:lastTime,action:action});
+  renderTracks();
+}
+function addTvInputAction(ti) {
+  var sel=document.getElementById('tv-input-sel-'+ti);
+  if(!editingTracks[ti].actions) editingTracks[ti].actions=[];
+  var lastTime=editingTracks[ti].actions.length>0?editingTracks[ti].actions[editingTracks[ti].actions.length-1].time+0.2:0;
+  editingTracks[ti].actions.push({time:lastTime,action:'input',value:sel.value});
+  renderTracks();
+}
+
 function removeTrack(ti) { editingTracks.splice(ti,1); renderTracks(); }
+
+function changeTrackType(ti, newType) {
+  var track=editingTracks[ti];
+  var duration=parseFloat(document.getElementById('ed-duration').value)||15;
+  track.type=newType;
+  if(newType==='fade'){
+    if(!track.lights) track.lights=[];
+    if(!track.lightNames) track.lightNames=[];
+    if(!track.waypoints||track.waypoints.length===0){
+      track.waypoints=[{time:0,bri:100,color:{ct:346}},{time:duration,bri:50,color:{ct:400}}];
+    }
+  } else if(newType==='homebridge'){
+    if(!track.accessory) track.accessory='';
+    if(!track.waypoints||track.waypoints.length===0){
+      track.waypoints=[{time:0,brightness:100},{time:duration,brightness:50}];
+    }
+  } else if(newType==='caseta-hap'){
+    if(!track.devices) track.devices=[];
+    if(!track.waypoints||track.waypoints.length===0){
+      track.waypoints=[{time:0,brightness:100},{time:duration,brightness:50}];
+    }
+  } else if(newType==='nanoleaf'){
+    if(!track.waypoints||track.waypoints.length===0){
+      track.waypoints=[{time:0,brightness:100},{time:duration,brightness:50}];
+    }
+  } else if(newType==='tv'){
+    if(!track.actions) track.actions=[];
+  } else if(newType==='thunderstorm'){
+    if(!track.groupId) track.groupId=11;
+    if(!track.flashMaxBri) track.flashMaxBri=67;
+    if(!track.minFlashInterval) track.minFlashInterval=4;
+    if(!track.maxFlashInterval) track.maxFlashInterval=15;
+    if(!track.ambientState) track.ambientState={on:true,bri:8,xy:[0.25,0.28],transitiontime:20};
+    if(!track.flashState) track.flashState={on:true,ct:153,transitiontime:0};
+  } else if(newType==='pulse'){
+    if(!track.groupId) track.groupId=11;
+    if(!track.baseState) track.baseState={on:true,bri:100,xy:[0.68,0.31]};
+  }
+  renderTracks();
+}
+
+function updateCasetaDevices(ti) {
+  var container=document.querySelector('#ed-tracks [data-track="'+ti+'"]');
+  if(!container) return;
+  var checkboxes=container.querySelectorAll('input[type=checkbox][value]');
+  editingTracks[ti].devices=Array.from(checkboxes).filter(function(c){return c.checked;}).map(function(c){return c.value;});
+}
 
 function addWaypoint(ti) {
   const track=editingTracks[ti];
   const lastWp=track.waypoints[track.waypoints.length-1];
   const newTime=lastWp?(lastWp.time+2):0;
-  track.waypoints.push({time:newTime,bri:lastWp?Math.min(100,lastWp.bri+10):50,color:lastWp?JSON.parse(JSON.stringify(lastWp.color)):{ct:300}});
+  if(isBrightnessOnlyTrack(track)){
+    var lastBri=lastWp?(track.type==='fade'?lastWp.bri:lastWp.brightness):50;
+    var newBri=Math.min(100,(lastBri||50)+10);
+    if(track.type==='fade'){
+      track.waypoints.push({time:newTime,bri:newBri});
+    } else {
+      track.waypoints.push({time:newTime,brightness:newBri});
+    }
+  } else {
+    track.waypoints.push({time:newTime,bri:lastWp?Math.min(100,lastWp.bri+10):50,color:lastWp?JSON.parse(JSON.stringify(lastWp.color)):{ct:300}});
+  }
   track.waypoints.sort((a,b)=>a.time-b.time);
   renderTracks();
 }
@@ -496,27 +1351,63 @@ function addWaypoint(ti) {
 // ── Waypoint Editor ──
 function openWpEditor(ti, wi) {
   editingWpTrackIdx=ti; editingWpIdx=wi;
-  const wp=editingTracks[ti].waypoints[wi];
+  const track=editingTracks[ti];
+  const wp=track.waypoints[wi];
+  const briOnly=isBrightnessOnlyTrack(track);
+
   document.getElementById('wp-time').value=wp.time;
-  document.getElementById('wp-bri').value=wp.bri;
-  document.getElementById('wp-bri-label').textContent=wp.bri+'%';
-  if(wp.color.ct){
-    setColorMode('ct');
-    document.getElementById('wp-ct').value=wp.color.ct;
-    updateCtLabel();
-  } else if(wp.color.hs) {
-    setColorMode('color');
-    document.getElementById('wp-hue').value=wp.color.hs.hue;
-    document.getElementById('wp-sat').value=wp.color.hs.sat;
-    document.getElementById('wp-hue-label').textContent=Math.round(wp.color.hs.hue/65535*360)+'deg';
-    document.getElementById('wp-sat-label').textContent=wp.color.hs.sat;
-  } else if(wp.color.xy) {
-    // xy -> approximate CT or show as color mode
-    setColorMode('ct');
-    document.getElementById('wp-ct').value=395;
-    updateCtLabel();
+
+  // Set brightness from correct field
+  var briVal=track.type==='fade'?(wp.bri||0):(wp.brightness||0);
+  document.getElementById('wp-bri').value=briVal;
+  document.getElementById('wp-bri-label').textContent=briVal+'%';
+
+  // Show/hide color section
+  var colorSection=document.getElementById('wp-color-section');
+  colorSection.style.display=briOnly?'none':'';
+
+  // Show/hide effect field (only for nanoleaf tracks)
+  var effectSection=document.getElementById('wp-effect-section');
+  var effectSelect=document.getElementById('wp-effect');
+  if(track.type==='nanoleaf'){
+    effectSection.style.display='';
+    var opts='<option value="">-- None --</option>';
+    (window.nanoleafEffects||[]).forEach(function(e){
+      opts+='<option value="'+esc(e)+'"'+(e===(wp.effect||'')?(' selected'):'')+'>'+esc(e)+'</option>';
+    });
+    effectSelect.innerHTML=opts;
+  } else {
+    effectSection.style.display='none';
   }
-  updateWpPreview();
+
+  // Show/hide test button (only for fade tracks with lights)
+  var testBtn=document.getElementById('wp-test-btn');
+  testBtn.style.display=(track.type==='fade'&&!briOnly)?'':'none';
+
+  if(!briOnly&&wp.color){
+    if(wp.color.ct){
+      setColorMode('ct');
+      document.getElementById('wp-ct').value=wp.color.ct;
+      updateCtLabel();
+    } else if(wp.color.hs) {
+      setColorMode('color');
+      document.getElementById('wp-hue').value=wp.color.hs.hue;
+      document.getElementById('wp-sat').value=wp.color.hs.sat;
+      document.getElementById('wp-hue-label').textContent=Math.round(wp.color.hs.hue/65535*360)+'deg';
+      document.getElementById('wp-sat-label').textContent=wp.color.hs.sat;
+    } else if(wp.color.xy) {
+      setColorMode('ct');
+      document.getElementById('wp-ct').value=395;
+      updateCtLabel();
+    }
+  }
+
+  // Update preview swatch
+  if(briOnly){
+    document.getElementById('wp-preview-swatch').style.background=briSwatchHex(briVal);
+  } else {
+    updateWpPreview();
+  }
   document.getElementById('wp-modal').classList.add('open');
 }
 function closeWpEditor() { document.getElementById('wp-modal').classList.remove('open'); }
@@ -530,15 +1421,19 @@ function setColorMode(mode) {
 }
 function updateCtLabel() {
   const v=parseInt(document.getElementById('wp-ct').value);
-  document.getElementById('wp-ct-label').textContent=v+' mirek (~'+Math.round(1e6/v)+'K)';
+  document.getElementById('wp-ct-label').textContent='~'+Math.round(1e6/v)+'K';
 }
 function getWpColor() {
   if(currentColorMode==='ct') return {ct:parseInt(document.getElementById('wp-ct').value)};
   return {hs:{hue:parseInt(document.getElementById('wp-hue').value),sat:parseInt(document.getElementById('wp-sat').value)}};
 }
 function updateWpPreview() {
-  const color=getWpColor();
   const bri=parseInt(document.getElementById('wp-bri').value);
+  if(editingWpTrackIdx!==null&&isBrightnessOnlyTrack(editingTracks[editingWpTrackIdx])){
+    document.getElementById('wp-preview-swatch').style.background=briSwatchHex(bri);
+    return;
+  }
+  const color=getWpColor();
   let xy;
   if(color.ct) xy=ctToXy(color.ct);
   else if(color.hs) xy=hsToXy(color.hs.hue,color.hs.sat);
@@ -575,11 +1470,29 @@ async function testWpInline(ti, wi) {
   }
 }
 function saveWaypoint() {
-  const wp=editingTracks[editingWpTrackIdx].waypoints[editingWpIdx];
+  const track=editingTracks[editingWpTrackIdx];
+  const wp=track.waypoints[editingWpIdx];
+  const briOnly=isBrightnessOnlyTrack(track);
   wp.time=parseFloat(document.getElementById('wp-time').value);
-  wp.bri=parseInt(document.getElementById('wp-bri').value);
-  wp.color=getWpColor();
-  editingTracks[editingWpTrackIdx].waypoints.sort((a,b)=>a.time-b.time);
+  var briVal=parseInt(document.getElementById('wp-bri').value);
+  if(briOnly){
+    if(track.type==='fade'){
+      wp.bri=briVal;
+      delete wp.color;
+    } else {
+      wp.brightness=briVal;
+    }
+  } else {
+    wp.bri=briVal;
+    wp.color=getWpColor();
+  }
+  // Save effect for nanoleaf tracks
+  if(track.type==='nanoleaf'){
+    var effectVal=document.getElementById('wp-effect').value.trim();
+    if(effectVal) wp.effect=effectVal;
+    else delete wp.effect;
+  }
+  track.waypoints.sort((a,b)=>a.time-b.time);
   closeWpEditor();
   renderTracks();
 }
@@ -589,12 +1502,66 @@ function deleteWaypoint() {
   renderTracks();
 }
 
+// ── Spotify Queue Editor ──
+function renderSpotifyQueue() {
+  var el=document.getElementById('ed-spotify-queue');
+  if(!el) return;
+  if(editingSpotifyQueue.length===0){
+    el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0">No tracks in queue</div>';
+    return;
+  }
+  el.innerHTML=editingSpotifyQueue.map(function(uri,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="flex:1;font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(uri)+'</span>'
+      +'<button class="btn-ghost" onclick="editingSpotifyQueue.splice('+i+',1);renderSpotifyQueue()" style="color:var(--red);font-size:14px">&times;</button>'
+      +'</div>';
+  }).join('');
+}
+function addSpotifyTrack() {
+  var input=document.getElementById('ed-spotify-new');
+  var val=input.value.trim();
+  if(!val) return;
+  // Convert Spotify URLs to URIs
+  var urlMatch=val.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/);
+  if(urlMatch) val='spotify:track:'+urlMatch[1];
+  var episodeMatch=val.match(/open\.spotify\.com\/episode\/([a-zA-Z0-9]+)/);
+  if(episodeMatch) val='spotify:episode:'+episodeMatch[1];
+  editingSpotifyQueue.push(val);
+  input.value='';
+  renderSpotifyQueue();
+}
+
 // ── Save/Delete Routine ──
 async function saveRoutine() {
   const name=document.getElementById('ed-name').value.trim();
   const duration=parseFloat(document.getElementById('ed-duration').value);
   if(!name){alert('Name is required');return;}
   const body={name,duration,durationUnit:'minutes',tracks:editingTracks,overrideDetection:true};
+  // Build excludeOnOverride from editor
+  if(document.getElementById('ed-exclude-enabled').checked){
+    var accName=(document.getElementById('ed-exclude-accessory')||{}).value||'';
+    var excLights=Array.from(document.querySelectorAll('#ed-exclude-config [data-exclude-light]:checked')).map(function(el){return parseInt(el.dataset.excludeLight);});
+    var excDesc=(document.getElementById('ed-exclude-desc')||{}).value||'';
+    if(accName&&excLights.length>0) body.excludeOnOverride=[{hbAccessory:accName,lights:excLights,description:excDesc}];
+    else body.excludeOnOverride=[];
+  } else {
+    body.excludeOnOverride=[];
+  }
+  // Build driftDetection from editor
+  if(document.getElementById('ed-drift-enabled').checked){
+    var driftThreshold=parseInt((document.getElementById('ed-drift-threshold')||{}).value)||8;
+    var driftLights=Array.from(document.querySelectorAll('#ed-drift-config [data-drift-light]:checked')).map(function(el){return parseInt(el.dataset.driftLight);});
+    body.driftDetection={enabled:true,thresholdPct:driftThreshold,lights:driftLights};
+  } else {
+    body.driftDetection=null;
+  }
+  // Build sonos block from editor
+  var sonosRoutine=(document.getElementById('ed-sonos-routine').value||'').trim();
+  if(sonosRoutine||editingSpotifyQueue.length>0){
+    body.sonos={};
+    if(sonosRoutine) body.sonos.routine=sonosRoutine;
+    if(editingSpotifyQueue.length>0) body.sonos.spotifyQueue=editingSpotifyQueue.slice();
+  }
   if(editingRoutineId){
     await api('/api/routines/'+editingRoutineId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   } else {
@@ -609,6 +1576,131 @@ async function deleteRoutine() {
   await api('/api/routines/'+editingRoutineId,{method:'DELETE'});
   closeEditor();
   await refresh();
+}
+
+// ── Scenes Tab ──
+var DEFAULT_SCENE_IDS = ['romantic_mode','movie_mode','party_mode','thunderstorm','red_alert','evening_to_latenight','aurora_borealis','storms_end','fireplace_cozy','disco_party'];
+var SCENE_IDS = DEFAULT_SCENE_IDS.slice();
+var SCENE_META = {
+  romantic_mode:   {name:'Romantic Mode',   desc:'Scarlet dream lights, candles, romantic playlist', mood:'romantic'},
+  movie_mode:      {name:'Movie Mode',      desc:'Dim everything, Playbase solo',                   mood:'movie'},
+  party_mode:      {name:'Party Mode',      desc:'Color loop, all speakers, max energy',            mood:'party'},
+  thunderstorm:    {name:'Thunderstorm',    desc:'Lightning flashes, rain ambience',                mood:'thunderstorm'},
+  red_alert:       {name:'Red Alert',       desc:'Pulsing red lights, full intensity',              mood:'redalert'},
+  evening_to_latenight:{name:'Evening to Late Night',desc:'15-min fade to late night ambiance',     mood:'evening'},
+  aurora_borealis:  {name:'Aurora Borealis',  desc:'Color cycle, ambient synth',                   mood:'aurora'},
+  storms_end:       {name:'Storm\'s End',     desc:'Blue-grey fades to sunset amber',              mood:'stormsend'},
+  fireplace_cozy:   {name:'Fireplace Cozy',   desc:'Warm amber, candlelight, jazz',                mood:'fireplace'},
+  disco_party:      {name:'Disco Party',       desc:'Colorloop, pulse, full brightness',            mood:'disco'}
+};
+var sceneStatuses = {};
+var sceneConfigs = {};
+
+async function loadScenes() {
+  // Load scene order from server
+  try {
+    var orderRes = await api('/api/scenes/order');
+    if (orderRes.ok && orderRes.order && orderRes.order.length) {
+      SCENE_IDS = orderRes.order.filter(function(id){return DEFAULT_SCENE_IDS.includes(id);});
+      DEFAULT_SCENE_IDS.forEach(function(id){if(!SCENE_IDS.includes(id)) SCENE_IDS.push(id);});
+    } else { SCENE_IDS = DEFAULT_SCENE_IDS.slice(); }
+  } catch(e) { SCENE_IDS = DEFAULT_SCENE_IDS.slice(); }
+  await Promise.all(SCENE_IDS.map(async id => {
+    try {
+      var res = await api('/api/routines/'+id+'/status');
+      sceneStatuses[id] = res.ok ? res : null;
+    } catch(e) { sceneStatuses[id] = null; }
+    if (!sceneConfigs[id]) {
+      try { sceneConfigs[id] = await api('/api/routines/'+id); } catch(e) {}
+    }
+  }));
+  renderSceneCards();
+}
+
+function describeTrack(t) {
+  if (t.type==='fade') return (t.lightNames||['Hue lights']).join(', ')+' (fade '+t.waypoints.length+' waypoints)';
+  if (t.type==='caseta-hap') return 'Caseta: '+(t.devices||[]).join(', ');
+  if (t.type==='nanoleaf') return 'Nanoleaf'+(t.waypoints&&t.waypoints[0]&&t.waypoints[0].effect?' ['+t.waypoints[0].effect+']':'');
+  if (t.type==='homebridge') return 'Homebridge: '+(t.accessory||'');
+  if (t.type==='thunderstorm') return 'Lightning flashes ('+t.minFlashInterval+'-'+t.maxFlashInterval+'s intervals, max brightness: '+(t.flashMaxBri||170)+')';
+  if (t.type==='pulse') return 'Pulsing lights (group '+t.groupId+')';
+  return t.type;
+}
+
+function describeAction(a) {
+  if (a.type==='hue-scene') return 'Hue scene: "'+a.sceneName+'" on group '+a.group;
+  if (a.type==='hue-state') return 'Hue group '+a.group+': '+JSON.stringify(a.state);
+  if (a.type==='switchbot-scene') return 'SwitchBot: '+(a.sceneName||a.sceneId);
+  return a.type;
+}
+
+function renderSceneCards() {
+  var el = document.getElementById('scene-grid');
+  el.innerHTML = SCENE_IDS.map(function(id) {
+    var meta = SCENE_META[id];
+    var st = sceneStatuses[id];
+    var cfg = sceneConfigs[id];
+    var active = st && st.active === true;
+    var progress = active && st.progress !== undefined ? Math.round(st.progress) : 0;
+    var remaining = active && st.remaining !== undefined ? fmtTime(st.remaining) : '';
+    var cardClass = 'scene-card scene-' + meta.mood + (active ? ' scene-active' : '');
+    var html = '<div class="' + cardClass + '" draggable="true" data-id="' + id + '">';
+    html += '<div class="scene-card-name">' + esc(meta.name) + '</div>';
+    html += '<div class="scene-card-desc">' + esc(meta.desc) + '</div>';
+    if (active) {
+      html += '<div class="progress-bar"><div class="progress-fill" style="width:' + progress + '%"></div></div>';
+      html += '<div style="font-size:11px;color:var(--muted);margin-top:4px">' + progress + '% -- ' + remaining + ' remaining</div>';
+    }
+    // Settings detail panel
+    if (cfg) {
+      html += '<button class="scene-toggle" onclick="toggleSceneDetail(\''+id+'\',event)">Settings</button>';
+      html += '<div class="scene-detail" id="scene-detail-'+id+'">';
+      html += '<div class="scene-detail-row"><span class="scene-detail-label">Duration:</span> '+(cfg.duration||'?')+' '+(cfg.durationUnit||'min')+'</div>';
+      if (cfg.sonos) {
+        var sonosLabel = cfg.sonos.routine ? 'Routine: '+cfg.sonos.routine : 'Scene: '+cfg.sonos.scene;
+        html += '<div class="scene-detail-row"><span class="scene-detail-label">Sonos:</span> '+esc(sonosLabel)+'</div>';
+      }
+      if (cfg.actions && cfg.actions.length) {
+        html += '<div class="scene-detail-row"><span class="scene-detail-label">Actions:</span></div>';
+        cfg.actions.forEach(function(a){ html += '<div class="scene-detail-row" style="padding-left:8px">'+esc(describeAction(a))+'</div>'; });
+      }
+      if (cfg.tracks && cfg.tracks.length) {
+        html += '<div class="scene-detail-row"><span class="scene-detail-label">Tracks ('+cfg.tracks.length+'):</span></div>';
+        cfg.tracks.forEach(function(t){ html += '<div class="scene-detail-row" style="padding-left:8px">'+esc(describeTrack(t))+'</div>'; });
+      }
+      html += '<div style="margin-top:8px"><button class="btn btn-sm" style="background:var(--card);border:1px solid var(--border);color:var(--text);font-size:11px" onclick="editSceneInRoutines(\''+id+'\')">Edit in Fade Routines</button></div>';
+      html += '</div>';
+    }
+    html += '<div class="scene-card-actions">';
+    html += '<button class="btn btn-teal btn-sm" onclick="startScene(\'' + id + '\')">Start</button>';
+    html += '<button class="btn btn-sm" style="background:#dc2626" onclick="cancelScene(\'' + id + '\')">Stop</button>';
+    html += '</div></div>';
+    return html;
+  }).join('');
+  initDrag('scene-grid',saveSceneOrder);
+}
+
+function toggleSceneDetail(id, ev) {
+  ev.stopPropagation();
+  var el = document.getElementById('scene-detail-'+id);
+  if (el) el.classList.toggle('open');
+}
+
+function editSceneInRoutines(id) {
+  switchTab('routines');
+  setTimeout(function(){ var el=document.querySelector('[data-routine="'+id+'"]'); if(el) el.scrollIntoView({behavior:'smooth'}); }, 200);
+}
+
+async function startScene(id) {
+  await api('/api/routines/'+id+'/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+  await loadScenes();
+  refresh();
+}
+
+async function cancelScene(id) {
+  await api('/api/routines/'+id+'/cancel',{method:'POST'});
+  await loadScenes();
+  refresh();
 }
 
 // ── Sonos Tab ──
@@ -647,12 +1739,267 @@ async function triggerSonos(id) {
   await api('/api/sonos/trigger/'+id,{method:'POST'});
 }
 
+// ── Samsung TV Tab ──
+var tvState = { info: null, stStatus: null, fullStatus: null, loading: false };
+
+async function loadTv() {
+  if (tvState.loading) return;
+  tvState.loading = true;
+  try {
+    tvState.info = await api('/api/tv/info');
+    try { tvState.stStatus = await api('/api/tv/smartthings/status'); } catch(e) { tvState.stStatus = null; }
+    try { tvState.fullStatus = await api('/api/tv/status'); } catch(e) { tvState.fullStatus = null; }
+    renderTvTab();
+    loadAmbientRoutine();
+  } catch(e) {
+    document.getElementById('tv-info').textContent = 'Error loading TV info: ' + e.message;
+  }
+  tvState.loading = false;
+}
+
+function renderTvTab() {
+  var info = tvState.info;
+  if (!info || !info.ok) {
+    document.getElementById('tv-input-grid').innerHTML = '<div style="color:var(--muted)">Samsung TV not configured</div>';
+    document.getElementById('tv-info').textContent = 'Not configured';
+    document.getElementById('tv-status-badge').innerHTML = '';
+    return;
+  }
+  // Status badge - use SmartThings health if available
+  var badge = document.getElementById('tv-status-badge');
+  var st = tvState.stStatus;
+  var stOnline = st && st.ok && st.health === 'ONLINE';
+  if (stOnline) {
+    badge.innerHTML = '<span class="tv-status-dot tv-status-on"></span>Online';
+    badge.style.color = 'var(--green)';
+  } else if (info.available) {
+    badge.innerHTML = '<span class="tv-status-dot tv-status-on"></span>Online';
+    badge.style.color = 'var(--green)';
+  } else {
+    badge.innerHTML = '<span class="tv-status-dot tv-status-off"></span>Offline';
+    badge.style.color = 'var(--red)';
+  }
+  // Current input from SmartThings
+  var currentInput = (st && st.ok && st.currentInput) ? st.currentInput.toUpperCase() : null;
+  // Input grid
+  var inputs = info.inputs || {};
+  var grid = document.getElementById('tv-input-grid');
+  var keys = Object.keys(inputs);
+  if (!keys.length) {
+    grid.innerHTML = '<div style="color:var(--muted)">No inputs configured</div>';
+  } else {
+    grid.innerHTML = keys.map(function(port) {
+      var isActive = currentInput && port.toUpperCase() === currentInput;
+      return '<div class="tv-input-btn' + (isActive ? ' active' : '') + '" onclick="tvSwitchInput(\'' + port + '\')">'
+        + '<div class="tv-input-label">' + inputs[port] + '</div>'
+        + '<div class="tv-input-port">' + port + '</div></div>';
+    }).join('');
+  }
+  // SmartThings status
+  var stEl = document.getElementById('tv-st-status');
+  if (info.smartThings && info.smartThings.configured) {
+    var parts = ['Device: connected'];
+    if (st && st.ok) {
+      parts.push('Health: ' + (st.health || 'unknown'));
+      if (st.currentInput) parts.push('Current input: ' + st.currentInput);
+    }
+    parts.push('Auth: ' + (info.smartThings.hasToken ? 'OAuth (auto-refresh)' : 'none'));
+    stEl.innerHTML = parts.join(' &bull; ');
+    stEl.style.color = (st && st.ok && st.health === 'ONLINE') ? 'var(--green)' : 'var(--muted)';
+  } else {
+    stEl.innerHTML = 'Not configured';
+    stEl.style.color = 'var(--muted)';
+  }
+  // Full status: picture mode, evening mode, volume
+  var fs = tvState.fullStatus;
+  if (fs && fs.ok) {
+    // Highlight active picture mode
+    var pmBtns = document.querySelectorAll('#tv-picture-modes .tv-ctrl-btn');
+    pmBtns.forEach(function(btn) {
+      var mode = btn.textContent.trim();
+      if (mode === 'Filmmaker') mode = 'FILMMAKER MODE';
+      var active = fs.pictureMode === mode;
+      btn.style.borderColor = active ? 'var(--teal)' : '';
+      btn.style.color = active ? 'var(--teal)' : '';
+    });
+    // Evening mode badge
+    var evBadge = document.getElementById('tv-evening-badge');
+    if (evBadge) {
+      evBadge.textContent = fs.eveningMode ? '(Active)' : '';
+      evBadge.style.color = fs.eveningMode ? 'var(--teal)' : '';
+    }
+    // Volume slider sync
+    if (fs.volume !== null && fs.volume !== undefined) {
+      var volSlider = document.getElementById('tv-vol-slider');
+      var volLabel = document.getElementById('tv-vol-label');
+      if (volSlider) { volSlider.value = fs.volume; }
+      if (volLabel) { volLabel.textContent = fs.volume; }
+    }
+  }
+  // Volume slider live label
+  var vs = document.getElementById('tv-vol-slider');
+  if (vs) vs.oninput = function() { document.getElementById('tv-vol-label').textContent = this.value; };
+  // Connection info
+  var infoEl = document.getElementById('tv-info');
+  infoEl.innerHTML = 'IP: ' + (info.ip || 'N/A')
+    + ' &bull; MAC: ' + (info.mac || 'N/A')
+    + ' &bull; WS paired: ' + (info.paired ? 'Yes' : 'No')
+    + ' &bull; Port 8002: ' + (info.available ? 'Open' : 'Closed');
+  // Webhooks reference
+  var base = location.protocol + '//' + location.hostname + ':' + location.port;
+  var hooks = [];
+  // Input triggers
+  keys.forEach(function(port) {
+    var id = 'input_' + inputs[port].toLowerCase().replace(/\s+/g, '_');
+    hooks.push({ label: inputs[port] + ' (' + port + ')', method: 'POST', url: base + '/api/trigger/' + id });
+  });
+  // Smart power
+  hooks.push({ label: 'Smart On', method: 'POST', url: base + '/api/tv/smartpower/on' });
+  hooks.push({ label: 'Smart Off', method: 'POST', url: base + '/api/tv/smartpower/off' });
+  // Ambient
+  hooks.push({ label: 'Ambient Mode', method: 'POST', url: base + '/api/tv/ambient' });
+  // Evening mode
+  hooks.push({ label: 'Evening On', method: 'POST', url: base + '/api/tv/evening-mode/on' });
+  hooks.push({ label: 'Evening Off', method: 'POST', url: base + '/api/tv/evening-mode/off' });
+  // Picture modes
+  hooks.push({ label: 'Picture: Dynamic', method: 'POST', url: base + '/api/tv/picture-mode/Dynamic' });
+  hooks.push({ label: 'Picture: Movie', method: 'POST', url: base + '/api/tv/picture-mode/Movie' });
+  hooks.push({ label: 'Picture: Filmmaker', method: 'POST', url: base + '/api/tv/picture-mode/FILMMAKER%20MODE' });
+  // Power (legacy)
+  hooks.push({ label: 'Wake (WoL)', method: 'POST', url: base + '/api/tv/power/on' });
+  hooks.push({ label: 'Power Off (key)', method: 'POST', url: base + '/api/tv/power/off' });
+  // Volume
+  hooks.push({ label: 'Vol +', method: 'POST', url: base + '/api/tv/key/KEY_VOLUP' });
+  hooks.push({ label: 'Vol -', method: 'POST', url: base + '/api/tv/key/KEY_VOLDOWN' });
+  hooks.push({ label: 'Mute', method: 'POST', url: base + '/api/tv/key/KEY_MUTE' });
+  // Status
+  hooks.push({ label: 'Full Status', method: 'GET', url: base + '/api/tv/status' });
+  var whEl = document.getElementById('tv-webhooks');
+  whEl.innerHTML = hooks.map(function(h) {
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border)">'
+      + '<span style="min-width:130px;color:var(--text);font-weight:500;font-size:12px">' + h.label + '</span>'
+      + '<code style="flex:1;font-size:11px;color:var(--teal);background:var(--card2);padding:3px 6px;border-radius:4px;cursor:pointer;word-break:break-all" onclick="navigator.clipboard.writeText(this.textContent);this.style.color=\'var(--green)\';setTimeout(function(){this.style.color=\'var(--teal)\'}.bind(this),800)" title="Click to copy">' + h.method + ' ' + h.url + '</code></div>';
+  }).join('');
+}
+
+async function loadAmbientRoutine() {
+  try {
+    var [routines, routineCfg, sceneCfg] = await Promise.all([
+      api('/api/sonos/routines'),
+      api('/api/tv/ambient-routine'),
+      api('/api/tv/ambient-scene')
+    ]);
+    // Scene dropdown
+    var sceneSel = document.getElementById('ambientSceneSelect');
+    if (sceneSel && sceneCfg) {
+      var currentScene = sceneCfg.scene || '';
+      var sceneNames = {none:'None',featured:'Featured',blossom:'Blossom',tranquilnature:'Tranquil Nature',islandflyover:'Island Flyover',fireplace:'Fireplace',sparkle:'Sparkle',wish:'Wish',window:'Window',journey:'Journey',spring:'Spring'};
+      var sOpts = '<option value="">(Last used)</option>';
+      (sceneCfg.scenes || []).forEach(function(s) {
+        sOpts += '<option value="' + s + '"' + (s === currentScene ? ' selected' : '') + '>' + (sceneNames[s] || s) + '</option>';
+      });
+      sceneSel.innerHTML = sOpts;
+    }
+    // Sonos routine dropdown
+    var sel = document.getElementById('ambientRoutineSelect');
+    if (sel) {
+      var current = (routineCfg && routineCfg.routine) || '';
+      var opts = '<option value="">(None)</option>';
+      if (routines && typeof routines === 'object') {
+        Object.keys(routines).forEach(function(id) {
+          var r = routines[id];
+          if (r && r.type === 'music' && r.enabled !== false) {
+            opts += '<option value="' + id + '"' + (id === current ? ' selected' : '') + '>' + (r.name || id) + '</option>';
+          }
+        });
+      }
+      sel.innerHTML = opts;
+    }
+  } catch(e) { console.log('Ambient config load error:', e); }
+}
+
+async function saveAmbientConfig() {
+  var sceneSel = document.getElementById('ambientSceneSelect');
+  var routineSel = document.getElementById('ambientRoutineSelect');
+  var status = document.getElementById('ambientRoutineStatus');
+  try {
+    await Promise.all([
+      api('/api/tv/ambient-scene', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({scene: sceneSel ? sceneSel.value : ''}) }),
+      api('/api/tv/ambient-routine', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({routine: routineSel ? routineSel.value : ''}) })
+    ]);
+    if (status) {
+      status.textContent = 'Saved';
+      status.style.color = 'var(--green)';
+      setTimeout(function() { status.style.color = 'var(--muted)'; status.textContent = ''; }, 2000);
+    }
+  } catch(e) { alert('Save error: ' + e.message); }
+}
+
+async function tvCmd(endpoint) {
+  try {
+    var res = await api(endpoint, { method: 'POST' });
+    if (res.ok || res.success) {
+      // Brief visual feedback -- reload TV info after a moment
+      setTimeout(loadTv, 1000);
+    } else {
+      alert('TV command failed: ' + (res.error || 'unknown error'));
+    }
+  } catch(e) {
+    alert('TV command error: ' + e.message);
+  }
+}
+
+async function tvSwitchInput(port) {
+  // Highlight the selected button immediately
+  document.querySelectorAll('.tv-input-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.querySelector('.tv-input-port').textContent === port);
+  });
+  await tvCmd('/api/tv/input/' + port);
+}
+
+async function tvRefreshToken() {
+  var resultEl = document.getElementById('tv-refresh-result');
+  resultEl.textContent = 'Refreshing...';
+  resultEl.style.color = 'var(--muted)';
+  try {
+    var res = await api('/api/tv/smartthings/refresh', { method: 'POST' });
+    if (res.ok) {
+      resultEl.textContent = 'Token refreshed (expires in ' + Math.round((res.expiresIn || 86400) / 3600) + 'h)';
+      resultEl.style.color = 'var(--green)';
+    } else {
+      resultEl.textContent = 'Failed: ' + (res.error || 'unknown');
+      resultEl.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    resultEl.textContent = 'Error: ' + e.message;
+    resultEl.style.color = 'var(--red)';
+  }
+  setTimeout(function() { resultEl.textContent = ''; }, 5000);
+}
+
+
+async function tvSetPictureMode(mode) {
+  await tvCmd('/api/tv/picture-mode/' + encodeURIComponent(mode));
+}
+
+async function tvEveningMode(on) {
+  await tvCmd('/api/tv/evening-mode/' + (on ? 'on' : 'off'));
+}
+
+async function tvSetVolume() {
+  var vol = document.getElementById('tv-vol-slider').value;
+  await tvCmd('/api/tv/volume/' + vol);
+}
+
 // ── Auto-refresh ──
 let refreshTimer=null;
 function scheduleRefresh() {
   const hasActive=S.status&&S.status.activeRoutines&&S.status.activeRoutines.length>0;
+  const hasTesting=S.status&&S.status.daytimeGradient&&S.status.daytimeGradient.testing;
+  const hasGradient=S.status&&S.status.daytimeGradient&&S.status.daytimeGradient.running;
   clearTimeout(refreshTimer);
-  refreshTimer=setTimeout(async()=>{await refresh();scheduleRefresh();},hasActive?5000:15000);
+  const interval=hasTesting?2000:(hasActive||hasGradient)?5000:15000;
+  refreshTimer=setTimeout(async()=>{await refresh();scheduleRefresh();},interval);
 }
 refresh().then(scheduleRefresh);
 </script>

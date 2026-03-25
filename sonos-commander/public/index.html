@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sonos Commander</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2300587C'/><path d='M20 4v18a5 5 0 1 1-3-4.6V4h3zM12 24a2 2 0 1 0 5 0 2 2 0 0 0-5 0z' fill='white' stroke='white' stroke-width='1'/></svg>">
 <style>
   :root { --teal:#009999; --dark-blue:#00587C; --bg:#0F1419; --card:#1A2332; --card-border:#2A3A4E; --text:#E8ECF1; --muted:#8899AA; --success:#36B37E; --warn:#FFAB00; --danger:#FF5630; --accent:var(--teal); --radius:8px; }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -21,6 +22,7 @@
   .tab-content { display:none; padding:16px; }
   .tab-content.active { display:block; }
   .card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .group-card { border-left:3px solid var(--accent); }
   .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
   .card-title { font-size:14px; font-weight:600; }
   .grid { display:grid; gap:12px; }
@@ -88,14 +90,16 @@
   .chip-row { display:flex; gap:6px; flex-wrap:wrap; }
   .chip { padding:4px 10px; background:var(--bg); border:1px solid var(--card-border); border-radius:16px; font-size:12px; cursor:pointer; transition:all 0.2s; }
   .chip.selected { background:var(--accent); border-color:var(--accent); color:white; }
+  .chip.offline { opacity:0.4; border-style:dashed; }
+  .chip.offline.selected { opacity:0.6; background:var(--accent); border-color:var(--accent); border-style:dashed; }
   .section-title { font-size:16px; font-weight:600; margin-bottom:12px; }
   .toast { position:fixed; bottom:20px; right:20px; background:var(--card); border:1px solid var(--card-border); padding:12px 20px; border-radius:var(--radius); font-size:13px; z-index:1000; transform:translateY(100px); opacity:0; transition:all 0.3s; }
   .toast.show { transform:translateY(0); opacity:1; }
   .toast.success { border-left:3px solid var(--success); }
   .toast.error { border-left:3px solid var(--danger); }
   .expandable-content { max-height:0; overflow:hidden; transition:max-height 0.3s ease; }
-  .expandable-content.open { max-height:600px; }
-  @media (max-width:600px) { .grid-2{grid-template-columns:1fr;} .form-row{flex-direction:column;} }
+  .expandable-content.open { max-height:80vh; overflow-y:auto; }
+  @media (max-width:600px) { .grid-2{grid-template-columns:1fr;} .form-row{flex-direction:column;} .header{flex-wrap:wrap;padding:12px 16px;gap:8px;} .header-actions{width:100%;justify-content:flex-start;flex-wrap:wrap;gap:6px;} .header-actions button{padding:5px 10px;font-size:11px;} }
 </style>
 </head>
 <body>
@@ -188,7 +192,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let S={speakers:{},status:{},routines:{},favorites:[],scenes:{},groupPresets:{},sleepTimers:{},queues:{},log:[]};
+let S={speakers:{},status:{},routines:{},favorites:[],scenes:{},groupPresets:{},sleepTimers:{},queues:{},log:[],groups:[]};
 let rooms=[], queueRows=[];
 const esc=s=>s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';
 
@@ -208,14 +212,14 @@ async function doAction(name,body){
 
 async function refreshAll(){
   try{
-    const[sp,st,rt,fv,sc,gp,sl,qu,lg]=await Promise.all([
+    const[sp,st,rt,fv,sc,gp,sl,qu,lg,gr]=await Promise.all([
       fetch('/api/speakers').then(r=>r.json()),fetch('/api/status').then(r=>r.json()),
       fetch('/api/routines').then(r=>r.json()),fetch('/api/favorites').then(r=>r.json()),
       fetch('/api/scenes').then(r=>r.json()),fetch('/api/group-presets').then(r=>r.json()),
       fetch('/api/sleep-timers').then(r=>r.json()),fetch('/api/queues').then(r=>r.json()),
-      fetch('/api/log?limit=50').then(r=>r.json())
+      fetch('/api/log?limit=50').then(r=>r.json()),fetch('/api/groups').then(r=>r.json())
     ]);
-    S={speakers:sp,status:st,routines:rt,favorites:fv,scenes:sc,groupPresets:gp,sleepTimers:sl,queues:qu,log:lg};
+    S={speakers:sp,status:st,routines:rt,favorites:fv,scenes:sc,groupPresets:gp,sleepTimers:sl,queues:qu,log:lg,groups:gr};
     rooms=Object.keys(sp);renderAll();
   }catch(e){console.error('Refresh:',e);}
 }
@@ -236,7 +240,15 @@ function renderNowPlaying(){
   if(!p.length){a.innerHTML='';return;}
   const[n,s]=p[0];
   const art=s.albumArtURI?'<img src="'+esc(s.albumArtURI)+'" style="width:64px;height:64px;border-radius:6px;object-fit:cover" onerror="this.style.display=\'none\'">':'<div style="font-size:36px">🎵</div>';
-  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px">'+art+'<div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+(s.album?' — '+esc(s.album):'')+'</div><div class="np-rooms">Playing on: '+p.map(x=>x[0]).join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
+  // Build smart room list: collapse groups into "Coord + N"
+  const roomLabels=[],seen=new Set();
+  p.forEach(([name])=>{
+    if(seen.has(name)) return;
+    const g=(S.groups||[]).find(gr=>gr.members.includes(name)&&gr.memberCount>1);
+    if(g){ g.members.forEach(m=>seen.add(m)); roomLabels.push(g.coordinator+' + '+(g.memberCount-1)); }
+    else { seen.add(name); roomLabels.push(name); }
+  });
+  a.innerHTML='<div class="now-playing"><div style="display:flex;align-items:center;gap:12px">'+art+'<div style="flex:1"><div class="np-title">'+esc(s.track||'Unknown')+'</div><div class="np-artist">'+esc(s.artist||'')+(s.album?' — '+esc(s.album):'')+'</div><div class="np-rooms">Playing on: '+roomLabels.join(', ')+'</div></div></div><div class="np-controls"><button onclick="doAction(\'pause-all\')">⏸</button><input type="range" min="0" max="100" value="'+(s.volume||10)+'" style="flex:1;accent-color:var(--teal)" oninput="this.nextElementSibling.textContent=this.value+\'%\'" onchange="api(\'POST\',\'/api/action/volume\',{volume:parseInt(this.value)})"><span style="font-size:12px;color:var(--muted)">'+(s.volume||0)+'%</span></div></div>';
 }
 
 function renderSleepTimers(){
@@ -256,26 +268,104 @@ async function startSleep(){
   closeSleepModal();toast('Sleep timer started');refreshAll();
 }
 
-function renderSpeakers(){
-  document.getElementById('speakers-grid').innerHTML=rooms.map(n=>{
-    const i=S.speakers[n]||{},s=S.status[n]||{},sc=s.state==='error'?'error':(s.state==='playing'?'playing':(s.state||'stopped'));
-    const inp=s.inputSource?'<span class="input-badge">'+esc(s.inputSource)+'</span>':'';
-    const art=s.albumArtURI&&s.state==='playing'?'<img src="'+esc(s.albumArtURI)+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover" onerror="this.style.display=\'none\'">':'';
-    const trackLine=s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track" style="display:flex;align-items:center;gap:6px">'+art+'<span>🎵 '+esc(s.track)+(s.artist?' — '+esc(s.artist):'')+'</span></div>':'');
-    const volBtns='<div style="display:flex;gap:4px;margin-top:4px">'+[5,10,25,50].map(v=>'<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" onclick="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:'+v+'}).then(refreshAll)">'+v+'</button>').join('')+'</div>';
-    return '<div class="card"><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(s.state||'?')+'</span></div><div class="speaker-ip">'+esc(i.model)+' • '+esc(i.ip)+'</div>'+trackLine+'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div>'+volBtns+'</div>';
+const expandedSpeakerGroups = new Set();
+function toggleSpeakerGroup(id) { if (expandedSpeakerGroups.has(id)) expandedSpeakerGroups.delete(id); else expandedSpeakerGroups.add(id); renderSpeakers(); }
+async function setGroupVolume(groupId, volume) {
+  const g = (S.groups || []).find(gr => gr.id === groupId);
+  if (!g) return;
+  await Promise.all(g.members.map(m => api('POST', '/api/action/volume', { room: m, volume: volume })));
+  refreshAll();
+}
+
+function renderSoloCard(n) {
+  const i=S.speakers[n]||{},s=S.status[n]||{},isOffline=i.online===false;
+  const sc=isOffline?'error':(s.state==='error'?'error':(s.state==='playing'?'playing':(s.state||'stopped')));
+  const inp=s.inputSource?'<span class="input-badge">'+esc(s.inputSource)+'</span>':'';
+  const art=s.albumArtURI&&s.state==='playing'?'<img src="'+esc(s.albumArtURI)+'" style="width:32px;height:32px;border-radius:4px;object-fit:cover" onerror="this.style.display=\'none\'">':'';
+  const trackLine=isOffline?'':s.inputSource?'<div class="speaker-track">'+inp+'</div>':(s.track?'<div class="speaker-track" style="display:flex;align-items:center;gap:6px">'+art+'<span>'+esc(s.track)+(s.artist?' -- '+esc(s.artist):'')+'</span></div>':'');
+  const volBtns=isOffline?'':'<div style="display:flex;gap:4px;margin-top:4px">'+[5,10,25,50].map(v=>'<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" onclick="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:'+v+'}).then(refreshAll)">'+v+'</button>').join('')+'</div>';
+  return '<div class="card"'+(isOffline?' style="opacity:0.5;border-style:dashed"':'')+'><div class="card-header"><span class="card-title">'+esc(n)+'</span><span class="state '+sc+'">'+(isOffline?'offline':(s.state||'?'))+'</span></div><div class="speaker-ip">'+esc(i.model)+' &bull; '+esc(i.ip)+'</div>'+trackLine+(isOffline?'':'<div class="speaker-vol"><input type="range" min="0" max="100" value="'+(s.volume||0)+'" oninput="this.nextElementSibling.textContent=this.value" onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(n)+'\',volume:parseInt(this.value)})"><span>'+(s.volume||0)+'</span></div>'+volBtns)+'</div>';
+}
+
+function renderGroupCard(g) {
+  const coord=g.coordinator, cs=S.status[coord]||{};
+  const isPlaying=cs.state==='playing';
+  const sc=cs.state==='error'?'error':(isPlaying?'playing':(cs.state||'stopped'));
+  const isExpanded=expandedSpeakerGroups.has(g.id);
+  // Track info from coordinator
+  const art=cs.albumArtURI&&isPlaying?'<img src="'+esc(cs.albumArtURI)+'" style="width:40px;height:40px;border-radius:6px;object-fit:cover" onerror="this.style.display=\'none\'">':'';
+  const trackLine=cs.inputSource
+    ?'<div class="speaker-track"><span class="input-badge">'+esc(cs.inputSource)+'</span></div>'
+    :(cs.track?'<div class="speaker-track" style="display:flex;align-items:center;gap:8px">'+art+'<span>'+esc(cs.track)+(cs.artist?' -- '+esc(cs.artist):'')+'</span></div>':'');
+  // Member chips with volume
+  const chips=g.members.map(m=>{
+    const ms=S.status[m]||{};
+    return '<span class="chip selected" style="cursor:default;font-size:11px">'+esc(m)+' <span style="opacity:0.7">'+(ms.volume!=null?ms.volume:'?')+'</span></span>';
   }).join('');
+  // Expanded: individual volume sliders
+  let memberHtml='';
+  if(isExpanded){
+    memberHtml=g.members.map(m=>{
+      const ms=S.status[m]||{},mi=S.speakers[m]||{},isOff=mi.online===false;
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0'+(isOff?';opacity:0.4':'')+'">'
+        +'<span style="font-size:12px;min-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(m)+'</span>'
+        +'<input type="range" min="0" max="100" value="'+(ms.volume||0)+'" style="flex:1"'
+        +(isOff?' disabled':'')
+        +' oninput="this.nextElementSibling.textContent=this.value"'
+        +' onchange="api(\'POST\',\'/api/action/volume\',{room:\''+esc(m)+'\',volume:parseInt(this.value)})">'
+        +'<span style="font-size:12px;color:var(--muted);min-width:28px;text-align:right">'+(ms.volume||0)+'</span>'
+        +'</div>';
+    }).join('');
+    memberHtml+='<div style="display:flex;gap:4px;margin-top:4px;padding-top:8px;border-top:1px solid var(--card-border);align-items:center">'
+      +'<span style="font-size:11px;color:var(--muted);margin-right:4px">All:</span>'
+      +[5,10,25,50].map(v=>'<button class="btn btn-sm btn-ghost" style="padding:2px 8px;font-size:11px" onclick="setGroupVolume(\''+esc(g.id)+'\','+v+')">'+v+'</button>').join('')
+      +'</div>';
+  }
+  return '<div class="card group-card">'
+    +'<div class="card-header" style="cursor:pointer" onclick="toggleSpeakerGroup(\''+esc(g.id)+'\')">'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span class="card-title">'+esc(g.coordinator)+' + '+(g.memberCount-1)+'</span>'
+    +'<span class="state '+sc+'">'+(cs.state||'?')+'</span>'
+    +'</div>'
+    +'<span style="font-size:12px;color:var(--muted);transition:transform 0.2s;display:inline-block;transform:rotate('+(isExpanded?'180':'0')+'deg)">&#9660;</span>'
+    +'</div>'
+    +trackLine
+    +'<div style="margin-top:8px" class="chip-row">'+chips+'</div>'
+    +(memberHtml?'<div style="padding-top:10px">'+memberHtml+'</div>':'')
+    +'</div>';
+}
+
+function renderSpeakers(){
+  const grid=document.getElementById('speakers-grid');
+  const groupMap={};
+  (S.groups||[]).forEach(g=>{ g.members.forEach(m=>{ groupMap[m]=g; }); });
+  const rendered=new Set();
+  let html='';
+  rooms.forEach(n=>{
+    if(rendered.has(n)) return;
+    const g=groupMap[n];
+    if(g&&g.memberCount>1){
+      g.members.forEach(m=>rendered.add(m));
+      html+=renderGroupCard(g);
+    } else {
+      rendered.add(n);
+      html+=renderSoloCard(n);
+    }
+  });
+  grid.innerHTML=html;
 }
 
 function renderQuickPlay(){
   const el=document.getElementById('quick-routines');
-  el.innerHTML=Object.entries(S.routines).filter(([_,r])=>r.type==='music'&&r.enabled).map(([id,r])=>'<button class="btn btn-ghost btn-sm" onclick="api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Playing: '+esc(r.name)+'\');refreshAll()})">'+esc(r.name)+'</button>').join('');
+  el.innerHTML=Object.entries(S.routines).filter(([_,r])=>r.type==='music'&&r.enabled).map(([id,r])=>'<button class="btn btn-ghost btn-sm" onclick="api(\'POST\',\'/api/trigger/'+id+'?force=true\').then(()=>{toast(\'Playing: '+esc(r.name)+'\');refreshAll()})">'+esc(r.name)+'</button>').join('');
 }
 
 function renderScenes(){
   document.getElementById('scenes-grid').innerHTML=Object.entries(S.scenes).map(([id,s])=>'<button class="btn-scene" onclick="api(\'POST\',\'/api/scenes/'+id+'/execute\').then(()=>{toast(\'Scene: '+esc(s.name)+'\');refreshAll()})"><div class="icon">'+(s.icon||'🎵')+'</div><div class="label">'+esc(s.name)+'</div><div class="desc">'+esc(s.description||'')+'</div></button>').join('');
 }
 
+const expandedScenes = new Set();
+function toggleSceneExpand(id) { if (expandedScenes.has(id)) expandedScenes.delete(id); else expandedScenes.add(id); renderScenesEditor(); }
 function renderScenesEditor(){
   const actionTypes=['ungroupAll','groupAll','pauseAll','pauseExcept','setVolume','setVolumeAll','playFavorite','delay'];
   document.getElementById('scenes-editor').innerHTML=Object.entries(S.scenes).map(([id,s])=>{
@@ -285,13 +375,31 @@ function renderScenesEditor(){
       else if(a.type==='groupAll') detail='<div class="form-group"><label>Coordinator</label><select onchange="uSA(\''+id+'\','+i+',\'coordinator\',this.value)"><option value="">Auto</option>'+rooms.map(n=>'<option value="'+esc(n)+'"'+(a.coordinator===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select></div>';
       else if(a.type==='playFavorite') detail='<div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uSA(\''+id+'\','+i+',\'favorite\',this.value)"><option value="">--</option>'+S.favorites.map(f=>'<option value="'+esc(f.title)+'"'+(a.favorite===f.title?' selected':'')+'>'+esc(f.title)+'</option>').join('')+'</select></div>';
       else if(a.type==='delay') detail='<div class="form-group" style="max-width:80px"><label>Seconds</label><input type="number" min="1" max="60" value="'+(a.seconds||1)+'" onchange="uSA(\''+id+'\','+i+',\'seconds\',+this.value)"></div>';
-      else if(a.type==='pauseExcept') detail='<div class="form-group"><label>Keep</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((a.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleSAExcept(\''+id+'\','+i+',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>';
+      else if(a.type==='pauseExcept') detail='<div class="form-group"><label>Keep</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((a.exceptRooms||[]).includes(n)?'selected':'')+((S.speakers[n]&&S.speakers[n].online===false)?' offline':'')+'" onclick="toggleSAExcept(\''+id+'\','+i+',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>';
       return '<div class="form-row" style="align-items:flex-end"><span style="font-size:11px;color:var(--muted);min-width:18px">'+(i+1)+'</span><div class="form-group" style="max-width:140px"><label>Action</label><select onchange="uSA(\''+id+'\','+i+',\'type\',this.value);renderScenesEditor()">'+actionTypes.map(t=>'<option value="'+t+'"'+(a.type===t?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'+detail+'<button class="btn btn-sm btn-ghost" onclick="rmSA(\''+id+'\','+i+')" style="margin-bottom:6px">✕</button></div>';
     }).join('');
-    return '<div class="card"><div class="card-header"><span>'+(s.icon||'')+' <strong>'+esc(s.name)+'</strong></span><button class="btn btn-sm btn-ghost" onclick="this.parentElement.nextElementSibling.classList.toggle(\'open\')">Edit</button></div><div class="expandable-content"><div class="form-row" style="margin-top:10px"><div class="form-group"><label>Name</label><input value="'+esc(s.name)+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(s.icon||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Description</label><input value="'+esc(s.description||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{description:this.value})"></div><div style="margin-top:10px"><label style="font-size:11px;text-transform:uppercase;color:var(--muted)">Actions</label>'+actRows+'<button class="btn btn-sm btn-ghost" onclick="addSA(\''+id+'\')" style="margin-top:6px">+ Add Action</button></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="delScene(\''+id+'\')">Delete Scene</button></div></div></div>';
+    return '<div class="card"><div class="card-header"><span>'+(s.icon||'')+' <strong>'+esc(s.name)+'</strong></span><button class="btn btn-sm btn-ghost" onclick="toggleSceneExpand(\''+id+'\')">Edit</button></div><div class="expandable-content'+(expandedScenes.has(id)?' open':'')+'"><div class="form-row" style="margin-top:10px"><div class="form-group"><label>Name</label><input value="'+esc(s.name)+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(s.icon||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Description</label><input value="'+esc(s.description||'')+'" onchange="api(\'PUT\',\'/api/scenes/'+id+'\',{description:this.value})"></div><div style="margin-top:10px"><label style="font-size:11px;text-transform:uppercase;color:var(--muted)">Actions</label>'+actRows+'<button class="btn btn-sm btn-ghost" onclick="addSA(\''+id+'\')" style="margin-top:6px">+ Add Action</button></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="delScene(\''+id+'\')">Delete Scene</button></div></div></div>';
   }).join('');
 }
 
+const expandedRoutines = new Set();
+function toggleRoutineExpand(id) {
+  if (expandedRoutines.has(id)) expandedRoutines.delete(id); else expandedRoutines.add(id);
+  renderRoutines();
+}
+function routineSummary(r) {
+  if (r.type === 'music') {
+    let content = r.favorite || '';
+    if (!content && r.spotifyUri) { const epId = r.spotifyUri.split(':').pop(); const m = S.favorites.find(f => f.uri && f.uri.includes(epId)); content = m ? m.title : r.spotifyUri; }
+    const where = r.groupAll ? 'All Speakers' : (r.rooms && r.rooms.length ? r.rooms.join(', ') : (r.coordinator || 'Auto'));
+    return esc(content || 'No content') + ' &middot; ' + esc(where) + ' &middot; Vol ' + (r.volume || 10);
+  } else if (r.type === 'control') {
+    if(r.action==='tvVolume'){var vr=r.volumes||{};var vs=Object.entries(vr).map(([n,v])=>n.replace(/ Speaker$/,'').replace('Guest Bathroom','GBR')+':'+v).join(', ');return 'tvVolume &middot; '+esc(vs||'no volumes set')+(r.pauseExcept&&r.pauseExcept.length?' &middot; pause except '+esc(r.pauseExcept.join(', ')):'');}
+    return esc(r.action || '');
+  }
+  else if (r.type === 'webhook') { return esc(r.webhookUrl || 'No URL'); }
+  return '';
+}
 function renderRoutines(){
   const el=document.getElementById('routines-list');
   const ro=s=>rooms.map(n=>'<option value="'+esc(n)+'"'+(s===n?' selected':'')+'>'+esc(n)+'</option>').join('');
@@ -303,40 +411,228 @@ function renderRoutines(){
       const selFav=S.favorites.find(f=>f.title===r.favorite);
       const canShuffle=!r.favorite||!selFav||!!selFav.shuffleable;
       ed='<div class="form-row"><div class="form-group"><label>Favorite</label><input type="text" placeholder="Search favorites..." style="font-size:11px;padding:4px 8px;margin-bottom:4px" oninput="filterFavOpts(this)"><select onchange="uR(\''+id+'\',\'favorite\',this.value);updateShuffleToggle(\''+id+'\',this.value)"><option value="">-- Select --</option>'+fo(r.favorite)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volume||10)+'" onchange="uR(\''+id+'\',\'volume\',+this.value)"></div></div>'
+        +(r.spotifyUri&&!r.favorite?'<div style="font-size:11px;color:var(--accent);padding:2px 0 4px 0">Spotify URI: '+esc(r.spotifyUri)+'</div>':'')
         +'<div class="form-row"><div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div><div class="form-group" style="max-width:100px"><label>Group All</label><label class="toggle"><input type="checkbox" '+(r.groupAll?'checked':'')+' onchange="uR(\''+id+'\',\'groupAll\',this.checked);renderRoutines()"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px" id="shuffle-'+id+'"><label>Shuffle</label><label class="toggle"><input type="checkbox" '+(r.shuffle&&canShuffle?'checked':'')+' '+(canShuffle?'':'disabled')+' onchange="uR(\''+id+'\',\'shuffle\',this.checked)"><span class="slider"'+(canShuffle?'':' style="opacity:0.3;cursor:not-allowed"')+'></span></label>'+(canShuffle?'':'<div class="shuffle-na" style="font-size:9px;color:var(--muted);margin-top:2px">N/A for radio</div>')+'</div></div>'
-        +'<div class="form-group" style="margin-top:4px"><label>Speakers <span style="font-size:10px;color:var(--muted)">'+(r.groupAll?'(Group All is on — overrides selection)':'(select rooms, or enable Group All)')+'</span></label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.rooms||[]).includes(n)?'selected':'')+'" onclick="toggleRoutineRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>'
-        +'<div class="form-row" style="margin-top:8px"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>';
+        +'<div class="form-group" style="margin-top:4px"><label>Speakers <span style="font-size:10px;color:var(--muted)">'+(r.groupAll?'(Group All is on — overrides selection)':'(select rooms, or enable Group All)')+'</span></label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.rooms||[]).includes(n)?'selected':'')+((S.speakers[n]&&S.speakers[n].online===false)?' offline':'')+'" onclick="toggleRoutineRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>'
+        +'<div class="form-row" style="margin-top:8px"><div class="form-group" style="max-width:100px"><label>Sleep Timer</label><label class="toggle"><input type="checkbox" '+(r.sleepTimer&&r.sleepTimer.enabled?'checked':'')+' onchange="uRS(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label></div><div class="form-group" style="max-width:100px"><label>Minutes</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.minutes)||60)+'" onchange="uRS(\''+id+'\',\'minutes\',+this.value)"></div><div class="form-group" style="max-width:80px"><label>Fade</label><input type="number" value="'+((r.sleepTimer&&r.sleepTimer.fadeMinutes)||5)+'" onchange="uRS(\''+id+'\',\'fadeMinutes\',+this.value)"></div></div>'
+        +(!r.groupAll?'<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border)"><div class="form-row"><div class="form-group" style="max-width:160px"><label>Other Speakers</label><label class="toggle"><input type="checkbox" '+(r.otherSpeakers?'checked':'')+' onchange="toggleOtherSpeakers(\''+id+'\',this.checked)"><span class="slider"></span></label></div>'+(r.otherSpeakers?'<div class="form-group" style="max-width:130px"><label>Action</label><select onchange="uRO(\''+id+'\',\'action\',this.value)"><option value="stop"'+(r.otherSpeakers.action==='stop'?' selected':'')+'>Stop</option><option value="pause"'+(r.otherSpeakers.action==='pause'?' selected':'')+'>Pause</option><option value="mute"'+(r.otherSpeakers.action==='mute'?' selected':'')+'>Mute</option><option value="setVolume"'+(r.otherSpeakers.action==='setVolume'?' selected':'')+'>Set Volume</option></select></div>'+(r.otherSpeakers.action==='setVolume'?'<div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.otherSpeakers.volume||0)+'" onchange="uRO(\''+id+'\',\'volume\',+this.value)"></div>':''):'')+'</div></div>':'')
+        +conditionsHTML(id,r);
     } else if(r.type==='control'){
       if(r.action==='pauseExcept'){
-        ed='<div class="form-group"><label>Except Rooms (keep playing)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.exceptRooms||[]).includes(n)?'selected':'')+'" onclick="toggleExcept(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div class="form-row" style="margin-top:8px"><div class="form-group"><label>Volume Room</label><select onchange="uR(\''+id+'\',\'volumeRoom\',this.value)"><option value="">None</option>'+ro(r.volumeRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volumeLevel||45)+'" onchange="uR(\''+id+'\',\'volumeLevel\',+this.value)"></div></div>';
+        ed='<div class="form-group"><label>Except Rooms (keep playing)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.exceptRooms||[]).includes(n)?'selected':'')+((S.speakers[n]&&S.speakers[n].online===false)?' offline':'')+'" onclick="toggleExcept(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div class="form-row" style="margin-top:8px"><div class="form-group"><label>Volume Room</label><select onchange="uR(\''+id+'\',\'volumeRoom\',this.value)"><option value="">None</option>'+ro(r.volumeRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Volume</label><input type="number" min="0" max="100" value="'+(r.volumeLevel||45)+'" onchange="uR(\''+id+'\',\'volumeLevel\',+this.value)"></div></div>';
       } else if(r.action==='volumeAdjust'){
         ed='<div class="form-row"><div class="form-group"><label>Target Room</label><select onchange="uR(\''+id+'\',\'targetRoom\',this.value)"><option value="">--</option>'+ro(r.targetRoom)+'</select></div><div class="form-group" style="max-width:80px"><label>Adjust (+/-)</label><input type="number" min="-50" max="50" value="'+(r.volumeAdjust||5)+'" onchange="uR(\''+id+'\',\'volumeAdjust\',+this.value)"></div></div>';
       } else if(r.action==='groupAll'){
         ed='<div class="form-group"><label>Coordinator</label><select onchange="uR(\''+id+'\',\'coordinator\',this.value)"><option value="">Auto</option>'+ro(r.coordinator)+'</select></div>';
+      } else if(r.action==='tvVolume'){
+        var vols=r.volumes||{};
+        var asRules=Array.isArray(r.autoSkip)?r.autoSkip:[];
+        var asCapRooms=Object.entries(S.speakers).filter(([n,s])=>s.capabilities&&s.capabilities.length>0);
+        var asSrcOpts=function(spk,sel){var s=S.speakers[spk];if(!s||!s.capabilities||!s.capabilities.length)return '<option value="lineIn"'+(sel==='lineIn'?' selected':'')+'>Line In</option><option value="tv"'+(sel==='tv'?' selected':'')+'>TV</option>';return s.capabilities.map(function(c){var v=c==='tv'?'tv':'lineIn';return '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+({tv:'TV',lineIn:'Line In'}[v]||v)+'</option>';}).join('');};
+        ed='<div class="form-group"><label>Speaker Volumes</label>'
+          +'<div style="display:grid;grid-template-columns:1fr 60px;gap:4px 8px;align-items:center;max-width:320px">'
+          +rooms.map(n=>'<span style="font-size:12px'+(S.speakers[n]&&S.speakers[n].online===false?';opacity:0.4':'')+'">'+esc(n)+'</span><input type="number" min="0" max="100" value="'+(vols[n]!=null?vols[n]:'')+'" placeholder="-" style="width:60px;text-align:center" onchange="uRV(\''+id+'\',\''+esc(n)+'\',this.value===\'\'?null:+this.value)">').join('')
+          +'</div></div>'
+          +'<div style="margin-top:8px;padding:8px;border:1px solid var(--card-border);border-radius:6px;background:rgba(0,153,153,0.05)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:'+(asRules.length?'8':'0')+'px"><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Auto-Skip <span style="font-weight:400;font-size:10px">(leave speaker untouched when its input is active)</span></label><button class="btn btn-sm btn-outline" onclick="addAutoSkip(\''+id+'\')">+ Rule</button></div>'
+          +(asRules.length?asRules.map(function(rule,i){return '<div class="form-row" style="margin-bottom:4px;align-items:center;gap:8px"><div class="form-group" style="flex:1"><select onchange="updateAutoSkip(\''+id+'\','+i+',\'speaker\',this.value)">'+asCapRooms.map(function(e){return '<option value="'+esc(e[0])+'"'+(rule.speaker===e[0]?' selected':'')+'>'+esc(e[0])+'</option>';}).join('')+'</select></div><div class="form-group" style="max-width:100px"><select onchange="updateAutoSkip(\''+id+'\','+i+',\'source\',this.value)">'+asSrcOpts(rule.speaker,rule.source)+'</select></div><button class="btn btn-sm btn-danger" style="padding:2px 8px" onclick="removeAutoSkip(\''+id+'\','+i+')">&times;</button></div>';}).join(''):'<div style="font-size:11px;color:var(--muted)">No rules -- all speaker volumes always applied</div>')
+          +'</div>'
+          +'<div class="form-group" style="margin-top:8px"><label>Pause Except <span style="font-size:10px;color:var(--muted)">(keep these playing, pause the rest)</span></label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((r.pauseExcept||[]).includes(n)?'selected':'')+((S.speakers[n]&&S.speakers[n].online===false)?' offline':'')+'" onclick="toggleTVPause(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div>'
+          +'<div class="form-row" style="margin-top:8px"><div class="form-group" style="max-width:220px"><label>Vol 0 = Pause <span style="font-size:10px;color:var(--muted)">(pause speaker instead of muting)</span></label><label class="toggle"><input type="checkbox" '+(r.muteIsOff?'checked':'')+' onchange="uR(\''+id+'\',\'muteIsOff\',this.checked)"><span class="slider"></span></label></div></div>'
+          +'<div class="form-group" style="margin-top:8px"><label>Sub-Routines <span style="font-size:10px;color:var(--muted)">(trigger after volumes are set)</span></label><div class="chip-row">'+Object.entries(S.routines).filter(([k])=>k!==id).map(([k,v])=>'<span class="chip '+((r.subRoutines||[]).includes(k)?'selected':'')+'" onclick="toggleTVSub(\''+id+'\',\''+k+'\')">'+esc(v.name||k)+'</span>').join('')+'</div></div>'
+          +conditionsHTML(id,r);
       }
     } else if(r.type==='webhook'){
       ed='<div class="form-row"><div class="form-group" style="flex:2"><label>URL</label><input type="text" value="'+esc(r.webhookUrl||'')+'" placeholder="http://..." onchange="uR(\''+id+'\',\'webhookUrl\',this.value)"></div><div class="form-group" style="max-width:80px"><label>Method</label><select onchange="uR(\''+id+'\',\'webhookMethod\',this.value)"><option'+(r.webhookMethod==='POST'?' selected':'')+'>POST</option><option'+(r.webhookMethod==='GET'?' selected':'')+'>GET</option></select></div></div>'+(r.notes?'<div style="font-size:11px;color:var(--muted)">💡 '+esc(r.notes)+'</div>':'');
     }
 
-    return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="this.parentElement.querySelector(\'.expandable-content\').classList.toggle(\'open\')"><span class="badge '+r.type+'">'+r.type+'</span><span style="flex:1;font-size:13px">'+esc(r.name)+'</span><span style="font-size:11px;color:var(--muted);font-family:monospace">'+id+'</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="uR(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label><button class="btn btn-sm btn-primary" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'\').then(()=>{toast(\'Ran: '+esc(r.name)+'\');refreshAll()})">▶</button></div><div class="expandable-content"><div style="padding-top:12px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(r.name)+'" onchange="uR(\''+id+'\',\'name\',this.value)"></div><div class="form-group" style="max-width:140px"><label>Type</label><select onchange="uR(\''+id+'\',\'type\',this.value);refreshAll()"><option value="music"'+(r.type==='music'?' selected':'')+'>Music</option><option value="control"'+(r.type==='control'?' selected':'')+'>Control</option><option value="webhook"'+(r.type==='webhook'?' selected':'')+'>Webhook</option></select></div></div>'+ed+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delRoutine(\''+id+'\')">Delete Routine</button></div></div></div></div>';
+    return '<div class="card"><div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="toggleRoutineExpand(\''+id+'\')"><span class="badge '+r.type+'">'+r.type+'</span><span style="flex:1;font-size:13px">'+esc(r.name)+'</span><span style="font-size:11px;color:var(--muted);font-family:monospace">'+id+'</span><label class="toggle" onclick="event.stopPropagation()"><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="uR(\''+id+'\',\'enabled\',this.checked)"><span class="slider"></span></label><button class="btn btn-sm btn-primary" title="Play (force, ignore conditions)" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'?force=true\').then(()=>{toast(\'Playing: '+esc(r.name)+'\');refreshAll()})">&#9654;</button>'+(r.conditions&&r.conditions.length?'<button class="btn btn-sm btn-ghost" title="Test (respects skip conditions)" onclick="event.stopPropagation();api(\'POST\',\'/api/trigger/'+id+'\').then(r=>r.json?r.json():r).then(d=>{if(d&&d.skipped)toast(\'Skipped: conditions met\');else{toast(\'Playing: '+esc(r.name)+'\');refreshAll()}})">T</button>':'')+'</div><div style="font-size:11px;color:var(--muted);padding:2px 0 0 4px">'+routineSummary(r)+'</div><div class="expandable-content'+(expandedRoutines.has(id)?' open':'')+'"><div style="padding-top:12px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(r.name)+'" onchange="uR(\''+id+'\',\'name\',this.value)"></div><div class="form-group" style="max-width:140px"><label>Type</label><select onchange="uR(\''+id+'\',\'type\',this.value);refreshAll()"><option value="music"'+(r.type==='music'?' selected':'')+'>Music</option><option value="control"'+(r.type==='control'?' selected':'')+'>Control</option><option value="webhook"'+(r.type==='webhook'?' selected':'')+'>Webhook</option></select></div></div>'+ed+'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delRoutine(\''+id+'\')">Delete Routine</button></div></div></div>'
+      +'<div style="border-top:1px solid var(--border);margin-top:10px;padding-top:8px">'
+      +'<div class="webhook-toggle" onclick="event.stopPropagation();this.classList.toggle(\'open\');this.nextElementSibling.style.display=this.classList.contains(\'open\')?\'block\':\'none\'" style="font-size:11px;color:var(--muted);cursor:pointer;user-select:none">'
+      +'\u25b8 Webhook URL</div>'
+      +'<div style="display:none;margin-top:8px">'
+      +'<div style="margin-bottom:8px"><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Trigger:</div>'
+      +'<div style="display:flex;align-items:center;gap:6px">'
+      +'<code style="flex:1;font-size:10px;background:var(--bg);border:1px solid var(--border);padding:5px 8px;border-radius:4px;word-break:break-all">http://192.168.1.61:5005/api/trigger/'+id+'</code>'
+      +'<button class="btn btn-sm btn-outline" onclick="event.stopPropagation();copyUrl(this,\'http://192.168.1.61:5005/api/trigger/'+id+'\')">Copy</button>'
+      +'</div></div>'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.5;background:rgba(0,153,153,0.08);padding:6px 8px;border-radius:4px">'
+      +'Homebridge: Add a Dummy Switch with commandOn = this URL.</div>'
+      +'</div></div>'
+      +'</div>';
   }).join('');
 }
 
 async function uR(id,k,v){await api('PUT','/api/routines/'+id,{[k]:v});S.routines[id]={...S.routines[id],[k]:v};}
 async function uRS(id,k,v){const r=S.routines[id];const st={...(r.sleepTimer||{enabled:false,minutes:60,fadeMinutes:5}),[k]:v};await api('PUT','/api/routines/'+id,{sleepTimer:st});r.sleepTimer=st;}
 async function toggleExcept(id,room){const r=S.routines[id];let a=[...(r.exceptRooms||[])];if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);await uR(id,'exceptRooms',a);renderRoutines();}
+// Other Speakers helpers
+async function uRO(id,k,v){const r=S.routines[id];const os={...(r.otherSpeakers||{action:'stop',volume:0}),[k]:v};await api('PUT','/api/routines/'+id,{otherSpeakers:os});r.otherSpeakers=os;}
+async function toggleOtherSpeakers(id,on){if(on){await uR(id,'otherSpeakers',{action:'stop',volume:0});}else{await uR(id,'otherSpeakers',null);}renderRoutines();}
+// Conditions helpers
+function capableSpeakers(){return Object.entries(S.speakers).filter(([n,s])=>s.capabilities&&s.capabilities.length>0).map(([n,s])=>({name:n,caps:s.capabilities}));}
+function sourcesForSpeaker(name){const s=S.speakers[name];if(!s||!s.capabilities)return[];return s.capabilities.map(c=>c==='tv'?'tv':c==='lineIn'?'lineIn':c);}
+function conditionSourceOpts(speaker,sel){return sourcesForSpeaker(speaker).map(s=>'<option value="'+s+'"'+(sel===s?' selected':'')+'>'+({tv:'TV',lineIn:'Line In'}[s]||s)+'</option>').join('');}
+async function addCondition(id){const r=S.routines[id];const c=[...(r.conditions||[])];const cs=capableSpeakers();if(!cs.length)return;c.push({speaker:cs[0].name,source:cs[0].caps[0]==='tv'?'tv':'lineIn',is:'on'});await uR(id,'conditions',c);renderRoutines();}
+async function removeCondition(id,i){const r=S.routines[id];const c=[...(r.conditions||[])];c.splice(i,1);await uR(id,'conditions',c);renderRoutines();}
+async function updateCondition(id,i,f,v){const r=S.routines[id];const c=[...(r.conditions||[])];c[i]={...c[i],[f]:v};if(f==='speaker'){const srcs=sourcesForSpeaker(v);if(srcs.length&&!srcs.includes(c[i].source))c[i].source=srcs[0];}await uR(id,'conditions',c);renderRoutines();}
+// Reusable conditions HTML builder
+function conditionsHTML(id,r){var cs=capableSpeakers();if(!cs.length)return '';var conds=r.conditions||[];var logic=r.conditionLogic||'any';var html='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--card-border)"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Skip If <span style="font-weight:400;font-size:10px">(routine won\'t run if '+(logic==='all'?'ALL conditions are true':'ANY condition is true')+')</span></label><div style="display:flex;align-items:center;gap:6px"><select style="font-size:11px;padding:2px 6px;min-width:60px" onchange="uR(\''+id+'\',\'conditionLogic\',this.value);renderRoutines()"><option value="any"'+(logic==='any'?' selected':'')+'>Any (OR)</option><option value="all"'+(logic==='all'?' selected':'')+'>All (AND)</option></select><button class="btn btn-sm btn-outline" onclick="addCondition(\''+id+'\')">+ Condition</button></div></div>';if(conds.length){html+=conds.map(function(c,i){return '<div class="form-row" style="margin-bottom:4px;align-items:center"><div class="form-group" style="flex:1"><select onchange="updateCondition(\''+id+'\','+i+',\'speaker\',this.value)">'+cs.map(function(s){return '<option value="'+esc(s.name)+'"'+(c.speaker===s.name?' selected':'')+'>'+esc(s.name)+'</option>';}).join('')+'</select></div><div class="form-group" style="max-width:100px"><select onchange="updateCondition(\''+id+'\','+i+',\'source\',this.value)">'+conditionSourceOpts(c.speaker,c.source)+'</select></div><div class="form-group" style="max-width:60px"><select onchange="updateCondition(\''+id+'\','+i+',\'is\',this.value)"><option value="on"'+((c.is||'on')==='on'?' selected':'')+'>On</option><option value="off"'+(c.is==='off'?' selected':'')+'>Off</option></select></div><button class="btn btn-sm btn-danger" style="padding:2px 8px;margin-bottom:8px" onclick="removeCondition(\''+id+'\','+i+')">&times;</button></div>';}).join('');}else{html+='<div style="font-size:11px;color:var(--muted)">No conditions -- routine always runs when triggered</div>';}html+='</div>';return html;}
+// tvVolume helpers
+async function uRV(id,room,vol){const r=S.routines[id];const v={...(r.volumes||{}),[room]:vol};await api('PUT','/api/routines/'+id,{volumes:v});r.volumes=v;}
+async function toggleTVPause(id,room){const r=S.routines[id];let a=[...(r.pauseExcept||[])];if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);await uR(id,'pauseExcept',a);renderRoutines();}
+async function toggleTVSub(id,subId){const r=S.routines[id];let a=[...(r.subRoutines||[])];if(a.includes(subId))a=a.filter(x=>x!==subId);else a.push(subId);await uR(id,'subRoutines',a);renderRoutines();}
+async function addAutoSkip(id){const r=S.routines[id];const a=[...(Array.isArray(r.autoSkip)?r.autoSkip:[])];const cs=Object.entries(S.speakers).filter(([n,s])=>s.capabilities&&s.capabilities.length>0);if(!cs.length)return;a.push({speaker:cs[0][0],source:cs[0][1].capabilities[0]==='tv'?'tv':'lineIn'});await api('PUT','/api/routines/'+id,{autoSkip:a});r.autoSkip=a;renderRoutines();}
+async function removeAutoSkip(id,i){const r=S.routines[id];const a=[...(Array.isArray(r.autoSkip)?r.autoSkip:[])];a.splice(i,1);await api('PUT','/api/routines/'+id,{autoSkip:a});r.autoSkip=a;renderRoutines();}
+async function updateAutoSkip(id,i,k,v){const r=S.routines[id];const a=[...(Array.isArray(r.autoSkip)?r.autoSkip:[])];a[i]={...a[i],[k]:v};if(k==='speaker'){const s=S.speakers[v];if(s&&s.capabilities&&s.capabilities.length&&!s.capabilities.includes(a[i].source==='tv'?'tv':'lineIn'))a[i].source=s.capabilities[0]==='tv'?'tv':'lineIn';}await api('PUT','/api/routines/'+id,{autoSkip:a});r.autoSkip=a;renderRoutines();}
 
-function renderGroups(){
-  document.getElementById('groups-list').innerHTML=Object.entries(S.groupPresets).map(([id,p])=>
-    '<div class="card"><div class="card-header"><span>'+(p.icon||'🔗')+' <strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);margin-left:8px">'+((p.rooms||[]).length?p.rooms.join(', '):'All speakers')+'</span></span><div style="display:flex;gap:6px"><button class="btn btn-sm btn-ghost" onclick="this.closest(\'.card\').querySelector(\'.expandable-content\').classList.toggle(\'open\')">Edit</button><button class="btn btn-sm btn-primary" onclick="api(\'POST\',\'/api/group-presets/'+id+'/apply\').then(()=>{toast(\'Applied: '+esc(p.name)+'\');refreshAll()})">Apply</button></div></div><div class="expandable-content"><div style="padding-top:10px"><div class="form-row"><div class="form-group"><label>Name</label><input value="'+esc(p.name)+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{name:this.value})"></div><div class="form-group" style="max-width:60px"><label>Icon</label><input value="'+esc(p.icon||'')+'" onchange="api(\'PUT\',\'/api/group-presets/'+id+'\',{icon:this.value})"></div></div><div class="form-group"><label>Rooms (click to toggle)</label><div class="chip-row">'+rooms.map(n=>'<span class="chip '+((p.rooms||[]).includes(n)?'selected':'')+'" onclick="togglePresetRoom(\''+id+'\',\''+esc(n)+'\')">'+esc(n)+'</span>').join('')+'</div></div><div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)"><button class="btn btn-sm btn-danger" onclick="delGroup(\''+id+'\')">Delete Preset</button></div></div></div></div>'
-  ).join('');
+async function copyUrl(btn, url) {
+  try { await navigator.clipboard.writeText(url); } catch(e) {
+    const ta=document.createElement('textarea');ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+  }
+  const orig=btn.textContent;btn.textContent='Copied!';btn.style.background='var(--teal)';btn.style.color='#fff';
+  setTimeout(()=>{btn.textContent=orig;btn.style.background='';btn.style.color='';},2000);
 }
 
-async function togglePresetRoom(id,room){
-  const p=S.groupPresets[id];let a=[...(p.rooms||[])];
-  if(a.includes(room))a=a.filter(x=>x!==room);else a.push(room);
-  await api('PUT','/api/group-presets/'+id,{rooms:a});
-  S.groupPresets[id].rooms=a;renderGroups();
+const expandedGroups = new Set();
+function toggleGroupExpand(id) { if (expandedGroups.has(id)) expandedGroups.delete(id); else expandedGroups.add(id); renderGroups(); }
+function renderGroups(){
+  document.getElementById('groups-list').innerHTML=Object.entries(S.groupPresets).map(([id,p])=>{
+    var gs=p.groups||[];
+    // Summary text
+    var summary=gs.length>0
+      ? gs.map(function(g){var s=(g.rooms||[]).join(', ')+(g.volume!=null?' @'+g.volume+'%':'');if(g.input){if(g.input.type==='favorite')s+=' ['+( g.input.name||'Favorite')+']';else if(g.input.type==='lineIn')s+=' [Line In]';else if(g.input.type==='tv')s+=' [TV: '+(g.input.room||'')+']';}return s;}).join(' | ')
+      : (p.rooms||[]).length?p.rooms.join(', '):'All speakers';
+    // Groups editor
+    var groupsHtml=gs.map(function(g,gi){
+      // Build input source options based on rooms in this sub-group
+      var inputOpts='<option value="">-- None --</option><option value="favorite"'+(g.input&&g.input.type==='favorite'?' selected':'')+'>Sonos Favorite</option>';
+      var groupRooms=g.rooms||[];
+      var lineInRooms=[],tvRooms=[];
+      groupRooms.forEach(function(rn){
+        var sp=S.speakers[rn];
+        if(sp&&sp.capabilities){
+          if(sp.capabilities.indexOf('lineIn')>=0) lineInRooms.push(rn);
+          if(sp.capabilities.indexOf('tv')>=0) tvRooms.push(rn);
+        }
+      });
+      lineInRooms.forEach(function(rn){
+        var sel=g.input&&g.input.type==='lineIn'&&g.input.room===rn?' selected':'';
+        inputOpts+='<option value="lineIn:'+esc(rn)+'"'+sel+'>Line In ('+esc(rn)+')</option>';
+      });
+      tvRooms.forEach(function(rn){
+        var sel=g.input&&g.input.type==='tv'&&g.input.room===rn?' selected':'';
+        inputOpts+='<option value="tv:'+esc(rn)+'"'+sel+'>TV ('+esc(rn)+')</option>';
+      });
+      // Favorite sub-selector
+      var favSelect='';
+      if(g.input&&g.input.type==='favorite'){
+        favSelect='<select style="margin-top:4px;width:100%;background:var(--card-bg);color:var(--text);border:1px solid var(--card-border);padding:4px 6px;border-radius:4px;font-size:11px" '
+          +'onchange="updateSubgroupInputFav(\''+id+'\','+gi+',this.value)"><option value="">-- Select --</option>'
+          +S.favorites.map(function(f){return '<option value="'+esc(f.title)+'"'+(g.input.name===f.title?' selected':'')+'>'+esc(f.title)+'</option>';}).join('')
+          +'</select>';
+      }
+      return '<div style="background:var(--bg);border:1px solid var(--card-border);border-radius:6px;padding:10px;margin-bottom:8px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<strong style="font-size:12px">Group '+(gi+1)+'</strong>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<label class="toggle" style="margin:0" title="Set volume when applied"><input type="checkbox" '+(g.setVolume!==false?'checked':'')+' onchange="toggleSubgroupSetVolume(\''+id+'\','+gi+',this.checked)"><span class="slider" style="width:32px;height:18px"></span></label>'
+        +'<label style="font-size:11px;color:var(--muted)">Vol</label>'
+        +'<input type="number" value="'+(g.volume!=null?g.volume:'')+'" min="0" max="100" placeholder="--" '
+        +(g.setVolume===false?'disabled ':'')
+        +'onchange="updateSubgroupVolume(\''+id+'\','+gi+',this.value)" '
+        +'style="width:60px;background:var(--card-bg);color:var(--text);border:1px solid var(--card-border);padding:4px 6px;border-radius:4px;font-size:12px'+(g.setVolume===false?';opacity:0.4':'')+'"> '
+        +'<button class="btn btn-sm btn-ghost" onclick="removeSubgroup(\''+id+'\','+gi+')" style="color:var(--danger);font-size:14px">&times;</button>'
+        +'</div></div>'
+        +'<div class="chip-row">'+rooms.map(function(n){
+          return '<span class="chip '+((g.rooms||[]).includes(n)?'selected':'')+((S.speakers[n]&&S.speakers[n].online===false)?' offline':'')+'" onclick="toggleSubgroupRoom(\''+id+'\','+gi+',\''+esc(n)+'\')">'+esc(n)+'</span>';
+        }).join('')+'</div>'
+        +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
+        +'<label style="font-size:11px;color:var(--muted);white-space:nowrap">Input:</label>'
+        +'<select style="flex:1;min-width:140px;background:var(--card-bg);color:var(--text);border:1px solid var(--card-border);padding:4px 6px;border-radius:4px;font-size:11px" '
+        +'onchange="updateSubgroupInput(\''+id+'\','+gi+',this.value)">'+inputOpts+'</select>'
+        +'</div>'
+        +favSelect
+        +'</div>';
+    }).join('');
+
+    return '<div class="card"><div class="card-header">'
+      +'<span>'+(p.icon||'🔗')+' <strong>'+esc(p.name)+'</strong> <span style="font-size:11px;color:var(--muted);margin-left:8px">'+summary+'</span></span>'
+      +'<div style="display:flex;gap:6px">'
+      +'<button class="btn btn-sm btn-ghost" onclick="toggleGroupExpand(\''+id+'\')">Edit</button>'
+      +'<button class="btn btn-sm btn-primary" onclick="api(\'POST\',\'/api/group-presets/'+id+'/apply\').then(()=>{toast(\'Applied: '+esc(p.name)+'\');refreshAll()})">Apply</button>'
+      +'</div></div>'
+      +'<div class="expandable-content'+(expandedGroups.has(id)?' open':'')+'"><div style="padding-top:10px">'
+      +'<div class="form-row"><div class="form-group"><label>Name</label>'
+      +'<input value="'+esc(p.name)+'" onchange="updatePresetField(\''+id+'\',\'name\',this.value)">'
+      +'</div><div class="form-group" style="max-width:60px"><label>Icon</label>'
+      +'<input value="'+esc(p.icon||'')+'" onchange="updatePresetField(\''+id+'\',\'icon\',this.value)">'
+      +'</div></div>'
+      +'<div style="margin:12px 0"><label style="margin-bottom:8px;display:block">Speaker Groups</label>'
+      +groupsHtml
+      +'<button class="btn btn-sm btn-outline" onclick="addSubgroup(\''+id+'\')">+ Add Group</button>'
+      +'</div>'
+      +'<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--card-border)">'
+      +'<button class="btn btn-sm btn-danger" onclick="delGroup(\''+id+'\')">Delete Preset</button>'
+      +'</div></div></div></div>';
+  }).join('');
+}
+
+async function updatePresetField(id,field,value){
+  var update={};update[field]=value;
+  await api('PUT','/api/group-presets/'+id,update);
+  S.groupPresets[id][field]=value;renderGroups();
+}
+async function addSubgroup(id){
+  var p=S.groupPresets[id];
+  if(!p.groups) p.groups=[];
+  p.groups.push({rooms:[],volume:10});
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+  renderGroups();
+}
+async function removeSubgroup(id,gi){
+  var p=S.groupPresets[id];
+  p.groups.splice(gi,1);
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+  renderGroups();
+}
+async function toggleSubgroupRoom(id,gi,room){
+  var p=S.groupPresets[id];var g=p.groups[gi];
+  var a=[...(g.rooms||[])];
+  if(a.includes(room))a=a.filter(function(x){return x!==room});else a.push(room);
+  g.rooms=a;
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+  renderGroups();
+}
+async function updateSubgroupVolume(id,gi,val){
+  var p=S.groupPresets[id];
+  p.groups[gi].volume=val===''?null:parseInt(val);
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+}
+async function toggleSubgroupSetVolume(id,gi,checked){
+  var p=S.groupPresets[id];
+  p.groups[gi].setVolume=checked;
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+  renderGroups();
+}
+async function updateSubgroupInput(id,gi,val){
+  var p=S.groupPresets[id];
+  if(!val){
+    delete p.groups[gi].input;
+  } else if(val==='favorite'){
+    p.groups[gi].input={type:'favorite',name:''};
+  } else {
+    var parts=val.split(':');
+    p.groups[gi].input={type:parts[0],room:parts.slice(1).join(':')};
+  }
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
+  renderGroups();
+}
+async function updateSubgroupInputFav(id,gi,favName){
+  var p=S.groupPresets[id];
+  if(!p.groups[gi].input) p.groups[gi].input={type:'favorite'};
+  p.groups[gi].input.name=favName;
+  await api('PUT','/api/group-presets/'+id,{groups:p.groups});
 }
 
 // ─── Create / Delete ────────────────────────────────────────────────────────
@@ -360,7 +656,7 @@ async function delScene(id){
 }
 async function addGroup(){
   const id='preset_'+Date.now();
-  await api('POST','/api/group-presets',{id,name:'New Preset',icon:'🔗',rooms:[]});
+  await api('POST','/api/group-presets',{id,name:'New Preset',icon:'🔗',groups:[{rooms:[],volume:10}]});
   await refreshAll();renderGroups();toast('Preset created');
 }
 async function delGroup(id){
@@ -474,9 +770,10 @@ refreshAll();
 setInterval(()=>{
   Promise.all([
     fetch('/api/status').then(r=>r.json()),
-    fetch('/api/sleep-timers').then(r=>r.json())
-  ]).then(([st,sl])=>{
-    S.status=st;S.sleepTimers=sl;
+    fetch('/api/sleep-timers').then(r=>r.json()),
+    fetch('/api/groups').then(r=>r.json())
+  ]).then(([st,sl,gr])=>{
+    S.status=st;S.sleepTimers=sl;S.groups=gr;
     renderNowPlaying();renderSleepTimers();renderSpeakers();
   }).catch(()=>{});
 },15000);

@@ -7,7 +7,20 @@
       "volume": 5,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "shuffle": true,
+      "conditions": [
+        {
+          "speaker": "Playbase",
+          "source": "tv",
+          "is": "on"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv",
+          "is": "on"
+        }
+      ]
     },
     "Day_Music": {
       "name": "Day Music",
@@ -18,6 +31,27 @@
       "coordinator": "",
       "enabled": true
     },
+    "Day_Music_No_TV": {
+      "name": "Day Music (No TV)",
+      "type": "music",
+      "favorite": "Poolside: Miami Chill",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true,
+      "conditions": [
+        {
+          "speaker": "Playbase",
+          "source": "tv",
+          "is": "on"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv",
+          "is": "on"
+        }
+      ]
+    },
     "Evening_Music": {
       "name": "Evening Music",
       "type": "music",
@@ -25,7 +59,8 @@
       "volume": 10,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "conditions": []
     },
     "Late_Night_Music": {
       "name": "Late Night Music",
@@ -34,7 +69,8 @@
       "volume": 5,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "conditions": []
     },
     "Music_Workday": {
       "name": "Workday Music",
@@ -43,7 +79,20 @@
       "volume": 10,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "shuffle": true,
+      "conditions": [
+        {
+          "speaker": "Playbase",
+          "source": "tv",
+          "is": "on"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv",
+          "is": "on"
+        }
+      ]
     },
     "Upbeat_Music": {
       "name": "Upbeat Music",
@@ -52,7 +101,8 @@
       "volume": 10,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "conditions": []
     },
     "Reading_Music": {
       "name": "Reading Music",
@@ -61,7 +111,9 @@
       "volume": 10,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "shuffle": true,
+      "conditions": []
     },
     "Romantic_Playlist": {
       "name": "Romantic Playlist",
@@ -70,21 +122,67 @@
       "volume": 10,
       "groupAll": true,
       "coordinator": "",
-      "enabled": true
+      "enabled": true,
+      "shuffle": true,
+      "conditions": []
     },
     "White_Noise_Sleep": {
       "name": "White Noise Sleep",
       "type": "music",
-      "favorite": "100Hz - White Noise",
-      "volume": 5,
-      "groupAll": true,
-      "coordinator": "",
+      "favorite": "Brown Noise + Rain Sound Machine (12 Hours - Ad Free)",
+      "volume": 25,
+      "groupAll": false,
+      "coordinator": "Master Bedroom",
+      "rooms": [
+        "Master Bedroom",
+        "Bathroom"
+      ],
+      "otherSpeakers": {
+        "action": "stop"
+      },
       "enabled": true,
       "sleepTimer": {
         "enabled": false,
         "minutes": 60,
         "fadeMinutes": 5
-      }
+      },
+      "conditions": [
+        {
+          "speaker": "Playbase",
+          "source": "tv",
+          "is": "on"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv",
+          "is": "on"
+        }
+      ]
+    },
+    "Thunderstorm_Ambience": {
+      "name": "Thunderstorm Ambience",
+      "type": "music",
+      "spotifyUri": "spotify:episode:7u8fVgkDJOzxv2gtOtec2t",
+      "volume": 10,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true,
+      "seekToStart": true,
+      "conditions": []
+    },
+    "Red_Alert_Music": {
+      "name": "Red Alert Music",
+      "type": "music",
+      "spotifyQueue": [
+        "spotify:track:0XRPNOqHphqcf7W6qvQMYe",
+        "spotify:track:2UKgx2oba7CltHLACr3xdT",
+        "spotify:track:2dAI0qoOTobcP8yQAr6RYz"
+      ],
+      "volume": 25,
+      "groupAll": true,
+      "coordinator": "",
+      "enabled": true,
+      "conditions": []
     },
     "Sonos_Off": {
       "name": "Sonos Off",
@@ -131,6 +229,129 @@
       "action": "volumeAdjust",
       "targetRoom": "",
       "volumeAdjust": 5,
+      "enabled": true
+    },
+    "LR_TV_On": {
+      "name": "LR TV On",
+      "type": "control",
+      "action": "tvVolume",
+      "volumes": {
+        "Playbase": 33,
+        "Master Bedroom": 10,
+        "Guest Bathroom Speaker": 10,
+        "Kitchen": 10,
+        "Bathroom": 10,
+        "Office Speaker": 10
+      },
+      "pauseExcept": [
+        "Playbase"
+      ],
+      "autoSkip": [
+        {
+          "speaker": "Office Speaker",
+          "source": "lineIn"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv"
+        }
+      ],
+      "enabled": true
+    },
+    "LR_TV_Off": {
+      "name": "LR TV Off",
+      "type": "control",
+      "action": "tvVolume",
+      "volumes": {
+        "Playbase": 15,
+        "Master Bedroom": 15,
+        "Guest Bathroom Speaker": 15,
+        "Kitchen": 15,
+        "Bathroom": 15,
+        "Office Speaker": 15
+      },
+      "autoSkip": [
+        {
+          "speaker": "Office Speaker",
+          "source": "lineIn"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv"
+        }
+      ],
+      "enabled": true
+    },
+    "BR_TV_On": {
+      "name": "BR TV On",
+      "type": "control",
+      "action": "tvVolume",
+      "volumes": {
+        "Master Bedroom": 32,
+        "Playbase": 5,
+        "Kitchen": 5,
+        "Guest Bathroom Speaker": 5,
+        "Bathroom": 0,
+        "Office Speaker": 5
+      },
+      "muteIsOff": true,
+      "subRoutines": [
+        "bedroom_tv_up"
+      ],
+      "autoSkip": [
+        {
+          "speaker": "Office Speaker",
+          "source": "lineIn"
+        },
+        {
+          "speaker": "Playbase",
+          "source": "tv"
+        }
+      ],
+      "enabled": true
+    },
+    "BR_TV_Off": {
+      "name": "BR TV Off",
+      "type": "control",
+      "action": "tvVolume",
+      "volumes": {
+        "Playbase": 10,
+        "Master Bedroom": 10,
+        "Guest Bathroom Speaker": 10,
+        "Kitchen": 10,
+        "Bathroom": 10,
+        "Office Speaker": 10
+      },
+      "autoSkip": [
+        {
+          "speaker": "Playbase",
+          "source": "tv"
+        }
+      ],
+      "enabled": true
+    },
+    "PC_On": {
+      "name": "PC On (Vol 10)",
+      "type": "control",
+      "action": "tvVolume",
+      "volumes": {
+        "Playbase": 10,
+        "Master Bedroom": 10,
+        "Guest Bathroom Speaker": 10,
+        "Kitchen": 10,
+        "Bathroom": 10,
+        "Office Speaker": 10
+      },
+      "autoSkip": [
+        {
+          "speaker": "Playbase",
+          "source": "tv"
+        },
+        {
+          "speaker": "Master Bedroom",
+          "source": "tv"
+        }
+      ],
       "enabled": true
     },
     "Fireplace_On": {
@@ -185,7 +406,7 @@
   "scenes": {
     "background_work": {
       "name": "Background Work",
-      "icon": "💻",
+      "icon": "\ud83d\udcbb",
       "description": "Low volume, single room",
       "actions": [
         {
@@ -200,7 +421,7 @@
     },
     "movie_night": {
       "name": "Movie Night",
-      "icon": "🎬",
+      "icon": "\ud83c\udfac",
       "description": "Playbase loud, others off",
       "actions": [
         {
@@ -216,7 +437,7 @@
     },
     "party": {
       "name": "Party Mode",
-      "icon": "🎉",
+      "icon": "\ud83c\udf89",
       "description": "All speakers, volume up",
       "actions": [
         {
@@ -230,7 +451,7 @@
     },
     "recording": {
       "name": "Recording Mode",
-      "icon": "🎙️",
+      "icon": "\ud83c\udf99\ufe0f",
       "description": "Mute everything",
       "actions": [
         {
@@ -240,7 +461,7 @@
     },
     "late_night": {
       "name": "Late Night",
-      "icon": "🌙",
+      "icon": "\ud83c\udf19",
       "description": "All grouped, whisper vol",
       "actions": [
         {
@@ -256,23 +477,89 @@
   "groupPresets": {
     "all": {
       "name": "All Speakers",
-      "icon": "🏠",
+      "icon": "\ud83c\udfe0",
       "rooms": []
     },
     "office_kitchen": {
-      "name": "Office + Kitchen",
-      "icon": "☕",
-      "rooms": []
-    },
-    "bedrooms": {
-      "name": "Bedrooms Only",
-      "icon": "🛏️",
-      "rooms": []
+      "name": "Office (Work)",
+      "icon": "\u2615",
+      "rooms": [],
+      "groups": [
+        {
+          "rooms": [
+            "Office Speaker"
+          ],
+          "volume": 100,
+          "setVolume": true,
+          "input": {
+            "type": "lineIn",
+            "room": "Office Speaker"
+          }
+        },
+        {
+          "rooms": [
+            "Master Bedroom",
+            "Kitchen",
+            "Playbase",
+            "Guest Bathroom Speaker",
+            "Bathroom"
+          ],
+          "volume": 10
+        }
+      ]
     },
     "common_areas": {
       "name": "Common Areas",
-      "icon": "🛋️",
-      "rooms": []
+      "icon": "\ud83d\udecb\ufe0f",
+      "rooms": [],
+      "groups": [
+        {
+          "rooms": [
+            "Kitchen",
+            "Guest Bathroom Speaker",
+            "Playbase"
+          ],
+          "volume": 15
+        }
+      ]
+    }
+  },
+  "knownSpeakers": {
+    "Bathroom": {
+      "ip": "192.168.1.24",
+      "model": "Sonos One",
+      "capabilities": []
+    },
+    "Playbase": {
+      "ip": "192.168.1.36",
+      "model": "Sonos Playbase",
+      "capabilities": [
+        "tv"
+      ]
+    },
+    "Master Bedroom": {
+      "ip": "192.168.1.26",
+      "model": "Sonos Playbar",
+      "capabilities": [
+        "tv"
+      ]
+    },
+    "Guest Bathroom Speaker": {
+      "ip": "192.168.1.33",
+      "model": "Sonos One",
+      "capabilities": []
+    },
+    "Office Speaker": {
+      "ip": "192.168.1.31",
+      "model": "Sonos Five",
+      "capabilities": [
+        "lineIn"
+      ]
+    },
+    "Kitchen": {
+      "ip": "192.168.1.28",
+      "model": "Sonos Play:1",
+      "capabilities": []
     }
   }
 }

@@ -7,10 +7,72 @@
     "token": "ad9978ad3b3ec0c3ce56b83307fd81b96c61448f0ec9d81419e812b76801688554ee37619268c0d4ba0d4f1766fcf925",
     "secret": "5963d4582140c56049dfa1c7659fbf1c",
     "sceneMap": {
-      "other_lights_day": ["T02-202303282221-50514785"],
-      "other_lights_evening": ["0facc546-4b4c-49de-a87e-7b3de0b82f48"],
-      "other_lights_latenight": ["84c6c4d7-4c73-4854-8860-7236a21cbdd4"],
-      "other_lights_off": ["T02-202310021650-42083997"]
+      "other_lights_day": [
+        "T02-202303282221-50514785"
+      ],
+      "other_lights_evening": [
+        "0facc546-4b4c-49de-a87e-7b3de0b82f48"
+      ],
+      "other_lights_latenight": [
+        "84c6c4d7-4c73-4854-8860-7236a21cbdd4"
+      ],
+      "other_lights_off": [
+        "T02-202310021650-42083997"
+      ]
+    }
+  },
+  "caseta": {
+    "bridgeIp": "192.168.1.14",
+    "devices": {}
+  },
+  "nanoleaf": {
+    "ip": "192.168.1.149",
+    "token": "bjXsBjuDUPUSG13xTubKzod3HHpCUM9m"
+  },
+  "samsung": {
+    "ip": "192.168.1.193",
+    "mac": "74:6D:FA:31:6E:CE",
+    "token": "38793407",
+    "appName": "HomeHub",
+    "inputs": {
+      "HDMI1": "Apple TV",
+      "HDMI2": "PS5",
+      "HDMI3": "Xbox"
+    },
+    "smartThings": {
+      "pat": "5a9e3ebe-fff6-4432-8444-afb6a0baaf42",
+      "deviceId": "5cfe398e-0b06-1430-7f49-5c5e88ffcf4f",
+      "accessToken": "",
+      "refreshToken": "",
+      "clientId": "5f5abc64-2f43-4dee-bba5-0568646db65e",
+      "clientSecret": "c6e490e1-3173-4078-81a3-0c7211d74407"
+    },
+    "ambientScene": "",
+    "ambientRoutine": ""
+  },
+  "daytimeGradient": {
+    "lights": [25, 26, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 52, 53, 54, 55, 56, 60],
+    "lightNames": ["Day Static Colors (Hue Group 8)"],
+    "monitorGroups": [8, 12],
+    "sunnyColor": { "ct": 233 },
+    "cloudyColor": { "ct": 343 },
+    "sunnyCapPct": 40,
+    "cloudCapPct": 70,
+    "brightness": 100,
+    "weatherPollMinutes": 5,
+    "tickSeconds": 30,
+    "overrideThreshold": 50,
+    "excludeOnOverride": [
+      {
+        "hbAccessory": "Elgato Key Light",
+        "lights": [43, 44, 45, 46, 52, 53, 54, 55],
+        "description": "Office lights excluded when key lights are on"
+      }
+    ],
+    "openWeatherMap": {
+      "apiKey": "dcc1978622f15d10ba815866dfec96bc",
+      "lat": 47.6698003,
+      "lon": -122.2072802
     }
   },
   "routines": {
@@ -22,17 +84,1286 @@
       "tracks": [
         {
           "type": "fade",
-          "lights": [58],
-          "lightNames": ["Bed Lightstrip"],
+          "lights": [
+            58
+          ],
+          "lightNames": [
+            "Bed Lightstrip"
+          ],
           "waypoints": [
-            { "time": 0,  "bri": 1,  "color": { "xy": [0.65, 0.33] } },
-            { "time": 3,  "bri": 2,  "color": { "xy": [0.60, 0.35] } },
-            { "time": 5,  "bri": 4,  "color": { "xy": [0.55, 0.38] } },
-            { "time": 7,  "bri": 7,  "color": { "ct": 428 } },
-            { "time": 9,  "bri": 12, "color": { "ct": 395 } },
-            { "time": 11, "bri": 18, "color": { "ct": 395 } },
-            { "time": 13, "bri": 24, "color": { "ct": 395 } },
-            { "time": 15, "bri": 30, "color": { "ct": 395 } }
+            {
+              "time": 0,
+              "bri": 1,
+              "color": {
+                "xy": [
+                  0.65,
+                  0.33
+                ]
+              }
+            },
+            {
+              "time": 3,
+              "bri": 2,
+              "color": {
+                "xy": [
+                  0.6,
+                  0.35
+                ]
+              }
+            },
+            {
+              "time": 5,
+              "bri": 4,
+              "color": {
+                "xy": [
+                  0.55,
+                  0.38
+                ]
+              }
+            },
+            {
+              "time": 7,
+              "bri": 7,
+              "color": {
+                "ct": 428
+              }
+            },
+            {
+              "time": 9,
+              "bri": 12,
+              "color": {
+                "ct": 395
+              }
+            },
+            {
+              "time": 11,
+              "bri": 18,
+              "color": {
+                "ct": 395
+              }
+            },
+            {
+              "time": 13,
+              "bri": 24,
+              "color": {
+                "ct": 395
+              }
+            },
+            {
+              "time": 15,
+              "bri": 30,
+              "color": {
+                "ct": 395
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sunset_transition": {
+      "name": "Sunset Transition",
+      "duration": 25,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "excludeOnOverride": [
+        {
+          "hbAccessory": "Elgato Key Light",
+          "lights": [43, 44, 45, 46, 52, 53, 54, 55],
+          "description": "Office lights excluded when key lights are on"
+        }
+      ],
+      "driftDetection": {
+        "enabled": true,
+        "thresholdPct": 8,
+        "lights": []
+      },
+      "tracks": [
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Evening Static Lights"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 100,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 10,
+              "bri": 72,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 18,
+              "bri": 48,
+              "color": {
+                "ct": 385
+              }
+            },
+            {
+              "time": 22,
+              "bri": 53,
+              "color": {
+                "ct": 420
+              }
+            },
+            {
+              "time": 25,
+              "bri": 60,
+              "color": {
+                "ct": 445
+              }
+            }
+          ]
+        },
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "lights": [
+            52,
+            53,
+            54,
+            55
+          ],
+          "lightNames": [
+            "Day-Only Static Lights"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 100,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 10,
+              "bri": 72,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 18,
+              "bri": 45,
+              "color": {
+                "ct": 370
+              }
+            },
+            {
+              "time": 25,
+              "bri": 30,
+              "color": {
+                "ct": 400
+              }
+            }
+          ]
+        },
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "brightnessOnly": true,
+          "groupId": 10,
+          "lights": [
+            61,
+            62,
+            63,
+            17,
+            19,
+            58,
+            51,
+            57
+          ],
+          "lightNames": [
+            "Color Lights"
+          ],
+          "sceneTransition": {
+            "detectGroup": 10,
+            "recallGroup": 11,
+            "fromPrefix": [
+              "Day ",
+              "Day - "
+            ],
+            "toPrefix": [
+              "Evening ",
+              "Evening - "
+            ]
+          },
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 70
+            },
+            {
+              "time": 13,
+              "bri": 55
+            },
+            {
+              "time": 25,
+              "bri": 45
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 13,
+              "brightness": 70,
+              "effect": "Color Black Weave"
+            },
+            {
+              "time": 25,
+              "brightness": 50
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 25,
+              "brightness": 60
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 10,
+              "brightness": 65
+            },
+            {
+              "time": 18,
+              "brightness": 38
+            },
+            {
+              "time": 25,
+              "brightness": 22
+            }
+          ]
+        }
+      ]
+    },
+    "romantic_mode": {
+      "name": "Romantic Mode",
+      "duration": 1,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Romantic_Playlist"
+      },
+      "actions": [
+        {
+          "type": "hue-scene",
+          "sceneName": "Late Night Scarlet dream",
+          "group": 11,
+          "transitiontime": 300
+        },
+        {
+          "type": "switchbot-scene",
+          "sceneId": "0facc546-4b4c-49de-a87e-7b3de0b82f48",
+          "sceneName": "Condo Candles On"
+        }
+      ],
+      "tracks": [
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Static Lights - Romantic Dim"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 100,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 1,
+              "bri": 15,
+              "color": {
+                "ct": 500
+              }
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 1,
+              "brightness": 15
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 1,
+              "brightness": 10
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 1,
+              "brightness": 28
+            }
+          ]
+        }
+      ]
+    },
+    "movie_mode": {
+      "name": "Movie Mode",
+      "duration": 0.5,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "scene": "movie_night"
+      },
+      "actions": [
+        {
+          "type": "switchbot-scene",
+          "sceneId": "0facc546-4b4c-49de-a87e-7b3de0b82f48",
+          "sceneName": "Condo Candles On"
+        }
+      ],
+      "tracks": [
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Static Lights - Movie Dim"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 100,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 0.5,
+              "bri": 5,
+              "color": {
+                "ct": 454
+              }
+            }
+          ]
+        },
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "brightnessOnly": true,
+          "groupId": 11,
+          "lights": [
+            61,
+            62,
+            63,
+            17,
+            19,
+            58,
+            51,
+            57
+          ],
+          "lightNames": [
+            "Color Lights - Movie Dim"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 70
+            },
+            {
+              "time": 0.5,
+              "bri": 5
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 0.5,
+              "brightness": 0
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 0.5,
+              "brightness": 0
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            },
+            {
+              "time": 0.5,
+              "brightness": 0
+            }
+          ]
+        }
+      ]
+    },
+    "party_mode": {
+      "name": "Party Mode",
+      "duration": 0.5,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Upbeat_Music"
+      },
+      "actions": [
+        {
+          "type": "hue-state",
+          "group": 11,
+          "state": {
+            "on": true,
+            "effect": "colorloop",
+            "bri": 100
+          }
+        }
+      ],
+      "tracks": [
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Static Lights - Party Bright"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 60,
+              "color": {
+                "ct": 346
+              }
+            },
+            {
+              "time": 0.5,
+              "bri": 100,
+              "color": {
+                "ct": 300
+              }
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100,
+              "effect": "Fireworks"
+            }
+          ]
+        }
+      ]
+    },
+    "thunderstorm": {
+      "name": "Thunderstorm",
+      "duration": 30,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Thunderstorm_Ambience"
+      },
+      "tracks": [
+        {
+          "type": "thunderstorm",
+          "groupId": 11,
+          "lights": [
+            61,
+            62,
+            63,
+            17,
+            19,
+            58,
+            51,
+            57
+          ],
+          "ambientState": {
+            "on": true,
+            "bri": 8,
+            "xy": [
+              0.25,
+              0.28
+            ],
+            "transitiontime": 3
+          },
+          "flashState": {
+            "on": true,
+            "ct": 153,
+            "transitiontime": 0
+          },
+          "flashMaxBri": 67,
+          "minFlashInterval": 4,
+          "maxFlashInterval": 15
+        },
+        {
+          "type": "fade",
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Static Lights - Storm Dim"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 8,
+              "color": {
+                "xy": [
+                  0.25,
+                  0.28
+                ]
+              }
+            },
+            {
+              "time": 30,
+              "bri": 8,
+              "color": {
+                "xy": [
+                  0.25,
+                  0.28
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 10
+            },
+            {
+              "time": 30,
+              "brightness": 10
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 0
+            },
+            {
+              "time": 30,
+              "brightness": 0
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 15,
+              "effect": "Northern Lights"
+            }
+          ]
+        }
+      ]
+    },
+    "red_alert": {
+      "name": "Red Alert",
+      "duration": 10,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "spotifyQueue": [
+          "spotify:track:0XRPNOqHphqcf7W6qvQMYe",
+          "spotify:track:2UKgx2oba7CltHLACr3xdT",
+          "spotify:track:2dAI0qoOTobcP8yQAr6RYz"
+        ],
+        "volume": 25
+      },
+      "actions": [
+        {
+          "type": "hue-state",
+          "group": 12,
+          "state": {
+            "on": true,
+            "bri": 100,
+            "xy": [
+              0.68,
+              0.31
+            ],
+            "transitiontime": 5
+          }
+        }
+      ],
+      "tracks": [
+        {
+          "type": "pulse",
+          "groupId": 11,
+          "baseState": {
+            "on": true,
+            "bri": 100,
+            "xy": [
+              0.68,
+              0.31
+            ]
+          }
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 100,
+              "effect": "Flames"
+            }
+          ]
+        }
+      ]
+    },
+    "evening_to_latenight": {
+      "name": "Evening to Late Night",
+      "duration": 15,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "excludeOnOverride": [
+        {
+          "hbAccessory": "Elgato Key Light",
+          "lights": [43, 44, 45, 46],
+          "description": "Office lights excluded when key lights are on"
+        }
+      ],
+      "sonos": {
+        "routine": "Late_Night_Music"
+      },
+      "tracks": [
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "groupId": 12,
+          "lights": [
+            25,
+            26,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            56,
+            60
+          ],
+          "lightNames": [
+            "Static Lights - Late Night Dim"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 60,
+              "color": {
+                "ct": 445
+              }
+            },
+            {
+              "time": 8,
+              "bri": 35,
+              "color": {
+                "ct": 475
+              }
+            },
+            {
+              "time": 15,
+              "bri": 25,
+              "color": {
+                "ct": 500
+              }
+            }
+          ]
+        },
+        {
+          "type": "fade",
+          "dynamicStart": true,
+          "brightnessOnly": true,
+          "groupId": 11,
+          "lights": [
+            61,
+            62,
+            63,
+            17,
+            19,
+            58,
+            51,
+            57
+          ],
+          "lightNames": [
+            "Color Lights - Late Night"
+          ],
+          "sceneTransition": {
+            "detectGroup": 11,
+            "recallGroup": 11,
+            "fromPrefix": [
+              "Evening ",
+              "Evening - "
+            ],
+            "toPrefix": [
+              "Late Night ",
+              "Late Night - "
+            ]
+          },
+          "waypoints": [
+            {
+              "time": 0,
+              "bri": 45
+            },
+            {
+              "time": 8,
+              "bri": 30
+            },
+            {
+              "time": 15,
+              "bri": 20
+            }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 50
+            },
+            {
+              "time": 15,
+              "brightness": 20
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "under_cabinet"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 60
+            },
+            {
+              "time": 15,
+              "brightness": 20
+            }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "dynamicStart": true,
+          "devices": [
+            "neon_sign"
+          ],
+          "waypoints": [
+            {
+              "time": 0,
+              "brightness": 22
+            },
+            {
+              "time": 15,
+              "brightness": 5
+            }
+          ]
+        }
+      ]
+    },
+    "aurora_borealis": {
+      "name": "Aurora Borealis",
+      "duration": 30,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Evening_Music"
+      },
+      "actions": [
+        {
+          "type": "hue-state",
+          "group": 11,
+          "state": {
+            "on": true,
+            "bri": 60,
+            "effect": "colorloop",
+            "transitiontime": 10
+          }
+        },
+        {
+          "type": "hue-state",
+          "group": 12,
+          "state": {
+            "on": true,
+            "bri": 15,
+            "ct": 300,
+            "transitiontime": 20
+          }
+        }
+      ],
+      "tracks": [
+        {
+          "type": "caseta-hap",
+          "devices": ["under_cabinet"],
+          "waypoints": [
+            { "time": 0, "brightness": 10 }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["neon_sign"],
+          "waypoints": [
+            { "time": 0, "brightness": 15 }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            { "time": 0, "brightness": 50, "effect": "Aurora magic" }
+          ]
+        }
+      ]
+    },
+    "storms_end": {
+      "name": "Storm's End",
+      "duration": 10,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "tracks": [
+        {
+          "type": "fade",
+          "groupId": 11,
+          "lights": [],
+          "dynamicStart": false,
+          "waypoints": [
+            { "time": 0, "bri": 8, "color": { "xy": [0.25, 0.28] } },
+            { "time": 5, "bri": 25, "color": { "xy": [0.40, 0.38] } },
+            { "time": 10, "bri": 40, "color": { "xy": [0.50, 0.40] } }
+          ]
+        },
+        {
+          "type": "fade",
+          "groupId": 12,
+          "lights": [],
+          "dynamicStart": false,
+          "brightnessOnly": true,
+          "waypoints": [
+            { "time": 0, "bri": 10 },
+            { "time": 5, "bri": 25 },
+            { "time": 10, "bri": 40 }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["under_cabinet"],
+          "waypoints": [
+            { "time": 0, "brightness": 5 },
+            { "time": 10, "brightness": 30 }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["neon_sign"],
+          "waypoints": [
+            { "time": 0, "brightness": 0 },
+            { "time": 10, "brightness": 15 }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            { "time": 0, "brightness": 10, "effect": "Ocean" },
+            { "time": 10, "brightness": 40, "effect": "Vibrant Sunrise" }
+          ]
+        }
+      ]
+    },
+    "fireplace_cozy": {
+      "name": "Fireplace Cozy",
+      "duration": 30,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Late_Night_Music"
+      },
+      "actions": [
+        {
+          "type": "hue-state",
+          "group": 11,
+          "state": {
+            "on": true,
+            "bri": 20,
+            "xy": [0.55, 0.40],
+            "transitiontime": 30
+          }
+        },
+        {
+          "type": "hue-state",
+          "group": 12,
+          "state": {
+            "on": true,
+            "bri": 20,
+            "ct": 450,
+            "transitiontime": 30
+          }
+        },
+        {
+          "type": "switchbot-scene",
+          "sceneId": "0facc546-4b4c-49de-a87e-7b3de0b82f48",
+          "sceneName": "Condo Candles On"
+        }
+      ],
+      "tracks": [
+        {
+          "type": "caseta-hap",
+          "devices": ["under_cabinet"],
+          "waypoints": [
+            { "time": 0, "brightness": 15 }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["neon_sign"],
+          "waypoints": [
+            { "time": 0, "brightness": 0 }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            { "time": 0, "brightness": 30, "effect": "Flames" }
+          ]
+        }
+      ]
+    },
+    "disco_party": {
+      "name": "Disco Party",
+      "duration": 30,
+      "durationUnit": "minutes",
+      "overrideDetection": false,
+      "sonos": {
+        "routine": "Upbeat_Music"
+      },
+      "actions": [
+        {
+          "type": "hue-state",
+          "group": 11,
+          "state": {
+            "on": true,
+            "bri": 100,
+            "effect": "colorloop",
+            "transitiontime": 5
+          }
+        },
+        {
+          "type": "hue-state",
+          "group": 12,
+          "state": {
+            "on": true,
+            "bri": 80,
+            "ct": 300,
+            "transitiontime": 5
+          }
+        }
+      ],
+      "tracks": [
+        {
+          "type": "pulse",
+          "groupId": 11,
+          "baseState": {
+            "on": true,
+            "bri": 100,
+            "effect": "colorloop"
+          }
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["neon_sign"],
+          "waypoints": [
+            { "time": 0, "brightness": 100 }
+          ]
+        },
+        {
+          "type": "caseta-hap",
+          "devices": ["under_cabinet"],
+          "waypoints": [
+            { "time": 0, "brightness": 100 }
+          ]
+        },
+        {
+          "type": "nanoleaf",
+          "waypoints": [
+            { "time": 0, "brightness": 100, "effect": "Meteor Shower" }
           ]
         }
       ]

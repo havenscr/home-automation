@@ -29,22 +29,32 @@ function loadConfig() {
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-      // migrate: add scenes/groupPresets if missing
+      // migrate: add scenes/groupPresets/knownSpeakers if missing
       if (!config.scenes) config.scenes = getDefaultScenes();
       if (!config.groupPresets) config.groupPresets = getDefaultGroupPresets();
+      if (!config.knownSpeakers) config.knownSpeakers = {};
       saveConfig();
     } else {
-      config = { routines: getDefaultRoutines(), scenes: getDefaultScenes(), groupPresets: getDefaultGroupPresets() };
+      config = { routines: getDefaultRoutines(), scenes: getDefaultScenes(), groupPresets: getDefaultGroupPresets(), knownSpeakers: {} };
       saveConfig();
     }
   } catch (e) {
     console.error('Config error:', e.message);
-    config = { routines: getDefaultRoutines(), scenes: getDefaultScenes(), groupPresets: getDefaultGroupPresets() };
+    config = { routines: getDefaultRoutines(), scenes: getDefaultScenes(), groupPresets: getDefaultGroupPresets(), knownSpeakers: {} };
     saveConfig();
   }
 }
 function saveConfig() {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+}
+function saveKnownSpeakers() {
+  const known = {};
+  for (const [name, info] of Object.entries(speakerInfo)) {
+    if (isBoost(name)) continue;
+    known[name] = { ip: info.ip, model: info.model, capabilities: info.capabilities };
+  }
+  config.knownSpeakers = known;
+  saveConfig();
 }
 
 function getDefaultRoutines() {
@@ -93,28 +103,116 @@ function getDefaultGroupPresets() {
   };
 }
 
+// ─── Speaker Capabilities ────────────────────────────────────────────────────
+function getModelCapabilities(model) {
+  const m = (model || '').toLowerCase();
+  const caps = [];
+  // Speakers with line-in (3.5mm or auto-detect)
+  if (m.includes('five') || m.includes('play:5') || m.includes('port') || m.includes('amp') || m.includes('connect')) caps.push('lineIn');
+  // Speakers with TV input (HDMI ARC / optical)
+  if (m.includes('playbase') || m.includes('playbar') || m.includes('beam') || m.includes('arc') || m.includes('ray')) caps.push('tv');
+  return caps;
+}
+
 // ─── Sonos Discovery ────────────────────────────────────────────────────────
 async function discoverSpeakers() {
   return new Promise((resolve) => {
     console.log('Discovering speakers...');
-    speakers = {}; speakerInfo = {};
+
+    // Pre-populate from known speakers (all start as offline)
+    for (const [name, known] of Object.entries(config.knownSpeakers || {})) {
+      if (!speakerInfo[name]) {
+        speakerInfo[name] = { ip: known.ip, model: known.model, name, rincon: '', capabilities: known.capabilities || [], online: false };
+      } else {
+        speakerInfo[name].online = false;
+      }
+      // Create Sonos object from last-known IP (may work if still reachable)
+      if (!speakers[name]) {
+        speakers[name] = new Sonos(known.ip);
+      }
+    }
+
+    const discovered = new Set();
     const discovery = DeviceDiscovery({ timeout: 10000 });
     discovery.on('DeviceAvailable', async (device) => {
       try {
         const sonos = new Sonos(device.host);
         const desc = await sonos.deviceDescription();
         const room = desc.roomName;
-        if (!speakers[room]) {
+        if (!discovered.has(room)) {
+          discovered.add(room);
           speakers[room] = sonos;
-          speakerInfo[room] = { ip: device.host, model: desc.modelName || 'Unknown', name: room };
+          const caps = getModelCapabilities(desc.modelName || '');
+          speakerInfo[room] = { ip: device.host, model: desc.modelName || 'Unknown', name: room, rincon: speakerInfo[room]?.rincon || '', capabilities: caps, online: true };
           console.log(`  Found: ${room} (${desc.modelName}) @ ${device.host}`);
         }
       } catch (e) { console.error(`  Error: ${device.host}: ${e.message}`); }
     });
     setTimeout(async () => {
       try { discovery.destroy(); } catch(e) {}
+
+      // Supplement SSDP with group topology (catches speakers SSDP misses)
+      const anyOnline = Object.keys(speakers).find(n => !isBoost(n) && speakerInfo[n]?.online);
+      if (anyOnline) {
+        try {
+          const groups = await speakers[anyOnline].getAllGroups();
+          for (const group of groups) {
+            const members = Array.isArray(group.ZoneGroupMember) ? group.ZoneGroupMember : [group.ZoneGroupMember];
+            for (const member of members) {
+              const room = member.ZoneName;
+              if (discovered.has(room) || isBoost(room) || member.Invisible) continue;
+              const locMatch = member.Location && member.Location.match(/\/\/([^:\/]+)/);
+              if (!locMatch) continue;
+              const memberIP = locMatch[1];
+              try {
+                const sonos = new Sonos(memberIP);
+                const desc = await withTimeout(sonos.deviceDescription(), 3000, `topology ${room}`);
+                discovered.add(room);
+                speakers[room] = sonos;
+                const caps = getModelCapabilities(desc.modelName || '');
+                speakerInfo[room] = { ip: memberIP, model: desc.modelName || 'Unknown', name: room, rincon: member.UUID || '', capabilities: caps, online: true };
+                console.log(`  Found: ${room} (${desc.modelName}) @ ${memberIP} (via topology)`);
+              } catch (e) {
+                console.log(`  Topology: ${room} @ ${memberIP} unreachable: ${e.message}`);
+              }
+            }
+          }
+        } catch (e) {
+          console.log(`  Topology check failed: ${e.message}`);
+        }
+      }
+
+      // Try to reach known speakers still not found
+      const missed = Object.entries(speakerInfo).filter(([name, info]) => !discovered.has(name) && !isBoost(name));
+      if (missed.length > 0) {
+        console.log(`  Checking ${missed.length} known speaker(s) not found by SSDP or topology...`);
+        await Promise.all(missed.map(async ([name, info]) => {
+          try {
+            const sonos = new Sonos(info.ip);
+            const desc = await withTimeout(sonos.deviceDescription(), 3000, `ping ${name}`);
+            speakers[name] = sonos;
+            speakerInfo[name].online = true;
+            speakerInfo[name].model = desc.modelName || info.model;
+            console.log(`  Reached: ${name} (${desc.modelName}) @ ${info.ip} (direct ping)`);
+          } catch (e) {
+            console.log(`  Offline: ${name} @ ${info.ip}`);
+            speakerInfo[name].online = false;
+          }
+        }));
+      }
+
       await ensureCoordinators();
-      logActivity('discovery', `Found ${Object.keys(speakers).length} speakers`, { rooms: Object.keys(speakerInfo) });
+      // Recompute capabilities after ensureCoordinators may have updated models
+      for (const [room, info] of Object.entries(speakerInfo)) {
+        info.capabilities = getModelCapabilities(info.model);
+      }
+
+      // Save known speakers to config for persistence
+      saveKnownSpeakers();
+
+      const onlineCount = Object.values(speakerInfo).filter(i => i.online).length;
+      const totalCount = Object.keys(speakerInfo).filter(n => !isBoost(n)).length;
+      logActivity('discovery', `Found ${onlineCount}/${totalCount} speakers online`, { rooms: Object.keys(speakerInfo) });
       resolve(speakers);
     }, 12000);
   });
@@ -144,6 +242,10 @@ async function ensureCoordinators() {
         const locMatch = member.Location && member.Location.match(/\/\/([^:\/]+)/);
         if (!locMatch) continue;
         const memberIP = locMatch[1];
+        // Capture RINCON UUID from group topology (most reliable source)
+        if (member.UUID && speakerInfo[room]) {
+          speakerInfo[room].rincon = member.UUID;
+        }
         if (speakers[room].host !== memberIP) {
           console.log(`  ${room}: swapping to ${memberIP} (was ${speakers[room].host})`);
           const memberSonos = new Sonos(memberIP);
@@ -208,7 +310,13 @@ async function getState(roomName) {
       const uri = track?.uri || '';
       let inputSource = null;
       if (uri.startsWith('x-rincon-stream:')) inputSource = 'Line In';
-      else if (uri.startsWith('x-sonos-vli:') || uri.startsWith('x-sonos-htastream:')) inputSource = 'TV';
+      else if (uri.startsWith('x-sonos-vli:') || uri.startsWith('x-sonos-htastream:')) {
+        // Playbars/Playbases retain TV URI in metadata even when playing streaming music.
+        // Only report TV if there's no streaming content (title + external album art).
+        const hasStreamingContent = track?.title && track?.albumArtURI &&
+          !track.albumArtURI.startsWith('/');
+        inputSource = hasStreamingContent ? null : 'TV';
+      }
       // Resolve relative album art URLs to full URLs via the speaker's IP
       let artURI = track?.albumArtURI || null;
       if (artURI && artURI.startsWith('/')) artURI = 'http://' + d.host + ':1400' + artURI;
@@ -252,12 +360,29 @@ async function groupAllSpeakers(coordName) {
     return [];
   }
   console.log(`  Joining ${toJoin.length} speakers to ${coordName} (${Math.max(0, alreadyGrouped.size - 1)} already grouped)`);
-  const joins = toJoin.map(([name, device]) =>
+  const results = await Promise.all(toJoin.map(([name, device]) =>
     withTimeout(device.joinGroup(coordName), 5000, `join ${name}`)
       .then(() => ({ room: name, status: 'joined' }))
       .catch(e => ({ room: name, status: 'error', error: e.message }))
-  );
-  return Promise.all(joins);
+  ));
+  // Retry any failed joins once
+  const failed = results.filter(r => r.status === 'error');
+  if (failed.length > 0) {
+    console.log(`  Retrying ${failed.length} failed joins: ${failed.map(r => r.room).join(', ')}`);
+    await new Promise(r => setTimeout(r, 1000));
+    for (const f of failed) {
+      if (speakers[f.room]) {
+        try {
+          await withTimeout(speakers[f.room].joinGroup(coordName), 5000, `retry join ${f.room}`);
+          f.status = 'joined';
+          console.log(`  Retry succeeded: ${f.room}`);
+        } catch (e) {
+          console.log(`  Retry failed: ${f.room}: ${e.message}`);
+        }
+      }
+    }
+  }
+  return results;
 }
 
 async function groupRooms(roomNames, coordName) {
@@ -299,8 +424,9 @@ async function playFavorite(favName, coordName) {
   const device = speakers[coordName];
   if (!device) throw new Error(`Speaker "${coordName}" not found`);
   // Spotify URIs need special handling -- extract spotify:type:id and use native play()
+  // Episodes/podcasts can't use device.play() -- they need setAVTransportURI with the Sonos-native URI
   const spotifyMatch = fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
-  if (spotifyMatch) {
+  if (spotifyMatch && spotifyMatch[1] !== 'episode') {
     await device.play(`spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`);
   } else {
     await device.setAVTransportURI({ uri: fav.uri, metadata: fav.metadata });
@@ -389,17 +515,87 @@ function cancelQueue(id) {
   delete activeQueues[id];
 }
 
+// ─── Input Source ───────────────────────────────────────────────────────────
+async function applyInputSource(coordRoom, input) {
+  const device = speakers[coordRoom];
+  if (!device) return;
+  if (input.type === 'favorite') {
+    const fav = favorites.find(f => f.title === input.name);
+    if (!fav) throw new Error(`Favorite "${input.name}" not found`);
+    await device.setAVTransportURI({ uri: fav.uri, metadata: fav.metadata });
+    await device.play();
+    console.log(`  Input: playing favorite "${input.name}" on ${coordRoom}`);
+  } else if (input.type === 'lineIn') {
+    const sourceRoom = input.room || coordRoom;
+    const info = speakerInfo[sourceRoom];
+    if (!info || !info.rincon) throw new Error(`No RINCON for "${sourceRoom}"`);
+    const uri = `x-rincon-stream:${info.rincon}`;
+    await device.setAVTransportURI({ uri, metadata: '' });
+    await device.play();
+    console.log(`  Input: line-in from ${sourceRoom} on ${coordRoom}`);
+  } else if (input.type === 'tv') {
+    const sourceRoom = input.room || coordRoom;
+    const info = speakerInfo[sourceRoom];
+    if (!info || !info.rincon) throw new Error(`No RINCON for "${sourceRoom}"`);
+    const uri = `x-sonos-htastream:${info.rincon}:spdif`;
+    await device.setAVTransportURI({ uri, metadata: '' });
+    console.log(`  Input: TV from ${sourceRoom} on ${coordRoom}`);
+  }
+}
+
 // ─── Group Presets ──────────────────────────────────────────────────────────
 async function applyGroupPreset(presetId) {
   const preset = config.groupPresets[presetId];
   if (!preset) throw new Error(`Group preset "${presetId}" not found`);
+
+  // Ungroup everything first
   await ungroupAll();
   await new Promise(r => setTimeout(r, 1000));
-  let rooms = preset.rooms && preset.rooms.length > 0 ? preset.rooms : Object.keys(speakers);
-  if (rooms.length < 2) return { preset: presetId, rooms };
-  await groupRooms(rooms, rooms[0]);
-  logActivity('group_preset', `Applied: ${preset.name}`, { rooms });
-  return { preset: presetId, rooms };
+
+  if (preset.groups && preset.groups.length > 0) {
+    // Multi-group mode: each sub-group gets its own coordinator and volume
+    for (const group of preset.groups) {
+      const groupRoomsList = group.rooms || [];
+      if (groupRoomsList.length === 0) continue;
+
+      if (groupRoomsList.length > 1) {
+        await groupRooms(groupRoomsList, groupRoomsList[0]);
+        await new Promise(r => setTimeout(r, 800));
+      }
+
+      // Set volume for each room in this sub-group (skip if setVolume is explicitly false)
+      if (group.volume != null && group.setVolume !== false) {
+        for (const roomName of groupRoomsList) {
+          if (speakers[roomName]) {
+            try { await speakers[roomName].setVolume(group.volume); } catch(e) {}
+          }
+        }
+      }
+
+      // Set input source on the coordinator (first room in the group)
+      const coord = groupRoomsList[0];
+      if (group.input && speakers[coord]) {
+        try { await applyInputSource(coord, group.input); } catch(e) { console.log(`  Input source error for ${coord}: ${e.message}`); }
+      }
+    }
+    logActivity('group_preset', `Applied: ${preset.name} (${preset.groups.length} groups)`, { presetId });
+    return { preset: presetId, groups: preset.groups };
+  } else {
+    // Legacy mode: single rooms array, optional volume
+    let rooms = preset.rooms && preset.rooms.length > 0 ? preset.rooms : Object.keys(speakers).filter(n => !n.toLowerCase().includes('boost'));
+    if (rooms.length >= 2) {
+      await groupRooms(rooms, rooms[0]);
+    }
+    if (preset.volume != null) {
+      for (const roomName of rooms) {
+        if (speakers[roomName]) {
+          try { await speakers[roomName].setVolume(preset.volume); } catch(e) {}
+        }
+      }
+    }
+    logActivity('group_preset', `Applied: ${preset.name}`, { rooms });
+    return { preset: presetId, rooms };
+  }
 }
 
 // ─── Scene Execution ────────────────────────────────────────────────────────
@@ -428,14 +624,48 @@ async function executeScene(sceneId) {
 
 // ─── State-Aware Routine Execution ──────────────────────────────────────────
 async function checkRoutineState(routine) {
-  if (!routine.stateCheck) return true;
-  const rooms = Object.keys(speakers);
-  if (rooms.length === 0) return true;
-  try {
-    const state = await speakers[rooms[0]].getCurrentState();
-    if (routine.stateCheck.onlyIfPlaying && state !== 'playing') return false;
-    if (routine.stateCheck.onlyIfStopped && state === 'playing') return false;
-  } catch (e) {}
+  // Legacy stateCheck support
+  if (routine.stateCheck) {
+    const rooms = Object.keys(speakers);
+    if (rooms.length > 0) {
+      try {
+        const state = await speakers[rooms[0]].getCurrentState();
+        if (routine.stateCheck.onlyIfPlaying && state !== 'playing') return false;
+        if (routine.stateCheck.onlyIfStopped && state === 'playing') return false;
+      } catch (e) {}
+    }
+  }
+  // Conditions system: skip based on input source state
+  // conditionLogic: "any" (OR, default) = skip if ANY matches; "all" (AND) = skip only if ALL match
+  if (routine.conditions && routine.conditions.length > 0) {
+    const useAll = routine.conditionLogic === 'all';
+    const results = [];
+    for (const cond of routine.conditions) {
+      if (!cond.speaker || !cond.source || !speakers[cond.speaker]) continue;
+      try {
+        const st = await getState(cond.speaker);
+        const srcNorm = cond.source.toLowerCase().replace(/\s/g, '');
+        const sourceActive = st && st.inputSource &&
+          st.inputSource.toLowerCase().replace(/\s/g, '') === srcNorm;
+        const wantOn = (cond.is || 'on') === 'on';
+        const matches = (wantOn && sourceActive) || (!wantOn && !sourceActive);
+        results.push({ cond, matches });
+        if (matches) console.log(`[Routine] Condition match: ${cond.speaker} ${wantOn ? 'IS' : 'is NOT'} on ${cond.source}`);
+      } catch (e) {
+        console.log(`[Routine] Condition check error for ${cond.speaker}: ${e.message}`);
+        results.push({ cond, matches: false });
+      }
+    }
+    if (results.length > 0) {
+      const shouldSkip = useAll
+        ? results.every(r => r.matches)   // AND: skip only if ALL match
+        : results.some(r => r.matches);   // OR: skip if ANY matches
+      if (shouldSkip) {
+        console.log(`[Routine] Skipping — conditions met (logic: ${useAll ? 'ALL' : 'ANY'})`);
+        return false;
+      }
+    }
+  }
   return true;
 }
 
@@ -453,53 +683,187 @@ async function executeRoutine(id, options = {}) {
   let result = {};
 
   if (routine.type === 'music') {
-    if (!routine.favorite) throw new Error('No favorite configured');
+    if (!routine.favorite && !routine.spotifyUri && !(routine.spotifyQueue && routine.spotifyQueue.length > 0)) throw new Error('No favorite, spotifyUri, or spotifyQueue configured');
+    // Cancel any active sleep timers that might interfere with volume
+    for (const timerId of Object.keys(activeSleepTimers)) {
+      console.log(`[Routine] Cancelling active sleep timer: ${timerId}`);
+      cancelSleepTimer(timerId);
+    }
+    // Pause all speakers first so joining speakers don't inherit stale playback
+    console.log(`[Routine] Pausing all speakers before setup`);
+    await pauseAll();
+    await new Promise(r => setTimeout(r, 300));
     let coord;
     if (routine.rooms && routine.rooms.length > 0) {
       coord = routine.coordinator || routine.rooms[0];
-      console.log(`[Routine] Grouping selected rooms [${routine.rooms.join(', ')}] to ${coord}`);
-      await groupRooms(routine.rooms, coord);
-      await new Promise(r => setTimeout(r, 800));
-      for (const n of routine.rooms) { if (speakers[n]) try { await speakers[n].setVolume(routine.volume || 10); } catch(e){} }
+      // Ungroup selected rooms first so they leave any existing group
+      for (const n of routine.rooms) { if (speakers[n]) try { await speakers[n].leaveGroup(); } catch(e){} }
+      await new Promise(r => setTimeout(r, 500));
+      if (routine.rooms.length > 1) {
+        console.log(`[Routine] Grouping selected rooms [${routine.rooms.join(', ')}] to ${coord}`);
+        await groupRooms(routine.rooms, coord);
+        await new Promise(r => setTimeout(r, 800));
+      } else {
+        console.log(`[Routine] Single room: ${coord}`);
+      }
+      for (const n of routine.rooms) {
+        if (speakers[n]) try {
+          await speakers[n].setVolume(routine.volume || 10);
+          console.log(`[Routine] Volume set: ${n} -> ${routine.volume || 10}`);
+        } catch(e) { console.log(`[Routine] Volume FAILED: ${n}: ${e.message}`); }
+      }
     } else if (routine.groupAll) {
       coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
       console.log(`[Routine] Grouping all speakers to ${coord}`);
       await groupAllSpeakers(coord);
       await new Promise(r => setTimeout(r, 800));
-      for (const [n, d] of Object.entries(speakers)) { if (n.toLowerCase().includes('boost')) continue; try { await d.setVolume(routine.volume || 10); } catch(e){} }
+      for (const [n, d] of Object.entries(speakers)) {
+        if (n.toLowerCase().includes('boost')) continue;
+        try {
+          await d.setVolume(routine.volume || 10);
+          console.log(`[Routine] Volume set: ${n} -> ${routine.volume || 10}`);
+        } catch(e) { console.log(`[Routine] Volume FAILED: ${n}: ${e.message}`); }
+      }
     } else {
       coord = routine.coordinator || Object.keys(speakers).filter(n => !n.toLowerCase().includes("boost"))[0];
-      if (speakers[coord]) try { await speakers[coord].setVolume(routine.volume || 10); } catch(e){}
+      // Ungroup the target speaker so it plays independently (avoids coordinator mismatch)
+      if (speakers[coord]) try { await speakers[coord].leaveGroup(); await new Promise(r => setTimeout(r, 500)); } catch(e){}
+      if (speakers[coord]) try {
+        await speakers[coord].setVolume(routine.volume || 10);
+        console.log(`[Routine] Volume set: ${coord} -> ${routine.volume || 10}`);
+      } catch(e) { console.log(`[Routine] Volume FAILED: ${coord}: ${e.message}`); }
     }
     await new Promise(r => setTimeout(r, 200));
     // Must use actual group coordinator for playback (calling play on a member causes it to leave the group)
     const actualCoord = await findGroupCoordinator(coord);
     if (actualCoord !== coord) console.log(`[Routine] Actual coordinator: ${actualCoord} (requested: ${coord})`);
-    console.log(`[Routine] Playing favorite: ${routine.favorite} on ${actualCoord}`);
-    const fav = favorites.find(f => f.title === routine.favorite);
-    const spotifyMatch = fav && fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
-    if (routine.shuffle && spotifyMatch) {
-      // Queue-based shuffle for Spotify: flush → queue → selectQueue → play → shuffle → next
-      const spotifyUri = `spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`;
-      console.log(`[Routine] Shuffle mode: queuing ${spotifyUri}`);
+    if (routine.spotifyQueue && routine.spotifyQueue.length > 0) {
+      // Multi-track Spotify queue playback
+      console.log(`[Routine] Queuing ${routine.spotifyQueue.length} Spotify tracks on ${actualCoord}`);
       await speakers[actualCoord].flush();
-      const qResult = await speakers[actualCoord].queue(spotifyUri);
-      console.log(`[Routine] Queued ${qResult.NumTracksAdded} tracks`);
-      await speakers[actualCoord].selectQueue();
-      await speakers[actualCoord].play();
-      await new Promise(r => setTimeout(r, 1500));
-      await speakers[actualCoord].setPlayMode('SHUFFLE');
-      await speakers[actualCoord].next();
-      console.log(`[Routine] Shuffle enabled, skipped to random track`);
-    } else {
-      await playFavorite(routine.favorite, actualCoord);
-      console.log(`[Routine] playFavorite succeeded`);
-      if (routine.shuffle) {
-        console.log(`[Routine] Shuffle requested but favorite is not a Spotify playlist - skipping shuffle`);
+      for (const uri of routine.spotifyQueue) {
+        try {
+          await speakers[actualCoord].queue(uri);
+          console.log(`[Routine] Queued: ${uri}`);
+        } catch (e) {
+          console.log(`[Routine] Queue failed for ${uri}: ${e.message}`);
+        }
       }
+      await speakers[actualCoord].selectQueue();
+      await speakers[actualCoord].selectTrack(1);
+      await speakers[actualCoord].play();
+      console.log(`[Routine] Playing queue of ${routine.spotifyQueue.length} tracks (starting from track 1)`);
+    } else if (routine.spotifyUri) {
+      console.log(`[Routine] Playing Spotify URI: ${routine.spotifyUri} on ${actualCoord}`);
+      // Episodes/podcasts need Sonos-native URI format (node-sonos queue() doesn't handle them)
+      const episodeMatch = routine.spotifyUri.match(/^spotify:episode:([a-zA-Z0-9]+)$/);
+      if (episodeMatch) {
+        const sonosUri = `x-sonos-spotify:spotify%3aepisode%3a${episodeMatch[1]}?sid=12&flags=8&sn=1`;
+        console.log(`[Routine] Episode detected, using Sonos URI: ${sonosUri}`);
+        await speakers[actualCoord].setAVTransportURI({ uri: sonosUri, metadata: '' });
+        await speakers[actualCoord].play();
+      } else {
+        // Tracks/albums/playlists: queue-based playback
+        await speakers[actualCoord].flush();
+        await speakers[actualCoord].queue(routine.spotifyUri);
+        await speakers[actualCoord].selectQueue();
+        await speakers[actualCoord].play();
+      }
+    } else if (routine.favorite) {
+      console.log(`[Routine] Playing favorite: ${routine.favorite} on ${actualCoord}`);
+      const fav = favorites.find(f => f.title === routine.favorite);
+      const spotifyMatch = fav && fav.uri.match(/spotify%3a(?:user%3a[^%]+%3a)?(playlist|album|track|episode)%3a([a-zA-Z0-9]+)/i);
+      if (routine.shuffle && spotifyMatch) {
+        // Queue-based shuffle for Spotify: flush → queue → selectQueue → play → shuffle → next
+        const spotifyUri = `spotify:${spotifyMatch[1]}:${spotifyMatch[2]}`;
+        console.log(`[Routine] Shuffle mode: queuing ${spotifyUri}`);
+        await speakers[actualCoord].flush();
+        const qResult = await speakers[actualCoord].queue(spotifyUri);
+        console.log(`[Routine] Queued ${qResult.NumTracksAdded} tracks`);
+        await speakers[actualCoord].selectQueue();
+        await speakers[actualCoord].play();
+        await new Promise(r => setTimeout(r, 1500));
+        await speakers[actualCoord].setPlayMode('SHUFFLE');
+        await speakers[actualCoord].next();
+        console.log(`[Routine] Shuffle enabled, skipped to random track`);
+      } else {
+        await playFavorite(routine.favorite, actualCoord);
+        console.log(`[Routine] playFavorite succeeded`);
+        if (routine.shuffle) {
+          console.log(`[Routine] Shuffle requested but favorite is not a Spotify playlist - skipping shuffle`);
+        }
+      }
+    }
+    // Seek to beginning if configured
+    if (routine.seekToStart) {
+      await new Promise(r => setTimeout(r, 500));
+      try { await speakers[actualCoord].seek(0); console.log(`[Routine] Seeked to start`); } catch(e) { console.log(`[Routine] Seek failed: ${e.message}`); }
     }
     if (routine.sleepTimer && routine.sleepTimer.enabled) {
       startSleepTimer(id, routine.sleepTimer.minutes || 60, routine.sleepTimer.fadeMinutes || 5);
+    }
+    // Handle "other speakers" (speakers not in this routine's rooms)
+    if (routine.otherSpeakers && routine.rooms && routine.rooms.length > 0) {
+      let otherNames = Object.keys(speakers)
+        .filter(n => !isBoost(n) && !routine.rooms.includes(n));
+      // Skip speakers on Line In for stop/pause -- pausing them triggers auto-play rebound
+      // that interferes with routine speaker volumes via Sonos group volume management
+      if (routine.otherSpeakers.action === 'stop' || routine.otherSpeakers.action === 'pause') {
+        const skipNames = [];
+        for (const n of otherNames) {
+          try {
+            const st = await getState(n);
+            if (st && st.inputSource === 'Line In') {
+              skipNames.push(n);
+              console.log(`[Routine] Skipping ${n} (Line In active)`);
+            }
+          } catch(e) {}
+        }
+        otherNames = otherNames.filter(n => !skipNames.includes(n));
+      }
+      if (otherNames.length > 0) {
+        const action = routine.otherSpeakers.action;
+        console.log(`[Routine] Handling ${otherNames.length} other speakers: ${action}`);
+        // Ungroup others so they're independent
+        for (const n of otherNames) {
+          try { await speakers[n].leaveGroup(); } catch(e) {}
+        }
+        await new Promise(r => setTimeout(r, 500));
+        // Only group others together for volume-based actions (not stop/pause)
+        if (action !== 'stop' && action !== 'pause' && otherNames.length > 1) {
+          await groupRooms(otherNames, otherNames[0]);
+          await new Promise(r => setTimeout(r, 800));
+        }
+        for (const n of otherNames) {
+          try {
+            switch (action) {
+              case 'stop': case 'pause':
+                await speakers[n].pause(); break;
+              case 'mute':
+                await speakers[n].setVolume(0); break;
+              case 'setVolume':
+                await speakers[n].setVolume(routine.otherSpeakers.volume || 0); break;
+            }
+          } catch(e) { /* 701 = already stopped, expected */ }
+        }
+        console.log(`[Routine] Other speakers: ${action} complete`);
+      }
+    }
+    // Post-playback volume verification -- catches drift from transport changes
+    await new Promise(r => setTimeout(r, 1000));
+    const targetVol = routine.volume || 10;
+    const volSpeakers = routine.rooms && routine.rooms.length > 0
+      ? routine.rooms : Object.keys(speakers).filter(n => !isBoost(n));
+    for (const n of volSpeakers) {
+      if (speakers[n]) {
+        try {
+          const currentVol = await speakers[n].getVolume();
+          if (currentVol !== targetVol) {
+            console.log(`[Routine] Volume drift: ${n} at ${currentVol}, correcting to ${targetVol}`);
+            await speakers[n].setVolume(targetVol);
+          }
+        } catch(e) {}
+      }
     }
     result = { played: routine.favorite, volume: routine.volume, rooms: routine.rooms, shuffle: !!routine.shuffle };
   } else if (routine.type === 'control') {
@@ -519,6 +883,82 @@ async function executeRoutine(id, options = {}) {
           await speakers[routine.targetRoom].setVolume(Math.max(0, Math.min(100, vol + (routine.volumeAdjust || 5))));
         }
         break;
+      case 'tvVolume': {
+        // Smart TV volume: checks autoSkip rules to skip speakers when their input source is active
+        const volumes = routine.volumes || {};
+        const autoSkipRules = Array.isArray(routine.autoSkip) ? routine.autoSkip : (routine.autoSkip && routine.autoSkip.speaker ? [routine.autoSkip] : []);
+        const skippedSpeakers = new Set();
+        for (const rule of autoSkipRules) {
+          if (!rule.speaker || !rule.source || !speakers[rule.speaker]) continue;
+          try {
+            const skipSt = await getState(rule.speaker);
+            const srcMatch = skipSt && skipSt.inputSource &&
+              skipSt.inputSource.toLowerCase().replace(/\s/g, '') === rule.source.toLowerCase();
+            if (srcMatch) {
+              skippedSpeakers.add(rule.speaker);
+              console.log(`[Routine] tvVolume: autoSkip ${rule.speaker} (${rule.source}) = ACTIVE`);
+            } else {
+              console.log(`[Routine] tvVolume: autoSkip ${rule.speaker} (${rule.source}) = inactive`);
+            }
+          } catch (e) { console.log(`[Routine] tvVolume: autoSkip ${rule.speaker} check failed: ${e.message}`); }
+        }
+        if (!autoSkipRules.length) console.log(`[Routine] tvVolume: no autoSkip rules`);
+        const tvSpeakerSet = new Set(routine.pauseExcept || []);
+        for (const [room, vol] of Object.entries(volumes)) {
+          if (!speakers[room] || isBoost(room)) continue;
+          if (skippedSpeakers.has(room)) {
+            console.log(`[Routine] tvVolume: skipping ${room} (input active)`);
+            continue;
+          }
+          if (tvSpeakerSet.has(room)) {
+            console.log(`[Routine] tvVolume: ${room} vol=${vol} (delayed 5s for CEC)`);
+            continue; // TV speakers set after delay to override CEC/ARC
+          }
+          try {
+            if (vol === 0 && routine.muteIsOff) {
+              await speakers[room].pause();
+              console.log(`[Routine] tvVolume: ${room} paused (vol=0)`);
+            } else {
+              await speakers[room].setVolume(vol);
+              console.log(`[Routine] tvVolume: ${room} vol=${vol}`);
+            }
+          } catch (e) { console.log(`[Routine] tvVolume: ${room} error: ${e.message}`); }
+        }
+        // Pause non-TV speakers if configured
+        if (tvSpeakerSet.size > 0) {
+          const except = new Set(tvSpeakerSet);
+          for (const s of skippedSpeakers) except.add(s);
+          for (const name of Object.keys(speakers)) {
+            if (isBoost(name) || except.has(name)) continue;
+            try { await speakers[name].pause(); } catch (e) { /* 701 = already stopped */ }
+          }
+          console.log(`[Routine] tvVolume: paused non-TV speakers (except ${[...except].join(', ')})`);
+        }
+        // Delayed volume set for TV speakers to override CEC/ARC volume commands
+        if (tvSpeakerSet.size > 0) {
+          const tvToSet = [...tvSpeakerSet].filter(s => speakers[s] && !skippedSpeakers.has(s) && volumes[s] !== undefined);
+          if (tvToSet.length > 0) {
+            setTimeout(async () => {
+              for (const name of tvToSet) {
+                try {
+                  await speakers[name].setVolume(volumes[name]);
+                  console.log(`[Routine] tvVolume: CEC override ${name} vol=${volumes[name]}`);
+                } catch (e) { console.log(`[Routine] tvVolume: CEC override ${name} error: ${e.message}`); }
+              }
+            }, 5000);
+          }
+        }
+        // Trigger sub-routines (like Bedroom TV Up/Down)
+        if (routine.subRoutines) {
+          for (const subId of routine.subRoutines) {
+            if (config.routines[subId] && config.routines[subId].enabled) {
+              try { await executeRoutine(subId); } catch (e) { console.log(`[Routine] sub-routine ${subId} error: ${e.message}`); }
+            }
+          }
+        }
+        result = { action: 'tvVolume', skipped: [...skippedSpeakers] };
+        break;
+      }
     }
     result = { action: routine.action };
   } else if (routine.type === 'webhook') {
@@ -563,6 +1003,31 @@ app.get('/api/status', async (req, res) => {
   for (const name of speakerNames()) { result[name] = await getState(name); }
   res.json(result);
 });
+app.get('/api/groups', async (req, res) => {
+  const anyRoom = Object.keys(speakers).find(n => !isBoost(n) && speakerInfo[n]?.online !== false);
+  if (!anyRoom) return res.json([]);
+  try {
+    const groups = await speakers[anyRoom].getAllGroups();
+    const result = [];
+    for (const g of groups) {
+      const members = Array.isArray(g.ZoneGroupMember) ? g.ZoneGroupMember : [g.ZoneGroupMember];
+      const visible = members.filter(m => m && !m.Invisible && !isBoost(m.ZoneName));
+      if (visible.length === 0) continue;
+      const coordEntry = Object.entries(speakerInfo).find(([n, i]) => i.ip === g.host && !isBoost(n));
+      const coordName = coordEntry ? coordEntry[0] : visible[0].ZoneName;
+      result.push({
+        id: g.ID || coordName,
+        coordinator: coordName,
+        members: visible.map(m => m.ZoneName),
+        memberCount: visible.length
+      });
+    }
+    res.json(result);
+  } catch (e) {
+    console.error('Groups API error:', e.message);
+    res.json([]);
+  }
+});
 app.get('/api/now-playing', async (req, res) => {
   const result = {};
   for (const name of speakerNames()) {
@@ -594,8 +1059,54 @@ app.delete('/api/routines/:id', (req, res) => {
   delete config.routines[req.params.id]; saveConfig(); res.json({ deleted: req.params.id });
 });
 app.post('/api/trigger/:id', async (req, res) => {
-  try { const r = await executeRoutine(req.params.id); res.json({ ok: true, ...r }); }
+  const force = req.query.force === 'true' || req.body?.force === true;
+  try { const r = await executeRoutine(req.params.id, { checkState: !force }); res.json({ ok: true, ...r }); }
   catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.post('/api/play-queue', async (req, res) => {
+  try {
+    const { uris, volume, groupAll } = req.body;
+    if (!uris || !uris.length) return res.status(400).json({ error: 'No URIs provided' });
+
+    let coord;
+    if (groupAll !== false) {
+      coord = Object.keys(speakers).filter(n => !n.toLowerCase().includes('boost'))[0];
+      console.log(`[play-queue] Grouping all speakers to ${coord}`);
+      await groupAllSpeakers(coord);
+      await new Promise(r => setTimeout(r, 800));
+      console.log(`[play-queue] Grouping complete`);
+    } else {
+      coord = Object.keys(speakers).filter(n => !n.toLowerCase().includes('boost'))[0];
+    }
+
+    if (volume != null) {
+      console.log(`[play-queue] Setting volume to ${volume}`);
+      for (const [n, d] of Object.entries(speakers)) {
+        if (n.toLowerCase().includes('boost')) continue;
+        try { await d.setVolume(volume); } catch(e) {}
+      }
+    }
+
+    const actualCoord = await findGroupCoordinator(coord);
+    console.log(`[play-queue] Coordinator: ${actualCoord}, queueing ${uris.length} tracks`);
+    await speakers[actualCoord].flush();
+    for (const uri of uris) {
+      try {
+        await speakers[actualCoord].queue(uri);
+        console.log(`[play-queue] Queued: ${uri}`);
+      } catch(e) { console.log(`[play-queue] Queue failed: ${uri}: ${e.message}`); }
+    }
+    await speakers[actualCoord].selectQueue();
+    await speakers[actualCoord].selectTrack(1);
+    await speakers[actualCoord].play();
+    console.log(`[play-queue] Playing ${uris.length} tracks from track 1`);
+
+    logActivity('play-queue', `Playing ${uris.length} tracks on ${actualCoord}`, { volume });
+    res.json({ ok: true, tracks: uris.length, coordinator: actualCoord });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── API: Scenes ────────────────────────────────────────────────────────────
@@ -748,11 +1259,64 @@ app.post('/api/config/import', (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// ─── Periodic Speaker Health Check ──────────────────────────────────────────
+const HEALTH_CHECK_INTERVAL = 2 * 60 * 1000; // 2 minutes
+let healthCheckRunning = false;
+
+async function speakerHealthCheck() {
+  if (healthCheckRunning) return;
+  healthCheckRunning = true;
+  try {
+    const offlineSpeakers = Object.entries(speakerInfo).filter(([name, info]) => !info.online && !isBoost(name));
+    if (offlineSpeakers.length === 0) return;
+
+    const totalSpeakers = Object.keys(speakerInfo).filter(n => !isBoost(n)).length;
+    const allOffline = offlineSpeakers.length === totalSpeakers;
+
+    if (allOffline) {
+      // All speakers offline (power outage recovery): full rediscovery
+      console.log('[Health] All speakers offline, running full rediscovery...');
+      await discoverSpeakers();
+      await loadFavorites();
+      const recovered = Object.values(speakerInfo).filter(i => i.online).length;
+      if (recovered > 0) {
+        console.log(`[Health] Recovered ${recovered}/${totalSpeakers} speakers`);
+        logActivity('health', `Power recovery: found ${recovered}/${totalSpeakers} speakers`);
+      }
+    } else {
+      // Some offline: lightweight ping check
+      let recovered = 0;
+      await Promise.all(offlineSpeakers.map(async ([name, info]) => {
+        try {
+          const sonos = new Sonos(info.ip);
+          const desc = await withTimeout(sonos.deviceDescription(), 3000, `health ${name}`);
+          speakers[name] = sonos;
+          speakerInfo[name].online = true;
+          speakerInfo[name].model = desc.modelName || info.model;
+          speakerInfo[name].capabilities = getModelCapabilities(desc.modelName || info.model);
+          recovered++;
+          console.log(`[Health] Recovered: ${name} @ ${info.ip}`);
+        } catch (e) { /* still offline */ }
+      }));
+      if (recovered > 0) {
+        saveKnownSpeakers();
+        logActivity('health', `Recovered ${recovered} speaker(s): ${offlineSpeakers.filter(([n]) => speakerInfo[n].online).map(([n]) => n).join(', ')}`);
+      }
+    }
+  } catch (e) {
+    console.error('[Health] Check failed:', e.message);
+  } finally {
+    healthCheckRunning = false;
+  }
+}
+
 // ─── Startup ────────────────────────────────────────────────────────────────
 async function start() {
   loadConfig();
   await discoverSpeakers();
   await loadFavorites();
+  // Start periodic health check for offline speaker recovery
+  setInterval(speakerHealthCheck, HEALTH_CHECK_INTERVAL);
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n${'═'.repeat(51)}`);
     console.log(`  Sonos Commander running at http://0.0.0.0:${PORT}`);
