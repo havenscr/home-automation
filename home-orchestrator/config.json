@@ -318,7 +318,9 @@
             "toPrefix": [
               "Evening ",
               "Evening - "
-            ]
+            ],
+            "time": 13,
+            "transitionSeconds": 300
           },
           "waypoints": [
             {

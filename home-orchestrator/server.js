@@ -183,8 +183,10 @@ async function executeSceneTransition(track) {
       logActivity('fade', `Scene transition: no matching scene for "${activeScene.name}" with prefixes ${st.toPrefix.join(', ')}`);
       return;
     }
-    logActivity('fade', `Scene transition: "${activeScene.name}" -> "${target.name}" on group ${st.recallGroup}`);
-    await hueGroupAction(st.recallGroup, { scene: target.id });
+    const tt = st.transitionSeconds ? Math.round(st.transitionSeconds * 10) : undefined;
+    const action = tt ? { scene: target.id, transitiontime: tt } : { scene: target.id };
+    logActivity('fade', `Scene transition: "${activeScene.name}" -> "${target.name}" on group ${st.recallGroup}${tt ? ' over ' + st.transitionSeconds + 's' : ''}`);
+    await hueGroupAction(st.recallGroup, action);
   } catch (e) {
     logActivity('fade', `Scene transition error: ${e.message}`);
   }
@@ -608,9 +610,9 @@ async function startRoutine(routineId, options = {}) {
         }
       }
 
-      // Execute scene transitions for tracks that have them
+      // Execute scene transitions (skip if already fired mid-routine)
       for (const track of routine.tracks) {
-        if (track.sceneTransition) {
+        if (track.sceneTransition && !state.firedInstants.has('sceneTransition')) {
           executeSceneTransition(track).catch(e =>
             logActivity('fade', `Scene transition error: ${e.message}`)
           );
@@ -645,6 +647,19 @@ async function startRoutine(routineId, options = {}) {
     // Drift detection: check every 3rd tick (~30s) using bulk API call
     if (routine.driftDetection && routine.driftDetection.enabled && state.tickCount % 3 === 0 && state.tickCount > 0) {
       await checkDriftDetection(state, routine);
+    }
+
+    // Mid-routine scene transitions (fire at configured time instead of waiting for completion)
+    for (const track of routine.tracks) {
+      if (track.sceneTransition && track.sceneTransition.time != null && !state.firedInstants.has('sceneTransition')) {
+        const stTime = track.sceneTransition.time * (durationMin / routine.duration);
+        if (elapsedMin >= stTime) {
+          state.firedInstants.add('sceneTransition');
+          executeSceneTransition(track).catch(e =>
+            logActivity('fade', `Scene transition error: ${e.message}`)
+          );
+        }
+      }
     }
 
     // Process each track
