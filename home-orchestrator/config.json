@@ -175,6 +175,7 @@
       "driftDetection": {
         "enabled": true,
         "thresholdPct": 8,
+        "cancelOnBrighterOverride": true,
         "lights": []
       },
       "tracks": [

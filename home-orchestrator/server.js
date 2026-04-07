@@ -839,10 +839,15 @@ async function checkDriftDetection(state, routine) {
     const actualBri = lightData.state.bri;
     const expectedBri = state.lastExpected[lightId];
     if (actualBri !== undefined && Math.abs(actualBri - expectedBri) > thresholdHue) {
-      state.excludedLights.add(lightId);
       const name = lightData.name || lightId;
       const actualPct = Math.round(actualBri / 2.54);
       const expectedPct = Math.round(expectedBri / 2.54);
+      if (dd.cancelOnBrighterOverride && actualBri > expectedBri + thresholdHue) {
+        logActivity('fade', `Drift: light ${lightId} (${name}) bri=${actualPct}% vs expected=${expectedPct}% — brighter override, cancelling routine`, { routineId: state.id });
+        cancelRoutine(state.id);
+        return;
+      }
+      state.excludedLights.add(lightId);
       logActivity('fade', `Drift: light ${lightId} (${name}) bri=${actualPct}% vs expected=${expectedPct}% (threshold ${dd.thresholdPct}%), excluding`, { routineId: state.id });
     }
   }
@@ -1311,13 +1316,15 @@ async function startDaytimeGradient() {
     throw new Error('No lights configured for daytime gradient');
   }
 
-  // Check for conflicting active routines
+  // Cancel any conflicting active routines rather than blocking gradient start
   const gradientLightSet = new Set(cfg.lights.map(String));
   for (const [routineId, rState] of Object.entries(activeRoutines)) {
     if (rState.routine && rState.routine.tracks) {
       for (const track of rState.routine.tracks) {
         if (track.lights && track.lights.some(l => gradientLightSet.has(String(l)))) {
-          throw new Error(`Cannot start gradient: routine "${routineId}" is using overlapping lights`);
+          logActivity('gradient', `Cancelling conflicting routine "${routineId}" to start gradient`);
+          cancelRoutine(routineId);
+          break;
         }
       }
     }
@@ -1378,6 +1385,23 @@ async function startDaytimeGradient() {
       );
     }, i * 100);
   });
+
+  // Verify lights actually turned on after stagger completes, retry any that didn't respond
+  setTimeout(async () => {
+    if (!gradientState) return;
+    try {
+      const allLightsData = await hueGetLights();
+      for (const lightId of initLights) {
+        const ld = allLightsData[String(lightId)];
+        if (ld && ld.state && !ld.state.on) {
+          logActivity('gradient', `Retry: light ${lightId} (${ld.name}) did not turn on, resending`);
+          hueLightState(lightId, { on: true, bri, ct: initialCt, transitiontime: 5 }).catch(e =>
+            logActivity('gradient', `Retry error light ${lightId}: ${e.message}`)
+          );
+        }
+      }
+    } catch (e) { /* verification fetch failed, skip retry */ }
+  }, initLights.length * 100 + 5000);
 
   // Weather polling
   gradientState.weatherTimer = setInterval(async () => {
