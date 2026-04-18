@@ -145,19 +145,7 @@
         "enabled": false,
         "minutes": 60,
         "fadeMinutes": 5
-      },
-      "conditions": [
-        {
-          "speaker": "Playbase",
-          "source": "tv",
-          "is": "on"
-        },
-        {
-          "speaker": "Master Bedroom",
-          "source": "tv",
-          "is": "on"
-        }
-      ]
+      }
     },
     "Thunderstorm_Ambience": {
       "name": "Thunderstorm Ambience",
