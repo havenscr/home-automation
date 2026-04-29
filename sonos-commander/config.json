@@ -324,11 +324,9 @@
       "action": "tvVolume",
       "volumes": {
         "Playbase": 10,
-        "Master Bedroom": 10,
         "Guest Bathroom Speaker": 10,
         "Kitchen": 10,
-        "Bathroom": 10,
-        "Office Speaker": 10
+        "Office Speaker": 100
       },
       "autoSkip": [
         {
