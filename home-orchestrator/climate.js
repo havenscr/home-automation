@@ -1,6 +1,6 @@
 // Smart climate controller for LG ThinQ portable ACs.
 // Phase 2: setpoint writes + manual-override detection + pause/resume.
-// Phase 3 will add the fan-speed priority ladder.
+// Phase 3: priority-ladder fan control with hysteresis + cross-room ramp.
 
 const https = require('https');
 const crypto = require('crypto');
@@ -14,8 +14,14 @@ const COUNTRY_TO_REGION = {
 };
 const API_KEY = 'v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3';
 const WIND_MAP = { low: 'LOW', mid: 'MID', medium: 'MID', high: 'HIGH' };
+const WIND_RANK = { LOW: 1, MID: 2, HIGH: 3 };
+const RANK_TO_WIND = { 1: 'LOW', 2: 'MID', 3: 'HIGH' };
 const DEFAULT_OVERRIDE_COOLDOWN_MS = 30 * 60 * 1000;
 const SETPOINT_TOLERANCE_C = 0.6;
+// Pressure thresholds in F. Engaging rung N requires pressure to cross thresholds[N-1].
+// Hysteresis: stepping down requires pressure to drop HYSTERESIS_F below the threshold that engaged it.
+const RUNG_THRESHOLDS_F = [0.5, 1.5, 2.5, 3.5];
+const HYSTERESIS_F = 0.5;
 
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
@@ -292,9 +298,41 @@ function createClimate({ getConfig, logActivity }) {
     return writeControl(slot, dev.deviceId, payload, { power }, saveConfigFn);
   }
 
+  // Map heat pressure (F above target) to a rung-count, applying hysteresis
+  // against the previously-engaged rung count so we don't flap at thresholds.
+  function pressureToRungCount(pressureF, prevCount, totalRungs) {
+    if (totalRungs <= 0) return 0;
+    let target = 1;
+    for (let i = 0; i < RUNG_THRESHOLDS_F.length; i++) {
+      if (pressureF >= RUNG_THRESHOLDS_F[i]) target = i + 2;
+    }
+    target = Math.min(target, totalRungs);
+    if (pressureF < 0) target = 1; // at or below target temp -> baseline (1 rung)
+
+    if (prevCount == null) return target;
+    if (target > prevCount) return target; // step up immediately
+    // Step down only if pressure dropped HYSTERESIS_F below the threshold that engaged prevCount.
+    // The threshold for being at prevCount rungs is RUNG_THRESHOLDS_F[prevCount - 2] (when prevCount >= 2).
+    if (prevCount >= 2) {
+      const stepDownAt = RUNG_THRESHOLDS_F[prevCount - 2] - HYSTERESIS_F;
+      if (pressureF >= stepDownAt) return prevCount;
+    }
+    return target;
+  }
+
+  // From an engaged-rung list and a slot, find the highest fan rank requested for that slot.
+  // Returns 0 if the slot is not in any engaged rung (baseline = LOW).
+  function highestRankForSlot(slot, engagedRungs) {
+    let best = 0;
+    for (const [room, speed] of engagedRungs) {
+      if (room !== slot) continue;
+      const rank = WIND_RANK[WIND_MAP[String(speed).toLowerCase()] || speed.toUpperCase()] || 0;
+      if (rank > best) best = rank;
+    }
+    return best;
+  }
+
   // ---- Control loop tick ----
-  // Phase 2 scope: only setpoint enforcement + override detection.
-  // Phase 3 will extend tickOnce() with the fan ladder.
 
   async function tickOnce(saveConfigFn) {
     const cfg = getConfig().climate || {};
@@ -307,41 +345,87 @@ function createClimate({ getConfig, logActivity }) {
 
     const { mode, targetF } = getMode();
     const targetC = roundC(fToC(targetF));
+    const ladder = getActiveLadder();
     const actions = [];
 
+    // Phase 1: detect overrides + compute heat pressure across non-paused, reachable ACs.
+    let pressureF = 0;
+    const slotData = {};
     for (const slot of slots) {
       const observed = fresh.devices[slot];
       if (!observed || !observed.ok) {
-        actions.push({ slot, skipped: 'unreachable' });
+        slotData[slot] = { observed: null, paused: false, skipReason: 'unreachable' };
         continue;
       }
-
-      // 1) Detect manual override BEFORE deciding to write.
       detectManualOverride(slot, observed, saveConfigFn);
-
-      // 2) Honor any pause (global, slot, or override).
       const pause = getPauseState(slot);
-      if (pause.paused) {
-        actions.push({ slot, skipped: 'paused', until: pause.until, reason: pause.reason });
-        continue;
-      }
-
-      // 3) Push setpoint if it drifted from desired.
-      if (observed.targetC != null && Math.abs(observed.targetC - targetC) > SETPOINT_TOLERANCE_C) {
-        try {
-          await setTargetTempF(slot, targetF, saveConfigFn);
-          actions.push({ slot, wrote: { targetF, targetC } });
-        } catch (e) {
-          if (logActivity) logActivity('climate', `setpoint ${slot} failed: ${e.message}`);
-          actions.push({ slot, error: e.message });
-        }
-      } else {
-        actions.push({ slot, ok: 'setpoint matches' });
+      slotData[slot] = { observed, paused: pause.paused, pause };
+      if (!pause.paused && observed.currentF != null) {
+        const delta = observed.currentF - targetF;
+        if (delta > pressureF) pressureF = delta;
       }
     }
 
+    // Phase 2: rung-count selection with hysteresis.
+    const ls = (cfg.lastState && cfg.lastState.engagedRungCount) || null;
+    const rungCount = pressureToRungCount(pressureF, ls, ladder.rungs.length);
+    const engagedRungs = ladder.rungs.slice(0, rungCount);
+
+    // Persist engaged-rung count for hysteresis on next tick.
+    if (!cfg.lastState) cfg.lastState = {};
+    if (cfg.lastState.engagedRungCount !== rungCount || cfg.lastState.engagedLadder !== ladder.name) {
+      cfg.lastState.engagedRungCount = rungCount;
+      cfg.lastState.engagedLadder = ladder.name;
+      if (saveConfigFn) saveConfigFn();
+      if (logActivity) logActivity('climate', `ladder=${ladder.name} pressure=${pressureF.toFixed(1)}F rungs=${rungCount}/${ladder.rungs.length}`);
+    }
+
+    // Phase 3: per-AC enforcement.
+    for (const slot of slots) {
+      const sd = slotData[slot];
+      if (sd.skipReason) { actions.push({ slot, skipped: sd.skipReason }); continue; }
+      if (sd.paused) { actions.push({ slot, skipped: 'paused', until: sd.pause.until, reason: sd.pause.reason }); continue; }
+
+      const observed = sd.observed;
+      const slotActions = { slot, wrote: {} };
+
+      // 3a) Setpoint enforcement.
+      if (observed.targetC != null && Math.abs(observed.targetC - targetC) > SETPOINT_TOLERANCE_C) {
+        try {
+          await setTargetTempF(slot, targetF, saveConfigFn);
+          slotActions.wrote.targetF = targetF;
+        } catch (e) {
+          if (logActivity) logActivity('climate', `setpoint ${slot} failed: ${e.message}`);
+          slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'setpoint: ' + e.message;
+        }
+      }
+
+      // 3b) Fan speed from ladder.
+      const desiredRank = highestRankForSlot(slot, engagedRungs) || WIND_RANK.LOW;
+      const desiredWind = RANK_TO_WIND[desiredRank];
+      if (observed.windStrength && observed.windStrength !== desiredWind) {
+        try {
+          await setFanSpeed(slot, desiredWind.toLowerCase(), saveConfigFn);
+          slotActions.wrote.windStrength = desiredWind;
+        } catch (e) {
+          if (logActivity) logActivity('climate', `fan ${slot} failed: ${e.message}`);
+          slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'fan: ' + e.message;
+        }
+      }
+
+      if (!Object.keys(slotActions.wrote).length && !slotActions.error) slotActions.ok = 'matches';
+      actions.push(slotActions);
+    }
+
     lastTickAt = Date.now();
-    return { mode, targetF, actions };
+    return {
+      mode, targetF,
+      ladder: ladder.name,
+      pressureF: Math.round(pressureF * 10) / 10,
+      engagedRungCount: rungCount,
+      engagedRungs,
+      actions,
+    };
   }
 
   async function tick(saveConfigFn) {
@@ -374,10 +458,23 @@ function createClimate({ getConfig, logActivity }) {
       const until = (cfg.lastState && cfg.lastState.pausedUntil) || 0;
       return { paused: until > Date.now(), until };
     })();
+    const { mode, targetF } = getMode();
+    // Compute current pressure from cached readings (no fresh fetch).
+    let pressureF = 0;
+    for (const s of slots) {
+      const d = cache.devices[s];
+      if (!d || !d.ok || !d.currentF) continue;
+      if (pauses[s].paused) continue;
+      const delta = d.currentF - targetF;
+      if (delta > pressureF) pressureF = delta;
+    }
+    const engagedRungCount = (cfg.lastState && cfg.lastState.engagedRungCount) || 0;
     return {
       enabled: !!cfg.enabled,
-      ...getMode(),
+      mode, targetF,
       ladder: getActiveLadder(),
+      pressureF: Math.round(pressureF * 10) / 10,
+      engagedRungCount,
       lastTickAt,
       globalPause,
       pauses,

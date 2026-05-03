@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Climate</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%2300587C'/><circle cx='16' cy='16' r='8' fill='none' stroke='white' stroke-width='2'/><circle cx='16' cy='16' r='2' fill='white'/></svg>">
+<style>
+  :root { --teal:#009999; --dark-blue:#00587C; --bg:#0F1419; --card:#1A2332; --card-border:#2A3A4E; --text:#E8ECF1; --muted:#8899AA; --success:#36B37E; --warn:#FFAB00; --danger:#FF5630; --accent:var(--teal); --radius:8px; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  .header { background:linear-gradient(135deg,var(--dark-blue),var(--teal)); padding:16px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  .header h1 { font-size:20px; font-weight:600; }
+  .header .subtitle { font-size:12px; opacity:0.7; }
+  .header-status { display:flex; gap:12px; align-items:center; }
+  .header-status .pill { background:rgba(255,255,255,0.15); padding:4px 10px; border-radius:12px; font-size:12px; }
+  .header-status .pill.off { background:rgba(255,86,48,0.4); }
+  .tabs { display:flex; background:var(--card); border-bottom:1px solid var(--card-border); overflow-x:auto; }
+  .tab { padding:12px 16px; cursor:pointer; font-size:13px; color:var(--muted); border-bottom:2px solid transparent; white-space:nowrap; transition:all 0.2s; }
+  .tab:hover { color:var(--text); }
+  .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+  .tab-content { display:none; padding:16px; max-width:1100px; margin:0 auto; }
+  .tab-content.active { display:block; }
+  .card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .card.paused { border-left:3px solid var(--warn); }
+  .card.offline { border-left:3px solid var(--danger); opacity:0.7; }
+  .card.cooling { border-left:3px solid var(--accent); }
+  .card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:8px; }
+  .card-title { font-size:15px; font-weight:600; }
+  .grid { display:grid; gap:12px; }
+  .grid-2 { grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); }
+  .state { font-size:11px; padding:2px 8px; border-radius:10px; }
+  .state.on { background:rgba(54,179,126,0.2); color:var(--success); }
+  .state.off { background:rgba(136,153,170,0.2); color:var(--muted); }
+  .state.warn { background:rgba(255,171,0,0.2); color:var(--warn); }
+  .state.danger { background:rgba(255,86,48,0.2); color:var(--danger); }
+  .temp-block { display:flex; align-items:baseline; gap:16px; margin:12px 0; }
+  .temp-current { font-size:42px; font-weight:300; line-height:1; }
+  .temp-current .deg { font-size:20px; color:var(--muted); }
+  .temp-target { font-size:13px; color:var(--muted); }
+  .temp-target strong { color:var(--text); }
+  .meta-row { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-top:4px; }
+  .meta-row span.k { color:var(--text); }
+  .controls { margin-top:14px; padding-top:12px; border-top:1px solid var(--card-border); }
+  .controls-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+  .controls-row label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; min-width:54px; }
+  .stepper { display:flex; align-items:center; gap:6px; }
+  .stepper button { width:30px; height:30px; padding:0; }
+  .stepper input { width:70px; text-align:center; }
+  .seg { display:inline-flex; border:1px solid var(--card-border); border-radius:var(--radius); overflow:hidden; }
+  .seg button { background:transparent; border:none; color:var(--muted); padding:6px 12px; cursor:pointer; font-size:12px; font-weight:500; transition:all 0.15s; }
+  .seg button:hover { color:var(--text); }
+  .seg button.active { background:var(--accent); color:white; }
+  .btn { border:none; padding:8px 14px; border-radius:var(--radius); cursor:pointer; font-size:13px; font-weight:500; transition:all 0.2s; }
+  .btn-primary { background:var(--accent); color:white; }
+  .btn-primary:hover { filter:brightness(1.15); }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+  .btn-danger { background:var(--danger); color:white; }
+  .btn-warn { background:var(--warn); color:#222; }
+  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--card-border); }
+  .btn-ghost:hover { color:var(--text); border-color:var(--muted); }
+  .pause-bar { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .form-row { display:flex; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .form-group { flex:1; min-width:140px; }
+  .form-group label { display:block; font-size:11px; color:var(--muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px; }
+  input,select { width:100%; background:var(--bg); border:1px solid var(--card-border); color:var(--text); padding:8px; border-radius:4px; font-size:13px; }
+  .toggle { position:relative; width:42px; height:22px; display:inline-block; }
+  .toggle input { opacity:0; width:0; height:0; }
+  .toggle .slider { position:absolute; cursor:pointer; inset:0; background:var(--card-border); border-radius:11px; transition:0.3s; }
+  .toggle .slider:before { content:""; position:absolute; height:16px; width:16px; left:3px; bottom:3px; background:white; border-radius:50%; transition:0.3s; }
+  .toggle input:checked+.slider { background:var(--accent); }
+  .toggle input:checked+.slider:before { transform:translateX(20px); }
+  .ladder-list { display:flex; flex-direction:column; gap:6px; }
+  .ladder-rung { display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--bg); border:1px solid var(--card-border); border-radius:var(--radius); font-size:13px; }
+  .ladder-rung .num { color:var(--muted); font-family:monospace; min-width:18px; }
+  .ladder-rung .room { font-weight:600; min-width:60px; }
+  .ladder-rung .speed { color:var(--accent); font-size:12px; text-transform:uppercase; }
+  .ladder-rung.active { border-color:var(--accent); background:rgba(0,153,153,0.08); }
+  .ladder-list.editable .ladder-rung { gap:6px; padding:6px 8px; flex-wrap:wrap; }
+  .ladder-list.editable select { width:auto; min-width:90px; padding:4px 6px; font-size:12px; }
+  .ladder-list.editable .reorder { display:flex; flex-direction:column; gap:2px; margin-left:auto; }
+  .ladder-list.editable .reorder button { width:24px; height:18px; padding:0; font-size:11px; line-height:1; background:transparent; border:1px solid var(--card-border); color:var(--muted); border-radius:3px; cursor:pointer; }
+  .ladder-list.editable .reorder button:hover:not(:disabled) { color:var(--text); border-color:var(--muted); }
+  .ladder-list.editable .reorder button:disabled { opacity:0.3; cursor:not-allowed; }
+  .ladder-list.editable .remove-btn { background:transparent; border:1px solid var(--card-border); color:var(--danger); width:28px; height:28px; padding:0; border-radius:4px; cursor:pointer; font-size:14px; }
+  .ladder-list.editable .remove-btn:hover { border-color:var(--danger); background:rgba(255,86,48,0.08); }
+  .ladder-list.editable .dirty { border-color:var(--warn); }
+  .explainer { font-size:13px; line-height:1.5; color:var(--text); }
+  .explainer p { margin-bottom:10px; }
+  .explainer ul { margin:6px 0 12px 20px; }
+  .explainer li { margin-bottom:4px; font-size:12px; }
+  .explainer .kbd { display:inline-block; background:var(--bg); border:1px solid var(--card-border); border-radius:3px; padding:1px 6px; font-family:monospace; font-size:11px; color:var(--accent); margin-right:6px; }
+  .explainer-example { background:rgba(0,153,153,0.06); border-left:3px solid var(--accent); padding:10px 12px; border-radius:0 4px 4px 0; font-size:12px; }
+  .section-title { font-size:15px; font-weight:600; margin-bottom:12px; }
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--card); border:1px solid var(--card-border); padding:12px 20px; border-radius:var(--radius); font-size:13px; z-index:1000; transform:translateY(100px); opacity:0; transition:all 0.3s; max-width:320px; }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.success { border-left:3px solid var(--success); }
+  .toast.error { border-left:3px solid var(--danger); }
+  .pause-banner { background:rgba(255,171,0,0.1); border:1px solid var(--warn); border-radius:var(--radius); padding:10px 14px; margin-bottom:12px; font-size:13px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .log-entry { padding:6px 0; border-bottom:1px solid rgba(42,58,78,0.5); font-size:12px; display:flex; gap:8px; }
+  .log-entry .log-time { color:var(--muted); min-width:60px; font-family:monospace; font-size:11px; }
+  .log-entry .log-msg { flex:1; }
+  @media (max-width:600px) {
+    .grid-2 { grid-template-columns:1fr; }
+    .form-row { flex-direction:column; }
+    .header { padding:12px 16px; }
+    .temp-current { font-size:36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Climate</h1>
+    <div class="subtitle">LG ThinQ ACs — Smart Control</div>
+  </div>
+  <div class="header-status">
+    <span id="pill-mode" class="pill">--</span>
+    <span id="pill-target" class="pill">target --</span>
+    <span id="pill-pressure" class="pill">+0.0F</span>
+    <span id="pill-ladder" class="pill">ladder --</span>
+    <span id="pill-enabled" class="pill">--</span>
+    <button class="btn btn-ghost btn-sm" onclick="refreshAll()">Refresh</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard">Dashboard</div>
+  <div class="tab" data-tab="settings">Settings</div>
+  <div class="tab" data-tab="ladder">Ladder</div>
+  <div class="tab" data-tab="log">Log</div>
+</div>
+
+<div class="tab-content active" id="tab-dashboard">
+  <div id="banner-area"></div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Auto Control</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">When on, the loop enforces day/night targets and the priority ladder.</div>
+      </div>
+      <label class="toggle"><input id="enabled-toggle" type="checkbox" onchange="toggleEnabled(this.checked)"><span class="slider"></span></label>
+    </div>
+    <div class="pause-bar">
+      <span style="font-size:12px;color:var(--muted);align-self:center">Pause everything for:</span>
+      <button class="btn btn-ghost btn-sm" onclick="pauseScope('global', 30)">30 min</button>
+      <button class="btn btn-ghost btn-sm" onclick="pauseScope('global', 60)">1 hr</button>
+      <button class="btn btn-ghost btn-sm" onclick="pauseScope('global', 120)">2 hr</button>
+      <button class="btn btn-ghost btn-sm" onclick="pauseScope('global', 480)">8 hr</button>
+      <button class="btn btn-warn btn-sm" id="resume-global" style="display:none" onclick="resumeScope('global')">Resume now</button>
+    </div>
+  </div>
+  <div class="grid grid-2" id="ac-grid"></div>
+</div>
+
+<div class="tab-content" id="tab-settings">
+  <div class="card">
+    <div class="section-title">Schedule</div>
+    <div class="form-row">
+      <div class="form-group"><label>Day target</label><input id="cfg-day-target" type="number" step="1" min="60" max="85"></div>
+      <div class="form-group"><label>Night target</label><input id="cfg-night-target" type="number" step="1" min="60" max="85"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Day starts</label><input id="cfg-day-start" type="time"></div>
+      <div class="form-group"><label>Night starts</label><input id="cfg-night-start" type="time"></div>
+    </div>
+    <div class="section-title" style="margin-top:18px">Office quiet hours</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When in quiet hours, the office is capped at medium fan; kitchen ramps up to compensate.</div>
+    <div class="form-row">
+      <div class="form-group"><label>Quiet from</label><input id="cfg-quiet-start" type="time"></div>
+      <div class="form-group"><label>Quiet until</label><input id="cfg-quiet-end" type="time"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="min-width:100%">
+        <label>Quiet days (0=Sun, 6=Sat)</label>
+        <div id="cfg-quiet-days" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:18px">Manual override</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When you change a setpoint or fan via the LG app or unit, the loop pauses that AC for this long, then resumes.</div>
+    <div class="form-row">
+      <div class="form-group"><label>Cooldown (minutes)</label><input id="cfg-override-cooldown" type="number" step="5" min="5" max="240"></div>
+      <div class="form-group"><label>Poll interval (seconds)</label><input id="cfg-poll-seconds" type="number" step="10" min="30" max="600"></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveConfig()">Save</button>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-ladder">
+  <div class="card">
+    <div class="section-title">How the ladder works</div>
+    <div class="explainer">
+      <p><strong>The goal:</strong> as the apartment gets hotter relative to your target temp, the system progressively turns up cooling, in the order you choose. Lower rungs are quieter, higher rungs cool harder.</p>
+      <p><strong>Heat pressure</strong> is the biggest gap between any room's current temp and the target. If office is 74F and kitchen is 73F with a 72F target, pressure = +2F (the office's gap).</p>
+      <p><strong>Engagement:</strong> as pressure rises, more rungs engage. The thresholds are:</p>
+      <ul>
+        <li><span class="kbd">at target</span> rung 1 only</li>
+        <li><span class="kbd">+0.5F</span> rungs 1-2</li>
+        <li><span class="kbd">+1.5F</span> rungs 1-3</li>
+        <li><span class="kbd">+2.5F</span> rungs 1-4</li>
+        <li><span class="kbd">+3.5F</span> all rungs</li>
+      </ul>
+      <p><strong>Per-AC fan speed:</strong> for each AC, the loop looks at every engaged rung that mentions it and uses the highest speed. So if rungs 1+2 say "kitchen low" and "kitchen medium", kitchen runs at MID. If a rung doesn't mention an AC, that AC isn't asked to ramp.</p>
+      <p><strong>Hysteresis:</strong> when pressure drops, rungs disengage 0.5F below the threshold that engaged them — prevents flapping at the boundary.</p>
+      <p><strong>Two ladders, picked by clock:</strong> the <em>office-quiet</em> ladder is used Mon-Fri during your work hours (caps office fan to keep meetings quiet — kitchen does the heavy lifting). The <em>default</em> ladder runs all other times — evenings, weekends, overnight — when office can ramp to high (it's empty + cold air reaches the bedroom).</p>
+      <p class="explainer-example"><strong>Example:</strong> Tuesday 11am, office hits 75F (+3F over target). Office-quiet ladder is active. Pressure 3F engages 4 of 4 rungs: kitchen low, office mid, kitchen mid, kitchen high. Office's max engaged speed is MID (rung 2). Kitchen's max is HIGH (rung 4). Result: office stays quiet at MID, kitchen ramps to HIGH to compensate. Exactly what you wanted.</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">Active right now: <span id="ladder-active-name">--</span></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Engaged rungs are highlighted. Read-only — edit the source ladder below.</div>
+    <div class="ladder-list" id="ladder-active"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="section-title" style="margin:0">Default ladder</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Evenings + weekends + overnight. Office can ramp to high.</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="addRung('default')">+ Add rung</button>
+        <button class="btn btn-primary btn-sm" onclick="saveLadders()">Save changes</button>
+      </div>
+    </div>
+    <div class="ladder-list editable" id="edit-ladder-default"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="section-title" style="margin:0">Office-quiet ladder</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">Mon-Fri during work hours. Office capped at medium.</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="addRung('officeQuiet')">+ Add rung</button>
+        <button class="btn btn-primary btn-sm" onclick="saveLadders()">Save changes</button>
+      </div>
+    </div>
+    <div class="ladder-list editable" id="edit-ladder-quiet"></div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-log">
+  <div class="card">
+    <div class="card-header">
+      <div class="section-title" style="margin:0">Recent climate activity</div>
+      <button class="btn btn-ghost btn-sm" onclick="loadLog()">Refresh</button>
+    </div>
+    <div id="log-list"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastState = null;
+let draftLadders = { default: [], officeQuiet: [], dirty: false };
+let knownSlots = ['office', 'kitchen'];
+const SPEEDS = ['low', 'mid', 'high'];
+
+function toast(msg, kind) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (kind || '');
+  setTimeout(() => { t.className = 'toast'; }, 2500);
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+  const j = await r.json().catch(() => ({}));
+  if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j;
+}
+
+function fmtRemaining(until) {
+  const ms = until - Date.now();
+  if (ms <= 0) return 'now';
+  const m = Math.round(ms / 60000);
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return h + 'h' + (mm ? ' ' + mm + 'm' : '');
+}
+
+function setHeaderStatus(s) {
+  $('pill-mode').textContent = s.mode || '--';
+  $('pill-target').textContent = 'target ' + (s.targetF != null ? s.targetF + 'F' : '--');
+  const p = s.pressureF ?? 0;
+  const pp = $('pill-pressure');
+  pp.textContent = (p > 0 ? '+' : '') + p.toFixed(1) + 'F over';
+  pp.className = 'pill' + (p >= 2.5 ? ' off' : '');
+  const ladderTxt = s.ladder?.name ? (s.ladder.name + ' ' + (s.engagedRungCount || 0) + '/' + (s.ladder.rungs?.length || 0)) : '--';
+  $('pill-ladder').textContent = 'ladder: ' + ladderTxt;
+  const pe = $('pill-enabled');
+  pe.textContent = s.enabled ? 'AUTO ON' : 'AUTO OFF';
+  pe.className = 'pill' + (s.enabled ? '' : ' off');
+  $('enabled-toggle').checked = !!s.enabled;
+}
+
+function setBanner(s) {
+  const area = $('banner-area');
+  area.innerHTML = '';
+  if (s.globalPause?.paused) {
+    const div = document.createElement('div');
+    div.className = 'pause-banner';
+    div.innerHTML = '<span><strong>All paused.</strong> Resumes in ' + fmtRemaining(s.globalPause.until) + '.</span>'
+      + '<button class="btn btn-warn btn-sm" onclick="resumeScope(\'global\')">Resume now</button>';
+    area.appendChild(div);
+  }
+  $('resume-global').style.display = s.globalPause?.paused ? '' : 'none';
+}
+
+function renderAcCard(slot, dev, pauseInfo) {
+  const offline = !dev || !dev.ok;
+  const paused = pauseInfo && pauseInfo.paused;
+  const cardClass = ['card', offline ? 'offline' : (paused ? 'paused' : (dev.power === 'POWER_ON' && dev.jobMode === 'COOL' ? 'cooling' : ''))].join(' ');
+  const card = document.createElement('div');
+  card.className = cardClass;
+  if (offline) {
+    card.innerHTML = '<div class="card-header"><div class="card-title">' + slot + '</div><span class="state danger">offline</span></div>'
+      + '<div style="font-size:12px;color:var(--muted)">' + (dev?.error || 'no reading') + '</div>';
+    return card;
+  }
+  const stateBadge = dev.power === 'POWER_ON' ? '<span class="state on">' + dev.jobMode + '</span>' : '<span class="state off">off</span>';
+  const pauseBadge = paused ? '<span class="state warn" title="' + pauseInfo.reason + '">paused ' + fmtRemaining(pauseInfo.until) + '</span>' : '';
+  const fan = (dev.windStrength || '').toLowerCase();
+  card.innerHTML =
+    '<div class="card-header">'
+    + '<div class="card-title">' + slot + '</div>'
+    + '<div style="display:flex;gap:6px;align-items:center">' + pauseBadge + stateBadge + '</div>'
+    + '</div>'
+    + '<div class="temp-block">'
+    +   '<div class="temp-current">' + (dev.currentF ?? '--') + '<span class="deg">F</span></div>'
+    +   '<div class="temp-target">target <strong>' + (dev.targetF ?? '--') + 'F</strong> &middot; fan <strong>' + (dev.windStrength || '--') + '</strong></div>'
+    + '</div>'
+    + '<div class="controls">'
+    +   '<div class="controls-row">'
+    +     '<label>Target</label>'
+    +     '<div class="stepper">'
+    +       '<button class="btn btn-ghost btn-sm" onclick="bumpTarget(\'' + slot + '\', -1)">-</button>'
+    +       '<input id="t-' + slot + '" type="number" value="' + (dev.targetF ?? '') + '" step="1" min="60" max="85">'
+    +       '<button class="btn btn-ghost btn-sm" onclick="bumpTarget(\'' + slot + '\', +1)">+</button>'
+    +       '<button class="btn btn-primary btn-sm" onclick="setTarget(\'' + slot + '\')">Set</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="controls-row">'
+    +     '<label>Fan</label>'
+    +     '<div class="seg">'
+    +       '<button class="' + (fan === 'low' ? 'active' : '') + '" onclick="setFan(\'' + slot + '\',\'low\')">Low</button>'
+    +       '<button class="' + (fan === 'mid' ? 'active' : '') + '" onclick="setFan(\'' + slot + '\',\'mid\')">Mid</button>'
+    +       '<button class="' + (fan === 'high' ? 'active' : '') + '" onclick="setFan(\'' + slot + '\',\'high\')">High</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="controls-row">'
+    +     '<label>Power</label>'
+    +     '<div class="seg">'
+    +       '<button class="' + (dev.power === 'POWER_ON' ? 'active' : '') + '" onclick="setPower(\'' + slot + '\', true)">On</button>'
+    +       '<button class="' + (dev.power === 'POWER_OFF' ? 'active' : '') + '" onclick="setPower(\'' + slot + '\', false)">Off</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="pause-bar">'
+    +     '<span style="font-size:12px;color:var(--muted);align-self:center">Pause this AC:</span>'
+    +     '<button class="btn btn-ghost btn-sm" onclick="pauseScope(\'' + slot + '\', 30)">30m</button>'
+    +     '<button class="btn btn-ghost btn-sm" onclick="pauseScope(\'' + slot + '\', 60)">1h</button>'
+    +     '<button class="btn btn-ghost btn-sm" onclick="pauseScope(\'' + slot + '\', 120)">2h</button>'
+    +     '<button class="btn btn-ghost btn-sm" onclick="pauseScope(\'' + slot + '\', 480)">8h</button>'
+    +     (paused ? '<button class="btn btn-warn btn-sm" onclick="resumeScope(\'' + slot + '\')">Resume</button>' : '')
+    +   '</div>'
+    + '</div>';
+  return card;
+}
+
+function renderDashboard(s) {
+  const grid = $('ac-grid');
+  grid.innerHTML = '';
+  const slots = Object.keys(s.devices || {});
+  if (!slots.length) { grid.innerHTML = '<div class="card"><div class="card-title">No ACs configured</div></div>'; return; }
+  for (const slot of slots) {
+    grid.appendChild(renderAcCard(slot, s.devices[slot], s.pauses?.[slot]));
+  }
+}
+
+function renderLadder(name, rungs, heatLevel = -1) {
+  return rungs.map((r, i) => {
+    const active = i <= heatLevel;
+    return '<div class="ladder-rung' + (active ? ' active' : '') + '">'
+      + '<span class="num">' + (i + 1) + '</span>'
+      + '<span class="room">' + r[0] + '</span>'
+      + '<span class="speed">' + r[1] + '</span>'
+      + '</div>';
+  }).join('');
+}
+
+async function refreshAll() {
+  try {
+    const s = await api('/api/climate/state');
+    lastState = s;
+    setHeaderStatus(s);
+    setBanner(s);
+    renderDashboard(s);
+    $('ladder-active-name').textContent = (s.ladder?.name || '--') + ' (' + (s.engagedRungCount || 0) + '/' + (s.ladder?.rungs?.length || 0) + ' engaged, pressure ' + (s.pressureF ?? 0).toFixed(1) + 'F)';
+    $('ladder-active').innerHTML = renderLadder('active', s.ladder?.rungs || [], (s.engagedRungCount || 0) - 1);
+  } catch (e) { toast('Refresh failed: ' + e.message, 'error'); }
+}
+
+function renderEditableLadders() {
+  renderEditableLadder('default', $('edit-ladder-default'));
+  renderEditableLadder('officeQuiet', $('edit-ladder-quiet'));
+}
+
+function renderEditableLadder(key, container) {
+  const rungs = draftLadders[key];
+  container.innerHTML = '';
+  if (!rungs.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">No rungs. Click "+ Add rung" to create one.</div>';
+    return;
+  }
+  rungs.forEach((rung, i) => {
+    const row = document.createElement('div');
+    row.className = 'ladder-rung' + (draftLadders.dirty ? ' dirty' : '');
+
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = i + 1;
+    row.appendChild(num);
+
+    const roomSel = document.createElement('select');
+    knownSlots.forEach(slot => {
+      const opt = document.createElement('option');
+      opt.value = slot;
+      opt.textContent = slot;
+      if (slot === rung[0]) opt.selected = true;
+      roomSel.appendChild(opt);
+    });
+    roomSel.addEventListener('change', () => { rung[0] = roomSel.value; markDirty(); });
+    row.appendChild(roomSel);
+
+    const speedSel = document.createElement('select');
+    SPEEDS.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.toUpperCase();
+      opt.textContent = s.toUpperCase();
+      if (s.toUpperCase() === String(rung[1]).toUpperCase()) opt.selected = true;
+      speedSel.appendChild(opt);
+    });
+    speedSel.addEventListener('change', () => { rung[1] = speedSel.value.toLowerCase(); markDirty(); });
+    row.appendChild(speedSel);
+
+    const reorder = document.createElement('div');
+    reorder.className = 'reorder';
+    const upBtn = document.createElement('button');
+    upBtn.textContent = '▲'; // up arrow
+    upBtn.title = 'Move up';
+    upBtn.disabled = i === 0;
+    upBtn.addEventListener('click', () => moveRung(key, i, -1));
+    const downBtn = document.createElement('button');
+    downBtn.textContent = '▼'; // down arrow
+    downBtn.title = 'Move down';
+    downBtn.disabled = i === rungs.length - 1;
+    downBtn.addEventListener('click', () => moveRung(key, i, +1));
+    reorder.appendChild(upBtn);
+    reorder.appendChild(downBtn);
+    row.appendChild(reorder);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '×'; // multiplication sign
+    removeBtn.title = 'Remove rung';
+    removeBtn.addEventListener('click', () => removeRung(key, i));
+    row.appendChild(removeBtn);
+
+    container.appendChild(row);
+  });
+}
+
+function markDirty() {
+  draftLadders.dirty = true;
+  document.querySelectorAll('.ladder-list.editable .ladder-rung').forEach(el => el.classList.add('dirty'));
+}
+
+function moveRung(key, index, delta) {
+  const rungs = draftLadders[key];
+  const j = index + delta;
+  if (j < 0 || j >= rungs.length) return;
+  [rungs[index], rungs[j]] = [rungs[j], rungs[index]];
+  markDirty();
+  renderEditableLadders();
+}
+
+function removeRung(key, index) {
+  draftLadders[key].splice(index, 1);
+  markDirty();
+  renderEditableLadders();
+}
+
+function addRung(key) {
+  const rungs = draftLadders[key];
+  // Sensible default for a new rung: alternate room from the last rung if any, else first slot.
+  const lastRoom = rungs.length ? rungs[rungs.length - 1][0] : null;
+  const newRoom = lastRoom && knownSlots.length > 1
+    ? (knownSlots.find(s => s !== lastRoom) || knownSlots[0])
+    : knownSlots[0];
+  rungs.push([newRoom, 'low']);
+  markDirty();
+  renderEditableLadders();
+}
+
+async function saveLadders() {
+  // Validate
+  const validate = (rungs, label) => {
+    for (const r of rungs) {
+      if (!Array.isArray(r) || r.length !== 2) return label + ': bad shape';
+      if (!knownSlots.includes(r[0])) return label + ': unknown room "' + r[0] + '"';
+      if (!SPEEDS.includes(String(r[1]).toLowerCase())) return label + ': unknown speed "' + r[1] + '"';
+    }
+    return null;
+  };
+  const err = validate(draftLadders.default, 'default') || validate(draftLadders.officeQuiet, 'officeQuiet');
+  if (err) { toast('Validation: ' + err, 'error'); return; }
+
+  // Normalize speeds to lowercase before sending (climate.js maps low/mid/high -> LOW/MID/HIGH)
+  const normalize = (rungs) => rungs.map(r => [r[0], String(r[1]).toLowerCase()]);
+  const patch = {
+    ladder: {
+      default: normalize(draftLadders.default),
+      officeQuiet: normalize(draftLadders.officeQuiet),
+    },
+  };
+  try {
+    await api('/api/climate/config', { method: 'PATCH', body: JSON.stringify(patch) });
+    draftLadders.dirty = false;
+    toast('Ladders saved', 'success');
+    renderEditableLadders();
+    refreshAll(); // reload active-ladder display since saved version may now differ
+  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function loadConfig() {
+  try {
+    const c = await api('/api/climate/config');
+    $('cfg-day-target').value = c.schedule.dayTargetF ?? 74;
+    $('cfg-night-target').value = c.schedule.nightTargetF ?? 70;
+    $('cfg-day-start').value = c.schedule.dayStart ?? '08:00';
+    $('cfg-night-start').value = c.schedule.nightStart ?? '22:00';
+    $('cfg-quiet-start').value = c.schedule.officeQuietStart ?? '10:00';
+    $('cfg-quiet-end').value = c.schedule.officeQuietEnd ?? '18:00';
+    $('cfg-override-cooldown').value = Math.round((c.overrideCooldownMs ?? 30 * 60 * 1000) / 60000);
+    $('cfg-poll-seconds').value = c.fanRamp?.pollSeconds ?? 60;
+    const days = c.schedule.officeQuietDays ?? [1, 2, 3, 4, 5];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    $('cfg-quiet-days').innerHTML = dayNames.map((n, i) =>
+      '<label style="display:flex;gap:4px;align-items:center;font-size:13px;cursor:pointer">'
+      + '<input type="checkbox" data-day="' + i + '" ' + (days.includes(i) ? 'checked' : '') + ' style="width:auto">'
+      + n + '</label>'
+    ).join('');
+    // Seed editable drafts (clone + canonicalize speeds so "medium" -> "mid" for UI dropdown)
+    const canonSpeed = (s) => {
+      const v = String(s).toLowerCase();
+      return v === 'medium' ? 'mid' : v;
+    };
+    draftLadders.default = (c.ladder?.default || []).map(r => [r[0], canonSpeed(r[1])]);
+    draftLadders.officeQuiet = (c.ladder?.officeQuiet || []).map(r => [r[0], canonSpeed(r[1])]);
+    draftLadders.dirty = false;
+    knownSlots = Object.keys(c.devices || {});
+    if (!knownSlots.length) knownSlots = ['office', 'kitchen']; // sensible default
+    renderEditableLadders();
+  } catch (e) { toast('Config load failed: ' + e.message, 'error'); }
+}
+
+async function saveConfig() {
+  const days = Array.from(document.querySelectorAll('#cfg-quiet-days input:checked')).map(el => Number(el.dataset.day));
+  const patch = {
+    schedule: {
+      dayTargetF: Number($('cfg-day-target').value),
+      nightTargetF: Number($('cfg-night-target').value),
+      dayStart: $('cfg-day-start').value,
+      nightStart: $('cfg-night-start').value,
+      officeQuietStart: $('cfg-quiet-start').value,
+      officeQuietEnd: $('cfg-quiet-end').value,
+      officeQuietDays: days,
+    },
+    fanRamp: { pollSeconds: Number($('cfg-poll-seconds').value) },
+    overrideCooldownMs: Number($('cfg-override-cooldown').value) * 60000,
+  };
+  try {
+    await api('/api/climate/config', { method: 'PATCH', body: JSON.stringify(patch) });
+    toast('Saved', 'success');
+    refreshAll();
+  } catch (e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function toggleEnabled(on) {
+  try {
+    await api('/api/climate/' + (on ? 'enable' : 'disable'), { method: 'POST' });
+    toast(on ? 'Auto control ON' : 'Auto control OFF', 'success');
+    refreshAll();
+  } catch (e) { toast('Toggle failed: ' + e.message, 'error'); }
+}
+
+function bumpTarget(slot, delta) {
+  const inp = $('t-' + slot);
+  inp.value = Number(inp.value || 70) + delta;
+}
+
+async function setTarget(slot) {
+  const v = Number($('t-' + slot).value);
+  if (!Number.isFinite(v)) return;
+  try { await api('/api/climate/' + slot + '/target', { method: 'POST', body: JSON.stringify({ targetF: v }) });
+    toast(slot + ' target ' + v + 'F', 'success'); setTimeout(refreshAll, 800);
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function setFan(slot, speed) {
+  try { await api('/api/climate/' + slot + '/fan', { method: 'POST', body: JSON.stringify({ speed }) });
+    toast(slot + ' fan ' + speed, 'success'); setTimeout(refreshAll, 800);
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function setPower(slot, on) {
+  try { await api('/api/climate/' + slot + '/power', { method: 'POST', body: JSON.stringify({ on }) });
+    toast(slot + ' ' + (on ? 'on' : 'off'), 'success'); setTimeout(refreshAll, 800);
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function pauseScope(scope, minutes) {
+  try { await api('/api/climate/' + scope + '/pause', { method: 'POST', body: JSON.stringify({ minutes }) });
+    toast('Paused ' + scope + ' ' + minutes + 'm', 'success'); refreshAll();
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function resumeScope(scope) {
+  try { await api('/api/climate/' + scope + '/resume', { method: 'POST' });
+    toast(scope + ' resumed', 'success'); refreshAll();
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function loadLog() {
+  // Reuse the orchestrator's general log endpoint, filter to climate.
+  try {
+    const r = await fetch('/api/log?type=climate&limit=80');
+    const j = await r.json().catch(() => ({}));
+    const items = j.entries || j.log || j || [];
+    const list = $('log-list');
+    if (!Array.isArray(items) || !items.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:13px">No recent activity (or /api/log not exposed -- run journalctl on the Pi).</div>';
+      return;
+    }
+    list.innerHTML = items.slice(-80).reverse().map(e => {
+      const t = new Date(e.ts || e.time || Date.now());
+      const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
+      return '<div class="log-entry"><span class="log-time">' + hh + '</span><span class="log-msg">' + (e.message || e.msg || JSON.stringify(e)) + '</span></div>';
+    }).join('');
+  } catch (e) {
+    $('log-list').innerHTML = '<div style="color:var(--muted);font-size:13px">No log endpoint available.</div>';
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    $('tab-' + t.dataset.tab).classList.add('active');
+    if (t.dataset.tab === 'log') loadLog();
+    if (t.dataset.tab === 'ladder' || t.dataset.tab === 'settings') loadConfig();
+  });
+});
+
+refreshAll();
+loadConfig();
+setInterval(refreshAll, 30000);
+</script>
+</body>
+</html>

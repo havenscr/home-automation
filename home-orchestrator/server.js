@@ -2810,6 +2810,39 @@ app.post('/api/climate/:scope/resume', (req, res) => {
   res.json({ ok: true, scope: req.params.scope });
 });
 
+// Patch climate config (schedule, ladder, override cooldown). Body keys are merged.
+// Allowed top-level keys only; nested keys merged 1 level deep.
+app.patch('/api/climate/config', (req, res) => {
+  const allowed = ['schedule', 'fanRamp', 'ladder', 'overrideCooldownMs'];
+  const patch = req.body || {};
+  if (!config.climate) config.climate = {};
+  for (const k of Object.keys(patch)) {
+    if (!allowed.includes(k)) continue;
+    if (typeof patch[k] === 'object' && !Array.isArray(patch[k]) && patch[k] !== null) {
+      config.climate[k] = { ...(config.climate[k] || {}), ...patch[k] };
+    } else {
+      config.climate[k] = patch[k];
+    }
+  }
+  saveConfig();
+  logActivity('climate', `config patched: ${Object.keys(patch).join(', ')}`);
+  res.json({ ok: true, climate: { schedule: config.climate.schedule, fanRamp: config.climate.fanRamp, ladder: config.climate.ladder, overrideCooldownMs: config.climate.overrideCooldownMs } });
+});
+
+// Get sanitized climate config for the UI (omits PAT and deviceIds).
+app.get('/api/climate/config', (req, res) => {
+  const c = config.climate || {};
+  res.json({
+    ok: true,
+    enabled: !!c.enabled,
+    schedule: c.schedule || {},
+    fanRamp: c.fanRamp || {},
+    ladder: c.ladder || {},
+    overrideCooldownMs: c.overrideCooldownMs ?? null,
+    devices: Object.fromEntries(Object.entries(c.devices || {}).map(([k, v]) => [k, { displayName: v.displayName }])),
+  });
+});
+
 // Kick off the polling loop. tickInterval gates itself on config.climate.enabled.
 climate.start(saveConfig);
 

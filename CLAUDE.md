@@ -1,5 +1,20 @@
 # Home Automation — Claude Code Guidelines
 
+## README is authoritative — keep it current
+
+**The repo's [README.md](README.md) is the authoritative project doc.** Whenever any of the following changes, update README.md *in the same change* (not later, not as a follow-up):
+
+- Service architecture (new service, new module, new external integration, removed integration)
+- Routines on either home-orchestrator or sonos-commander (added, removed, renamed, behavior changed materially)
+- HomeKit dummy switches (added, removed, renamed, naming-convention changes)
+- Config schema (new top-level key in config.json, breaking change to existing key)
+- Deploy commands, Pi hardware setup, network IPs, or service-port assignments
+- New pairing scripts or one-shot setup tooling
+
+**Before declaring a task done that touched any of the above, verify README.md reflects the new reality.** The expected sections are: Architecture diagram, Services (with file paths), Routines tables, Homebridge pattern + naming, Hardware/IP table, Deployment flow, Common pitfalls, Where-to-look-for-what.
+
+If the README is stale relative to the code, treat that as a defect on par with a failing test. Stale docs cause Reid (and future-me) to make decisions based on wrong assumptions.
+
 ## Target Hardware
 
 Raspberry Pi 3B+ with 1GB RAM running Homebridge, Apple TV Enhanced, and custom services.
