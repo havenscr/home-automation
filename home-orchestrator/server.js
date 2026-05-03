@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execSync } = require('child_process');
 const cron = require('node-cron');
+const { createClimate } = require('./climate');
 
 const PORT = 5006;
 const CONFIG_FILE = path.join(__dirname, 'config.json');
@@ -2721,6 +2722,96 @@ app.post('/api/tv/smartpower/off', async (req, res) => {
   try { await samsungPowerOff(); res.json({ ok: true, action: 'smart_power_off' }); }
   catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
+
+// --- Climate (LG ThinQ portable ACs) ---
+const climate = createClimate({
+  getConfig: () => config,
+  logActivity,
+});
+
+app.get('/api/climate/state', async (req, res) => {
+  try {
+    const fresh = await climate.readAll();
+    res.json({ ok: true, ...climate.getSnapshot(), devices: fresh.devices });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get('/api/climate/devices/:slot', async (req, res) => {
+  try {
+    const dev = (config.climate && config.climate.devices && config.climate.devices[req.params.slot]) || null;
+    if (!dev) return res.status(404).json({ ok: false, error: 'unknown slot' });
+    const reading = await climate.readDevice(req.params.slot, dev.deviceId);
+    res.json({ ok: true, slot: req.params.slot, ...reading });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/climate/enable', (req, res) => {
+  if (!config.climate) config.climate = {};
+  config.climate.enabled = true;
+  saveConfig();
+  logActivity('climate', 'enabled');
+  res.json({ ok: true, enabled: true });
+});
+
+app.post('/api/climate/disable', (req, res) => {
+  if (!config.climate) config.climate = {};
+  config.climate.enabled = false;
+  saveConfig();
+  logActivity('climate', 'disabled');
+  res.json({ ok: true, enabled: false });
+});
+
+app.post('/api/climate/tick', async (req, res) => {
+  try {
+    const result = await climate.tick(saveConfig);
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Manual control endpoints. Each write also seeds lastWritten so the override
+// detector won't immediately flag your own UI action as a manual override.
+app.post('/api/climate/:slot/target', async (req, res) => {
+  try {
+    const targetF = Number(req.body && req.body.targetF);
+    if (!Number.isFinite(targetF)) return res.status(400).json({ ok: false, error: 'targetF required' });
+    const result = await climate.setTargetTempF(req.params.slot, targetF, saveConfig);
+    res.json({ ok: true, slot: req.params.slot, targetF, result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/climate/:slot/fan', async (req, res) => {
+  try {
+    const speed = req.body && req.body.speed;
+    if (!speed) return res.status(400).json({ ok: false, error: 'speed required (low|mid|high)' });
+    const result = await climate.setFanSpeed(req.params.slot, speed, saveConfig);
+    res.json({ ok: true, slot: req.params.slot, speed, result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post('/api/climate/:slot/power', async (req, res) => {
+  try {
+    const on = !!(req.body && (req.body.on || req.body.power === 'on' || req.body.power === true));
+    const result = await climate.setPower(req.params.slot, on, saveConfig);
+    res.json({ ok: true, slot: req.params.slot, on, result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Pause / resume. Body: { minutes: 30 } or { until: <epoch ms> }. Default 30m.
+app.post('/api/climate/:scope/pause', (req, res) => {
+  const scope = req.params.scope; // 'global' | 'office' | 'kitchen'
+  const minutes = Number((req.body && req.body.minutes) ?? 30);
+  if (!Number.isFinite(minutes) || minutes <= 0) return res.status(400).json({ ok: false, error: 'minutes must be > 0' });
+  const result = climate.setPause(scope, minutes * 60 * 1000, saveConfig);
+  res.json({ ok: true, scope, until: result.until });
+});
+
+app.post('/api/climate/:scope/resume', (req, res) => {
+  climate.clearPause(req.params.scope, saveConfig);
+  res.json({ ok: true, scope: req.params.scope });
+});
+
+// Kick off the polling loop. tickInterval gates itself on config.climate.enabled.
+climate.start(saveConfig);
 
 // Picture mode
 app.post('/api/tv/picture-mode/:mode', async (req, res) => {
