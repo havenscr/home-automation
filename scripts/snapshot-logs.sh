@@ -223,10 +223,19 @@ if [ ! -f "$PAT_FILE" ]; then
   log "ERROR: PAT file missing at $PAT_FILE -- cannot push. Snapshot was built but not delivered."
   exit 2
 fi
-PAT=$(cat "$PAT_FILE")
+# Defense in depth: strip whitespace, ANSI bracketed-paste codes, and stray non-token chars.
+PAT=$(tr -d '\r\n' < "$PAT_FILE" | sed -E 's/\x1b\[\??[0-9;]*[a-zA-Z~]//g; s/^[^a-zA-Z0-9]+//; s/[^a-zA-Z0-9_]+$//')
+if ! printf '%s' "$PAT" | grep -qE '^(github_pat_|ghp_|ghs_|gho_)'; then
+  log "ERROR: PAT in $PAT_FILE does not have a recognized GitHub token prefix. Snapshot built but not delivered."
+  exit 2
+fi
 
-# Construct the auth URL. REPO_URL is expected to be https://github.com/<owner>/<name>.git
-AUTH_URL=$(echo "$REPO_URL" | sed -E "s#https://#https://x-access-token:${PAT}@#")
+# Construct the auth URL by string manipulation rather than sed (sed is fragile if
+# the PAT contains regex-special chars). REPO_URL is expected to be https://github.com/...
+case "$REPO_URL" in
+  https://*) AUTH_URL="https://x-access-token:${PAT}@${REPO_URL#https://}" ;;
+  *) log "ERROR: REPO_URL must start with https:// (got: $REPO_URL)"; exit 4 ;;
+esac
 
 if [ ! -d "$REPO_DIR/.git" ]; then
   log "first-run clone of audit-data branch into $REPO_DIR"

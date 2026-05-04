@@ -54,10 +54,18 @@ if [ ! -f "$PAT_FILE" ]; then
   echo
   read -r -s -p "Paste PAT (input hidden): " PAT
   echo
-  printf '%s' "$PAT" > "$PAT_FILE"
+  # Sanitize: terminals in bracketed-paste mode wrap pastes with ESC[200~ ... ESC[201~
+  # which corrupts URL substitutions. Also strip CR/LF and any leading/trailing non-token chars.
+  CLEAN_PAT=$(printf '%s' "$PAT" | tr -d '\r\n' | sed -E 's/\x1b\[\??[0-9;]*[a-zA-Z~]//g; s/^[^a-zA-Z0-9]+//; s/[^a-zA-Z0-9_]+$//')
+  if ! printf '%s' "$CLEAN_PAT" | grep -qE '^(github_pat_|ghp_|ghs_|gho_)'; then
+    echo "ERROR: PAT does not look valid after cleaning. Got prefix: $(printf '%s' "$CLEAN_PAT" | head -c 12)" >&2
+    echo "Expected to start with github_pat_ (fine-grained) or ghp_ (classic). Aborting." >&2
+    exit 3
+  fi
+  printf '%s' "$CLEAN_PAT" > "$PAT_FILE"
   chmod 600 "$PAT_FILE"
   chown claude:claude "$PAT_FILE"
-  echo "[2/4] Saved PAT to $PAT_FILE"
+  echo "[2/4] Saved PAT to $PAT_FILE ($(wc -c < "$PAT_FILE") bytes)"
 else
   echo "[2/4] PAT already exists at $PAT_FILE (leaving as-is; delete + rerun to update)"
 fi
