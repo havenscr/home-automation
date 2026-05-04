@@ -215,6 +215,18 @@ Homebridge runs at `homebridge.local:8581` and uses the `homebridge-dummy` plugi
 - Most are stateless with `timer: 1 sec` — fires the curl, auto-resets to OFF after 1 second so HomeKit treats every tap as a fresh trigger.
 - A few are stateful with both `commandOn` + `commandOff` and `resetOnRestart: false` (e.g. `Dummy - TV Evening Mode`, `Dummy - Climate Auto`). These survive reboots and reflect the actual on/off state of a feature.
 
+**Two functional categories of dummy** (important for log analysis and audits):
+- **Curl-based dummies**: have a `commandOn` curl. When toggled, Homebridge logs `executed command: ...`. Examples: `Dummy - Day Music`, `Dummy - Fade Start Sunset`, `Dummy - Other Lights (Day)`. The audit's `automationFires` count tracks these.
+- **State-only dummies**: NO `commandOn`, just a switch HomeKit-side automations watch. When toggled, Homebridge logs `is on` but no `executed command` line. Used purely as HomeKit-internal triggers for chained automations. Example: `Dummy - Routine Start`. The audit's `stateToggles` count tracks these.
+
+**The wake-up chain (NOT sunrise-based):**
+1. HomeKit time-of-day automation fires at clock-based times (different on weekdays vs weekends — set in iOS Home app, not in any config file in this repo).
+2. That automation toggles `Dummy - Routine Start` (state-only).
+3. HomeKit automation chains watching `Dummy - Routine Start` then trigger the delay dummies (`Dummy - 30 Sec Delay` through `Dummy - 50 Min Delay`) and ultimately a curl-based dummy like `Dummy - Fade Start Sunset` (or its sunrise equivalent), which calls the orchestrator's `/api/routines/sunrise_default/start`.
+4. End signal in the orchestrator's activity log: `type: "fade", message: "Routine \"Sunrise Wake-Up\" completed"`.
+
+When auditing wake-up health, the right signal is `routineCompletions.sunrise_default` (count of completion log entries), NOT the fire count of `Dummy - Fade Start Sunrise`.
+
 **Inventory by category:**
 - **Routines (HO + SC)**: ~25 triggers
 - **Volume / delays (SC)**: 13 timer dummies (`Dummy - 30 Sec Delay` through `Dummy - 50 Min Delay`) used by HomeKit automations to chain actions

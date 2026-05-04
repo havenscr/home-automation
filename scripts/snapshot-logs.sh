@@ -82,8 +82,8 @@ tail_text_log_errors() {
     | jq -R -s 'split("\n") | map(select(length > 0))'
 }
 
-# Count occurrences of "DummyName executed command" patterns in homebridge.log
-# over the lookback window. Returns a JSON object {dummyName: count}.
+# Count "DummyName executed command" lines (dummies with commandOn curl).
+# Returns {dummyName: count}.
 count_automation_fires() {
   local file="$1"
   if [ ! -f "$file" ]; then
@@ -94,6 +94,26 @@ count_automation_fires() {
     | sed -E 's/\x1b\[[0-9;]*m//g' \
     | grep -oE '\[Homebridge Dummy\] [A-Za-z0-9 ()_-]+ executed command' \
     | sed -E 's/.*Dummy\] (.+) executed command/\1/' \
+    | sort \
+    | uniq -c \
+    | awk '{count=$1; $1=""; sub(/^ /,""); printf "%s\t%d\n", $0, count}' \
+    | jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {(.[0]): (.[1]|tonumber)}) | add // {}'
+}
+
+# Count "DummyName is on" lines (any dummy that toggles, including state-only ones
+# without a commandOn -- those are HomeKit-internal triggers used by HomeKit-side
+# automation chains, e.g. "Dummy - Routine Start").
+# Returns {dummyName: count}.
+count_state_toggles() {
+  local file="$1"
+  if [ ! -f "$file" ]; then
+    echo '{}'
+    return
+  fi
+  tail -n 100000 "$file" 2>/dev/null \
+    | sed -E 's/\x1b\[[0-9;]*m//g' \
+    | grep -oE '\[Homebridge Dummy\] [A-Za-z0-9 ()_-]+ is on' \
+    | sed -E 's/.*Dummy\] (.+) is on/\1/' \
     | sort \
     | uniq -c \
     | awk '{count=$1; $1=""; sub(/^ /,""); printf "%s\t%d\n", $0, count}' \
@@ -169,6 +189,7 @@ jq -n \
   --argjson activitySC "$(tail_activity_log "$ACTIVITY_LOG_SC" 1500)" \
   --argjson hbErrors "$(tail_text_log_errors "$HOMEBRIDGE_LOG" 200)" \
   --argjson hbFires "$(count_automation_fires "$HOMEBRIDGE_LOG")" \
+  --argjson hbToggles "$(count_state_toggles "$HOMEBRIDGE_LOG")" \
   --argjson sysHO "$(journal_errors home-orchestrator 50)" \
   --argjson sysSC "$(journal_errors sonos-commander 50)" \
   --argjson sysHB "$(journal_errors homebridge 50)" \
@@ -186,9 +207,18 @@ jq -n \
       "home-orchestrator": $activityHO,
       "sonos-commander":   $activitySC
     },
+    routineCompletions: (
+      [$activityHO[]
+        | select(.type == "fade" and (.message | test("completed")))
+        | {routineId: .routineId, ts: .ts}]
+      | group_by(.routineId)
+      | map({key: (.[0].routineId // "unknown"), value: length})
+      | from_entries
+    ),
     homebridgeLog: {
       errors: $hbErrors,
-      automationFires: $hbFires
+      automationFires: $hbFires,
+      stateToggles: $hbToggles
     },
     systemd: {
       errors: {

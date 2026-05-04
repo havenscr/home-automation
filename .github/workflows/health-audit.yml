@@ -183,10 +183,21 @@ jobs:
           Routine triggers, any speaker discovery failures, group transitions. Brief.
 
           ### 5. Homebridge / HomeKit
-          Plugin errors (ignore "Duplicate device name Play/Pause" Alexa noise), accessory restoration patterns, automation fire counts. CRITICAL: explicitly check `homebridgeLog.automationFires` for daily-expected dummies that fired ~0 times in 14 days. Common ones to watch:
-          - "Dummy - Fade Start Sunrise" (should fire ~14x in 14d if HomeKit wake-up automation is healthy)
-          - "Dummy - Day Music" or similar (arrive-home indicator)
-          - "Dummy - Fade Start Sunset" (~14x)
+          Plugin errors (ignore "Duplicate device name Play/Pause" Alexa noise), accessory restoration patterns, automation fire counts.
+
+          IMPORTANT distinction between two dummy types:
+
+          - `homebridgeLog.automationFires` -- dummies WITH a `commandOn` curl. These log `executed command` lines when toggled. A 0 count for a daily-expected dummy here IS a real signal of a broken HomeKit automation.
+          - `homebridgeLog.stateToggles` -- ALL dummies that toggle, including state-only ones used purely as HomeKit-internal triggers (e.g. `Dummy - Routine Start`, which has no `commandOn`; HomeKit-side automation chains react to its on-state to start scenes). For these, "0 fires in automationFires" is NEVER a real signal -- you must check `stateToggles` instead.
+
+          The wake-up flow specifically: `Dummy - Routine Start` (state-only) is toggled by a HomeKit time-of-day automation at different times for weekdays vs weekends. That triggers a chain of HomeKit-internal automations that eventually call `/api/routines/sunrise_default/start` on the orchestrator. So the right downstream signal for "is the wake-up routine healthy?" is `routineCompletions.sunrise_default` -- if that's near 14 for a 14-day window, the chain is fine; if it's 0 or very low, dig in.
+
+          Do NOT flag `Dummy - Fade Start Sunrise` for low counts -- that dummy is not the daily trigger; `Dummy - Routine Start` + `routineCompletions.sunrise_default` is. (Reid's wake-up is NOT sunrise-time-based; it's clock-based via Routine Start.)
+
+          Daily-expected sentinels worth checking:
+          - `routineCompletions.sunrise_default` (wake-up; expect ~14 in 14d)
+          - `routineCompletions.sunset_transition` (sunset fade; expect ~14 in 14d)
+          - `stateToggles["Dummy - Routine Start"]` (the upstream trigger; expect ~14 in 14d)
 
           ### 6. Pattern Detection
           Cross-cutting issues: drift, recurring errors, things getting worse week-over-week. Compare to previous rolling summary.
