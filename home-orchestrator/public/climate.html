@@ -97,6 +97,11 @@
   .toast.success { border-left:3px solid var(--success); }
   .toast.error { border-left:3px solid var(--danger); }
   .pause-banner { background:rgba(255,171,0,0.1); border:1px solid var(--warn); border-radius:var(--radius); padding:10px 14px; margin-bottom:12px; font-size:13px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+  .info-banner { background:rgba(136,153,170,0.08); border:1px solid var(--card-border); border-radius:var(--radius); padding:10px 14px; margin-bottom:12px; font-size:13px; color:var(--muted); }
+  .info-banner strong { color:var(--text); }
+  .card.userOff { border-left:3px solid var(--muted); opacity:0.85; }
+  .card.userOff .temp-current { color:var(--muted); }
+  .userOff-note { font-size:12px; color:var(--muted); padding:8px 0; border-top:1px solid var(--card-border); margin-top:10px; }
   .log-entry { padding:6px 0; border-bottom:1px solid rgba(42,58,78,0.5); font-size:12px; display:flex; gap:8px; }
   .log-entry .log-time { color:var(--muted); min-width:60px; font-family:monospace; font-size:11px; }
   .log-entry .log-msg { flex:1; }
@@ -308,18 +313,52 @@ function setBanner(s) {
       + '<button class="btn btn-warn btn-sm" onclick="resumeScope(\'global\')">Resume now</button>';
     area.appendChild(div);
   }
+  const offSlots = Object.entries(s.devices || {})
+    .filter(([_, d]) => d && d.ok && d.power === 'POWER_OFF')
+    .map(([slot]) => slot);
+  if (offSlots.length) {
+    const div = document.createElement('div');
+    div.className = 'info-banner';
+    const list = offSlots.join(' + ');
+    div.innerHTML = '<strong>' + list + ' AC ' + (offSlots.length > 1 ? 'are' : 'is') + ' off.</strong> '
+      + 'Auto control is leaving ' + (offSlots.length > 1 ? 'them' : 'it') + ' alone. Turn back on to resume.';
+    area.appendChild(div);
+  }
   $('resume-global').style.display = s.globalPause?.paused ? '' : 'none';
 }
 
 function renderAcCard(slot, dev, pauseInfo) {
   const offline = !dev || !dev.ok;
-  const paused = pauseInfo && pauseInfo.paused;
-  const cardClass = ['card', offline ? 'offline' : (paused ? 'paused' : (dev.power === 'POWER_ON' && dev.jobMode === 'COOL' ? 'cooling' : ''))].join(' ');
+  const userOff = !offline && dev.power === 'POWER_OFF';
+  const paused = !userOff && pauseInfo && pauseInfo.paused;
+  const cardClass = ['card', offline ? 'offline' : (userOff ? 'userOff' : (paused ? 'paused' : (dev.power === 'POWER_ON' && dev.jobMode === 'COOL' ? 'cooling' : ''))) ].join(' ');
   const card = document.createElement('div');
   card.className = cardClass;
   if (offline) {
     card.innerHTML = '<div class="card-header"><div class="card-title">' + slot + '</div><span class="state danger">offline</span></div>'
       + '<div style="font-size:12px;color:var(--muted)">' + (dev?.error || 'no reading') + '</div>';
+    return card;
+  }
+  if (userOff) {
+    card.innerHTML =
+      '<div class="card-header">'
+      + '<div class="card-title">' + slot + '</div>'
+      + '<span class="state off">off</span>'
+      + '</div>'
+      + '<div class="temp-block">'
+      +   '<div class="temp-current">' + (dev.currentF ?? '--') + '<span class="deg">F</span></div>'
+      +   '<div class="temp-target">room temperature</div>'
+      + '</div>'
+      + '<div class="controls">'
+      +   '<div class="controls-row">'
+      +     '<label>Power</label>'
+      +     '<div class="seg">'
+      +       '<button onclick="setPower(\'' + slot + '\', true)">Turn on</button>'
+      +       '<button class="active" onclick="setPower(\'' + slot + '\', false)">Off</button>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div class="userOff-note">Auto control isn\'t touching this AC. Turn on to resume the schedule + ladder.</div>'
+      + '</div>';
     return card;
   }
   const stateBadge = dev.power === 'POWER_ON' ? '<span class="state on">' + dev.jobMode + '</span>' : '<span class="state off">off</span>';

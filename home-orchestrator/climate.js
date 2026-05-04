@@ -348,18 +348,27 @@ function createClimate({ getConfig, logActivity }) {
     const ladder = getActiveLadder();
     const actions = [];
 
-    // Phase 1: detect overrides + compute heat pressure across non-paused, reachable ACs.
+    // Phase 1: classify each slot (user-off | unreachable | paused | active)
+    // and compute heat pressure across only the active ones. User-off and
+    // unreachable ACs contribute nothing to pressure (they're not cooling
+    // and we won't write to them).
     let pressureF = 0;
     const slotData = {};
     for (const slot of slots) {
       const observed = fresh.devices[slot];
       if (!observed || !observed.ok) {
-        slotData[slot] = { observed: null, paused: false, skipReason: 'unreachable' };
+        slotData[slot] = { observed: null, paused: false, userOff: false, skipReason: 'unreachable' };
+        continue;
+      }
+      // User intentionally turned the unit off (via LG app, unit buttons, or our /power endpoint).
+      // Treat as "leave it alone": no writes, no override-pause, no contribution to pressure.
+      if (observed.power === 'POWER_OFF') {
+        slotData[slot] = { observed, paused: false, userOff: true, skipReason: 'user-off' };
         continue;
       }
       detectManualOverride(slot, observed, saveConfigFn);
       const pause = getPauseState(slot);
-      slotData[slot] = { observed, paused: pause.paused, pause };
+      slotData[slot] = { observed, paused: pause.paused, userOff: false, pause };
       if (!pause.paused && observed.currentF != null) {
         const delta = observed.currentF - targetF;
         if (delta > pressureF) pressureF = delta;
@@ -380,7 +389,7 @@ function createClimate({ getConfig, logActivity }) {
       if (logActivity) logActivity('climate', `ladder=${ladder.name} pressure=${pressureF.toFixed(1)}F rungs=${rungCount}/${ladder.rungs.length}`);
     }
 
-    // Phase 3: per-AC enforcement.
+    // Phase 3: per-AC enforcement. User-off and unreachable already have skipReason set.
     for (const slot of slots) {
       const sd = slotData[slot];
       if (sd.skipReason) { actions.push({ slot, skipped: sd.skipReason }); continue; }
@@ -460,11 +469,13 @@ function createClimate({ getConfig, logActivity }) {
     })();
     const { mode, targetF } = getMode();
     // Compute current pressure from cached readings (no fresh fetch).
+    // Skip paused, unreachable, and user-off ACs -- they don't contribute to pressure.
     let pressureF = 0;
     for (const s of slots) {
       const d = cache.devices[s];
       if (!d || !d.ok || !d.currentF) continue;
       if (pauses[s].paused) continue;
+      if (d.power === 'POWER_OFF') continue;
       const delta = d.currentF - targetF;
       if (delta > pressureF) pressureF = delta;
     }

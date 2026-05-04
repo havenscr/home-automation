@@ -106,6 +106,8 @@ The newest addition. Replaces fragile LG-side routines with a polling control lo
 - **Heat-pressure ladder**: max delta across rooms drives a 5-rung priority list. As pressure climbs, more aggressive rungs engage. Hysteresis prevents flapping.
 - **Office quiet hours** (Mon-Fri 10am-6pm): office capped at MID fan; kitchen ramps to compensate when room is hot. Outside these hours, the default ladder lets office go HIGH and become the apt's primary cooler.
 - **Manual override auto-detect**: if the LG app, the unit's buttons, or anyone else changes a setpoint or fan speed, the orchestrator pauses that AC for 30 minutes (configurable) before resuming control. Detection is automatic — no button press needed.
+- **User-off detection**: if you turn an AC fully off (LG app, the unit, or our `/power` endpoint), the loop excludes it from pressure calculation and never tries to write to it or wake it back up. The other AC continues normal control. Banner in the UI makes it obvious. Turn it back on and control resumes immediately.
+- **Power-outage recovery**: if both ACs go offline temporarily and come back, the loop resumes seamlessly on the next poll. Never auto-powers an AC ON — that's always a user action.
 - **Per-AC and global pause** with explicit duration buttons in the UI.
 - **Polling cadence**: 60 seconds. ~10-15MB RAM. Direct HTTPS calls to `api-aic.lgthinq.com`.
 - **UI** at `/climate.html` is fully editable: dashboard with per-AC manual control, settings tab for all schedule + override values, and a ladder tab where you can add/remove rungs, reorder via up/down buttons, and edit room or fan speed inline. All edits saved via `PATCH /api/climate/config`.
