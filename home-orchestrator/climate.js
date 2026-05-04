@@ -22,6 +22,9 @@ const SETPOINT_TOLERANCE_C = 0.6;
 // Hysteresis: stepping down requires pressure to drop HYSTERESIS_F below the threshold that engaged it.
 const RUNG_THRESHOLDS_F = [0.5, 1.5, 2.5, 3.5];
 const HYSTERESIS_F = 0.5;
+// Mode-switch deadband. Switch COOL->FAN when room <= target - this. Switch FAN->COOL when room >= target + this.
+// Keeps the compressor from cycling on every poll near setpoint.
+const MODE_DEADBAND_F = 0.5;
 
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
@@ -32,6 +35,30 @@ function createClimate({ getConfig, logActivity }) {
   let cache = { fetchedAt: 0, devices: {} };
   let lastTickAt = 0;
   let inFlightTick = null;
+  // Per-slot rate-limit backoff: { nextAt: epochMs, currentBackoffMs }.
+  // Triggered by HTTP 401 with LG code 1314 ("Exceeded User API calls").
+  const rateLimit = {};
+  const RL_BASE_MS = 60 * 1000;
+  const RL_MAX_MS = 10 * 60 * 1000;
+  // Per-slot ring buffer of recent currentF readings, used to smooth pressure
+  // calculation. The AC reports temp at 0.5F resolution which causes ladder rungs to
+  // flap when room is between two adjacent values. The 3-sample average eliminates this.
+  const tempHistory = {};
+  const TEMP_HISTORY_LEN = 3;
+
+  function pushTempReading(slot, currentF) {
+    if (currentF == null) return;
+    if (!tempHistory[slot]) tempHistory[slot] = [];
+    tempHistory[slot].push(currentF);
+    if (tempHistory[slot].length > TEMP_HISTORY_LEN) tempHistory[slot].shift();
+  }
+
+  function smoothedTempF(slot, fallback) {
+    const h = tempHistory[slot];
+    if (!h || !h.length) return fallback;
+    const sum = h.reduce((a, b) => a + b, 0);
+    return sum / h.length;
+  }
 
   function thinq({ pathname, method = 'GET', body = null }) {
     const cfg = getConfig().climate || {};
@@ -100,13 +127,47 @@ function createClimate({ getConfig, logActivity }) {
     };
   }
 
+  function rateLimitedNow(slot) {
+    const rl = rateLimit[slot];
+    return rl && rl.nextAt && Date.now() < rl.nextAt;
+  }
+
+  function trackRateLimit(slot, errMsg) {
+    const isRateLimit = errMsg && (/1314/.test(errMsg) || /Exceeded User API/i.test(errMsg));
+    if (!isRateLimit) {
+      // Any non-rate-limit error: clear backoff so we don't compound penalties.
+      delete rateLimit[slot];
+      return;
+    }
+    const cur = rateLimit[slot] || { currentBackoffMs: RL_BASE_MS };
+    cur.currentBackoffMs = Math.min(cur.currentBackoffMs * 2, RL_MAX_MS);
+    cur.nextAt = Date.now() + cur.currentBackoffMs;
+    rateLimit[slot] = cur;
+    if (logActivity) logActivity('climate',
+      `${slot} rate-limited by LG; backing off ${Math.round(cur.currentBackoffMs / 1000)}s`);
+  }
+
+  function clearRateLimit(slot) {
+    if (rateLimit[slot]) delete rateLimit[slot];
+  }
+
   async function readDevice(slot, deviceId) {
+    if (rateLimitedNow(slot)) {
+      // Don't even hit the API. Return last cached value (if any) marked as stale.
+      const stale = cache.devices[slot];
+      if (stale) return { ...stale, ok: false, error: 'rate-limit backoff', fetchedAt: Date.now() };
+      cache.devices[slot] = { ok: false, deviceId, error: 'rate-limit backoff', fetchedAt: Date.now() };
+      return cache.devices[slot];
+    }
     try {
       const res = await thinq({ pathname: `/devices/${deviceId}/state` });
       const norm = normalizeDeviceState(res);
       cache.devices[slot] = { ok: true, deviceId, ...norm, fetchedAt: Date.now() };
+      pushTempReading(slot, norm && norm.currentF);
+      clearRateLimit(slot);
       return cache.devices[slot];
     } catch (e) {
+      trackRateLimit(slot, e.message);
       cache.devices[slot] = { ok: false, deviceId, error: e.message, fetchedAt: Date.now() };
       if (logActivity) logActivity('climate', `read ${slot} failed: ${e.message}`);
       return cache.devices[slot];
@@ -140,6 +201,20 @@ function createClimate({ getConfig, logActivity }) {
       mode: isDay ? 'day' : 'night',
       targetF: isDay ? (sched.dayTargetF ?? 74) : (sched.nightTargetF ?? 70),
     };
+  }
+
+  // Effective target for a specific room. Per-room overrides win when present;
+  // otherwise falls back to the global day/night target.
+  // sched.overrides[slot] = { dayTargetF?, nightTargetF? } -- either or both optional.
+  function getEffectiveTargetF(slot) {
+    const cfg = getConfig().climate || {};
+    const sched = cfg.schedule || {};
+    const { mode, targetF: globalTarget } = getMode();
+    const override = (sched.overrides && sched.overrides[slot]) || null;
+    if (!override) return globalTarget;
+    const key = mode === 'day' ? 'dayTargetF' : 'nightTargetF';
+    const v = override[key];
+    return (v == null || v === '') ? globalTarget : Number(v);
   }
 
   function getActiveLadder() {
@@ -209,33 +284,73 @@ function createClimate({ getConfig, logActivity }) {
 
   // Compare what we last wrote to the AC against what it now reports.
   // If they diverge, a human/app changed something -> pause this slot for cooldown.
+  // Fields are checked individually with their own per-field timestamps. A field is only
+  // compared if it was written between SETTLE_MS and STALE_MS ago. After STALE_MS without
+  // a refresh, the field is forgotten so it can't trigger spurious overrides from old writes.
   function detectManualOverride(slot, observed, saveConfigFn) {
+    const SETTLE_MS = 15 * 1000;       // skip checks within 15s of write (let AC reflect it)
+    const STALE_MS = 5 * 60 * 1000;    // forget fields not refreshed within 5 minutes
     const cfg = getConfig().climate || {};
     const ls = (cfg.lastState && cfg.lastState[slot]) || {};
-    const lastWritten = ls.lastWritten;
-    if (!lastWritten || !lastWritten.at) return false;
-
-    // Allow ~15s for the AC to reflect our write before checking divergence.
-    if (Date.now() - lastWritten.at < 15000) return false;
+    const lw = ls.lastWritten;
+    if (!lw) return false;
 
     const cooldownMs = (cfg.overrideCooldownMs ?? DEFAULT_OVERRIDE_COOLDOWN_MS);
+    const now = Date.now();
     let diverged = false;
     const reasons = [];
 
-    if (lastWritten.targetC != null && observed.targetC != null) {
-      if (Math.abs(lastWritten.targetC - observed.targetC) > SETPOINT_TOLERANCE_C) {
+    // Per-field timestamp: lw[`${field}At`] holds when that field was last written.
+    // Falls back to lw.at for backwards compatibility with old config entries.
+    const fieldTime = (field) => lw[`${field}At`] ?? lw.at ?? 0;
+    const fieldFresh = (field) => {
+      const t = fieldTime(field);
+      if (!t) return false;
+      const age = now - t;
+      return age >= SETTLE_MS && age <= STALE_MS;
+    };
+
+    // Only compare target setpoint when both writer and reader were in COOL mode.
+    // In FAN/AIR_DRY the AC's reported "target" can drift independently of what we wrote
+    // (the unit's display target tracks differently per mode), and that's not a real override.
+    const targetComparable = (lw.jobMode == null || lw.jobMode === 'COOL')
+      && (observed.jobMode == null || observed.jobMode === 'COOL');
+    if (targetComparable && lw.targetC != null && observed.targetC != null && fieldFresh('targetC')) {
+      if (Math.abs(lw.targetC - observed.targetC) > SETPOINT_TOLERANCE_C) {
         diverged = true;
-        reasons.push(`target ${lastWritten.targetC}C->${observed.targetC}C`);
+        reasons.push(`target ${lw.targetC}C->${observed.targetC}C`);
       }
     }
-    if (lastWritten.windStrength && observed.windStrength
-        && lastWritten.windStrength !== observed.windStrength) {
+    // Grace period: if we wrote jobMode within the last MODE_GRACE_MS, ignore fan
+    // divergence. LG portable ACs auto-reset fan speed on mode transitions, and the
+    // next tick's force-rewrite will correct it without needing an override pause.
+    const MODE_GRACE_MS = 75 * 1000;
+    const recentModeWrite = lw.jobModeAt && (now - lw.jobModeAt) < MODE_GRACE_MS;
+    if (lw.windStrength && observed.windStrength && fieldFresh('windStrength')
+        && lw.windStrength !== observed.windStrength
+        && !recentModeWrite) {
       diverged = true;
-      reasons.push(`fan ${lastWritten.windStrength}->${observed.windStrength}`);
+      reasons.push(`fan ${lw.windStrength}->${observed.windStrength}`);
     }
-    if (lastWritten.power && observed.power && lastWritten.power !== observed.power) {
+    if (lw.power && observed.power && fieldFresh('power') && lw.power !== observed.power) {
       diverged = true;
-      reasons.push(`power ${lastWritten.power}->${observed.power}`);
+      reasons.push(`power ${lw.power}->${observed.power}`);
+    }
+    if (lw.jobMode && observed.jobMode && fieldFresh('jobMode')
+        && lw.jobMode !== observed.jobMode) {
+      diverged = true;
+      reasons.push(`mode ${lw.jobMode}->${observed.jobMode}`);
+    }
+
+    // Garbage-collect stale fields so they don't accumulate forever in config.
+    let gcChanged = false;
+    for (const f of ['targetC', 'targetF', 'windStrength', 'power', 'jobMode']) {
+      const t = lw[`${f}At`] ?? lw.at;
+      if (t && (now - t) > STALE_MS) {
+        delete lw[f];
+        delete lw[`${f}At`];
+        gcChanged = true;
+      }
     }
 
     if (diverged) {
@@ -243,13 +358,14 @@ function createClimate({ getConfig, logActivity }) {
       if (!cfg.lastState[slot]) cfg.lastState[slot] = {};
       cfg.lastState[slot].overrideUntil = Date.now() + cooldownMs;
       cfg.lastState[slot].overrideReason = reasons.join(', ');
-      // Clear lastWritten so we don't re-detect the same change repeatedly.
+      // Clear lastWritten so we don't re-detect the same change on the next poll.
       delete cfg.lastState[slot].lastWritten;
       if (saveConfigFn) saveConfigFn();
       if (logActivity) logActivity('climate',
         `manual override on ${slot} (${reasons.join(', ')}) -- pausing ${Math.round(cooldownMs / 60000)}m`);
       return true;
     }
+    if (gcChanged && saveConfigFn) saveConfigFn();
     return false;
   }
 
@@ -257,15 +373,32 @@ function createClimate({ getConfig, logActivity }) {
 
   async function writeControl(slot, deviceId, payload, intent, saveConfigFn) {
     if (!payload || !Object.keys(payload).length) return null;
-    const res = await thinq({
-      pathname: `/devices/${deviceId}/control`,
-      method: 'POST',
-      body: payload,
-    });
+    if (rateLimitedNow(slot)) {
+      throw new Error('rate-limit backoff active for ' + slot);
+    }
+    let res;
+    try {
+      res = await thinq({
+        pathname: `/devices/${deviceId}/control`,
+        method: 'POST',
+        body: payload,
+      });
+      clearRateLimit(slot);
+    } catch (e) {
+      trackRateLimit(slot, e.message);
+      throw e;
+    }
     const cfg = getConfig().climate || (getConfig().climate = {});
     if (!cfg.lastState) cfg.lastState = {};
     if (!cfg.lastState[slot]) cfg.lastState[slot] = {};
-    cfg.lastState[slot].lastWritten = { ...(cfg.lastState[slot].lastWritten || {}), ...intent, at: Date.now() };
+    const now = Date.now();
+    const merged = { ...(cfg.lastState[slot].lastWritten || {}), ...intent, at: now };
+    // Per-field timestamps: stamp every field included in this intent. The override
+    // detector uses these to decide when a field is fresh enough to compare.
+    for (const k of Object.keys(intent)) {
+      merged[`${k}At`] = now;
+    }
+    cfg.lastState[slot].lastWritten = merged;
     if (saveConfigFn) saveConfigFn();
     if (logActivity) logActivity('climate', `write ${slot}: ${JSON.stringify(intent)}`);
     return res;
@@ -296,6 +429,16 @@ function createClimate({ getConfig, logActivity }) {
     const power = on ? 'POWER_ON' : 'POWER_OFF';
     const payload = { operation: { airConOperationMode: power } };
     return writeControl(slot, dev.deviceId, payload, { power }, saveConfigFn);
+  }
+
+  // Set the AC's job mode (COOL / FAN / AIR_DRY). Records lastWritten.jobMode so
+  // the override detector knows we made this change and won't flag it as manual.
+  async function setJobMode(slot, jobMode, saveConfigFn) {
+    const cfg = getConfig().climate || {};
+    const dev = (cfg.devices || {})[slot];
+    if (!dev) throw new Error(`unknown slot: ${slot}`);
+    const payload = { airConJobMode: { currentJobMode: jobMode } };
+    return writeControl(slot, dev.deviceId, payload, { jobMode }, saveConfigFn);
   }
 
   // Map heat pressure (F above target) to a rung-count, applying hysteresis
@@ -343,34 +486,36 @@ function createClimate({ getConfig, logActivity }) {
     const slots = Object.keys(devs);
     if (!slots.length) return { skipped: 'no devices' };
 
-    const { mode, targetF } = getMode();
-    const targetC = roundC(fToC(targetF));
+    const { mode, targetF: globalTargetF } = getMode();
     const ladder = getActiveLadder();
     const actions = [];
 
     // Phase 1: classify each slot (user-off | unreachable | paused | active)
-    // and compute heat pressure across only the active ones. User-off and
-    // unreachable ACs contribute nothing to pressure (they're not cooling
-    // and we won't write to them).
+    // and compute heat pressure across only the active ones. Pressure is the
+    // worst delta across rooms, where each room is judged against ITS OWN
+    // effective target (per-room override if set, else global).
     let pressureF = 0;
     const slotData = {};
     for (const slot of slots) {
+      const slotTargetF = getEffectiveTargetF(slot);
       const observed = fresh.devices[slot];
       if (!observed || !observed.ok) {
-        slotData[slot] = { observed: null, paused: false, userOff: false, skipReason: 'unreachable' };
+        slotData[slot] = { observed: null, paused: false, userOff: false, slotTargetF, skipReason: 'unreachable' };
         continue;
       }
-      // User intentionally turned the unit off (via LG app, unit buttons, or our /power endpoint).
-      // Treat as "leave it alone": no writes, no override-pause, no contribution to pressure.
+      // User intentionally turned the unit off: leave it alone, exclude from pressure.
       if (observed.power === 'POWER_OFF') {
-        slotData[slot] = { observed, paused: false, userOff: true, skipReason: 'user-off' };
+        slotData[slot] = { observed, paused: false, userOff: true, slotTargetF, skipReason: 'user-off' };
         continue;
       }
       detectManualOverride(slot, observed, saveConfigFn);
       const pause = getPauseState(slot);
-      slotData[slot] = { observed, paused: pause.paused, userOff: false, pause };
+      slotData[slot] = { observed, paused: pause.paused, userOff: false, slotTargetF, pause };
       if (!pause.paused && observed.currentF != null) {
-        const delta = observed.currentF - targetF;
+        // Use smoothed temp (3-sample moving avg) for pressure calc to avoid rung
+        // flapping caused by 0.5F-resolution sensor reads. Display value stays raw.
+        const smoothed = smoothedTempF(slot, observed.currentF);
+        const delta = smoothed - slotTargetF;
         if (delta > pressureF) pressureF = delta;
       }
     }
@@ -397,22 +542,68 @@ function createClimate({ getConfig, logActivity }) {
 
       const observed = sd.observed;
       const slotActions = { slot, wrote: {} };
+      const slotTargetF = sd.slotTargetF;
+      const slotTargetC = roundC(fToC(slotTargetF));
 
-      // 3a) Setpoint enforcement.
-      if (observed.targetC != null && Math.abs(observed.targetC - targetC) > SETPOINT_TOLERANCE_C) {
+      // 3a) Setpoint enforcement using THIS room's effective target.
+      // Only enforce while in COOL mode -- the AC ignores setpoint writes in FAN/AIR_DRY,
+      // which led to redundant writes every poll forever. The setpoint will be re-asserted
+      // automatically when the loop's mode-switch logic moves the unit back to COOL.
+      const setpointEnforceable = observed.jobMode === 'COOL';
+      if (setpointEnforceable && observed.targetC != null
+          && Math.abs(observed.targetC - slotTargetC) > SETPOINT_TOLERANCE_C) {
         try {
-          await setTargetTempF(slot, targetF, saveConfigFn);
-          slotActions.wrote.targetF = targetF;
+          await setTargetTempF(slot, slotTargetF, saveConfigFn);
+          slotActions.wrote.targetF = slotTargetF;
         } catch (e) {
           if (logActivity) logActivity('climate', `setpoint ${slot} failed: ${e.message}`);
           slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'setpoint: ' + e.message;
         }
+      } else if (!setpointEnforceable && observed.targetC != null
+          && Math.abs(observed.targetC - slotTargetC) > SETPOINT_TOLERANCE_C) {
+        slotActions.setpointDeferred = `${observed.jobMode || 'unknown'} mode -- will set when COOL`;
+      }
+
+      // 3a.5) Mode switch: if room is below target, run as FAN (no compressor); if above, COOL.
+      // Deadband prevents flapping near setpoint. Leaves AIR_DRY alone -- if the user picked DRY, that's intentional.
+      let didModeSwitch = false;
+      if (observed.currentF != null && (observed.jobMode === 'COOL' || observed.jobMode === 'FAN')) {
+        const wantCool = observed.jobMode === 'COOL'
+          ? observed.currentF >= slotTargetF - MODE_DEADBAND_F  // stay COOL until well below target
+          : observed.currentF >= slotTargetF + MODE_DEADBAND_F; // need to climb above target to go back to COOL
+        const desiredMode = wantCool ? 'COOL' : 'FAN';
+        slotActions.modeDecision = { current: observed.jobMode, desired: desiredMode, currentF: observed.currentF, targetF: slotTargetF };
+        if (desiredMode !== observed.jobMode) {
+          try {
+            await setJobMode(slot, desiredMode, saveConfigFn);
+            slotActions.wrote.jobMode = desiredMode;
+            didModeSwitch = true;
+          } catch (e) {
+            if (logActivity) logActivity('climate', `mode ${slot} failed: ${e.message}`);
+            slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'mode: ' + e.message;
+          }
+        }
+      } else if (observed.jobMode && observed.jobMode !== 'COOL' && observed.jobMode !== 'FAN') {
+        // User has the unit in AIR_DRY (or some other mode we don't manage). Don't touch.
+        slotActions.modeDecision = { current: observed.jobMode, desired: observed.jobMode, leftAlone: true };
       }
 
       // 3b) Fan speed from ladder.
+      // If we just switched mode, the AC may auto-reset fan speed -- always force-rewrite
+      // the desired fan after a mode switch to overcome that reset.
+      // Debounce: if observed already matches desired AND we wrote that same value
+      // recently (within 5 min), skip. Belt-and-suspenders against subtle field-naming
+      // drift (windStrength vs windStrengthDetail) causing repeated identical writes.
+      const FAN_DEBOUNCE_MS = 5 * 60 * 1000;
       const desiredRank = highestRankForSlot(slot, engagedRungs) || WIND_RANK.LOW;
       const desiredWind = RANK_TO_WIND[desiredRank];
-      if (observed.windStrength && observed.windStrength !== desiredWind) {
+      const lwSlot = (cfg.lastState && cfg.lastState[slot] && cfg.lastState[slot].lastWritten) || {};
+      const lastFanWriteWasMatching = lwSlot.windStrength === desiredWind
+        && lwSlot.windStrengthAt
+        && (Date.now() - lwSlot.windStrengthAt) < FAN_DEBOUNCE_MS;
+      const fanNeedsWrite = didModeSwitch
+        || (observed.windStrength && observed.windStrength !== desiredWind && !lastFanWriteWasMatching);
+      if (fanNeedsWrite) {
         try {
           await setFanSpeed(slot, desiredWind.toLowerCase(), saveConfigFn);
           slotActions.wrote.windStrength = desiredWind;
@@ -427,8 +618,12 @@ function createClimate({ getConfig, logActivity }) {
     }
 
     lastTickAt = Date.now();
+    const slotTargets = {};
+    for (const slot of slots) slotTargets[slot] = slotData[slot].slotTargetF;
     return {
-      mode, targetF,
+      mode,
+      globalTargetF,
+      slotTargets,
       ladder: ladder.name,
       pressureF: Math.round(pressureF * 10) / 10,
       engagedRungCount: rungCount,
@@ -467,22 +662,29 @@ function createClimate({ getConfig, logActivity }) {
       const until = (cfg.lastState && cfg.lastState.pausedUntil) || 0;
       return { paused: until > Date.now(), until };
     })();
-    const { mode, targetF } = getMode();
-    // Compute current pressure from cached readings (no fresh fetch).
-    // Skip paused, unreachable, and user-off ACs -- they don't contribute to pressure.
+    const { mode, targetF: globalTargetF } = getMode();
+    // Per-room effective targets (overrides applied), and pressure measured
+    // against each room's own target. Skip paused, unreachable, user-off.
+    const slotTargets = {};
     let pressureF = 0;
     for (const s of slots) {
+      slotTargets[s] = getEffectiveTargetF(s);
       const d = cache.devices[s];
       if (!d || !d.ok || !d.currentF) continue;
       if (pauses[s].paused) continue;
       if (d.power === 'POWER_OFF') continue;
-      const delta = d.currentF - targetF;
+      const smoothed = smoothedTempF(s, d.currentF);
+      const delta = smoothed - slotTargets[s];
       if (delta > pressureF) pressureF = delta;
     }
     const engagedRungCount = (cfg.lastState && cfg.lastState.engagedRungCount) || 0;
     return {
       enabled: !!cfg.enabled,
-      mode, targetF,
+      mode,
+      globalTargetF,
+      // Back-compat: old UI consumers read s.targetF; keep it pointing at global.
+      targetF: globalTargetF,
+      slotTargets,
       ladder: getActiveLadder(),
       pressureF: Math.round(pressureF * 10) / 10,
       engagedRungCount,
@@ -502,6 +704,7 @@ function createClimate({ getConfig, logActivity }) {
     setTargetTempF,
     setFanSpeed,
     setPower,
+    setJobMode,
     setPause,
     clearPause,
     getPauseState,

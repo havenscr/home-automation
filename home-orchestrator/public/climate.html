@@ -39,6 +39,8 @@
   .temp-current .deg { font-size:20px; color:var(--muted); }
   .temp-target { font-size:13px; color:var(--muted); }
   .temp-target strong { color:var(--text); }
+  .mode-hint { font-size:11px; color:var(--muted); margin-top:4px; padding:4px 8px; background:rgba(0,153,153,0.06); border-radius:4px; display:inline-block; }
+  .mode-hint strong { color:var(--accent); }
   .meta-row { display:flex; gap:8px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-top:4px; }
   .meta-row span.k { color:var(--text); }
   .controls { margin-top:14px; padding-top:12px; border-top:1px solid var(--card-border); }
@@ -170,6 +172,9 @@
       <div class="form-group"><label>Day starts</label><input id="cfg-day-start" type="time"></div>
       <div class="form-group"><label>Night starts</label><input id="cfg-night-start" type="time"></div>
     </div>
+    <div class="section-title" style="margin-top:18px">Per-room targets (optional)</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Override the global day/night targets for a specific room. Leave blank to use the global target. Pressure is measured per-room against each room's effective target.</div>
+    <div id="cfg-room-overrides"></div>
     <div class="section-title" style="margin-top:18px">Office quiet hours</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When in quiet hours, the office is capped at medium fan; kitchen ramps up to compensate.</div>
     <div class="form-row">
@@ -207,7 +212,8 @@
         <li><span class="kbd">+3.5F</span> all rungs</li>
       </ul>
       <p><strong>Per-AC fan speed:</strong> for each AC, the loop looks at every engaged rung that mentions it and uses the highest speed. So if rungs 1+2 say "kitchen low" and "kitchen medium", kitchen runs at MID. If a rung doesn't mention an AC, that AC isn't asked to ramp.</p>
-      <p><strong>Hysteresis:</strong> when pressure drops, rungs disengage 0.5F below the threshold that engaged them — prevents flapping at the boundary.</p>
+      <p><strong>Hysteresis:</strong> when pressure drops, rungs disengage 0.5F below the threshold that engaged them. Prevents flapping at the boundary.</p>
+      <p><strong>COOL vs FAN auto-switch:</strong> when a room drops below its target, the loop switches that AC from COOL to FAN (compressor off, just airflow). When the room rises back above target, it switches back to COOL. A 0.5F deadband on each side prevents the compressor from cycling every minute near setpoint. If you manually set an AC to DRY mode, the loop leaves it alone. It assumes that was intentional.</p>
       <p><strong>Two ladders, picked by clock:</strong> the <em>office-quiet</em> ladder is used Mon-Fri during your work hours (caps office fan to keep meetings quiet — kitchen does the heavy lifting). The <em>default</em> ladder runs all other times — evenings, weekends, overnight — when office can ramp to high (it's empty + cold air reaches the bedroom).</p>
       <p class="explainer-example"><strong>Example:</strong> Tuesday 11am, office hits 75F (+3F over target). Office-quiet ladder is active. Pressure 3F engages 4 of 4 rungs: kitchen low, office mid, kitchen mid, kitchen high. Office's max engaged speed is MID (rung 2). Kitchen's max is HIGH (rung 4). Result: office stays quiet at MID, kitchen ramps to HIGH to compensate. Exactly what you wanted.</p>
     </div>
@@ -249,7 +255,14 @@
   <div class="card">
     <div class="card-header">
       <div class="section-title" style="margin:0">Recent climate activity</div>
-      <button class="btn btn-ghost btn-sm" onclick="loadLog()">Refresh</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Sort</span>
+        <div class="seg" id="log-sort-seg">
+          <button id="log-sort-newest" class="active" onclick="setLogSort('newest')">Newest</button>
+          <button id="log-sort-oldest" onclick="setLogSort('oldest')">Oldest</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadLog()">Refresh</button>
+      </div>
     </div>
     <div id="log-list"></div>
   </div>
@@ -327,7 +340,7 @@ function setBanner(s) {
   $('resume-global').style.display = s.globalPause?.paused ? '' : 'none';
 }
 
-function renderAcCard(slot, dev, pauseInfo) {
+function renderAcCard(slot, dev, pauseInfo, effectiveTargetF) {
   const offline = !dev || !dev.ok;
   const userOff = !offline && dev.power === 'POWER_OFF';
   const paused = !userOff && pauseInfo && pauseInfo.paused;
@@ -371,7 +384,19 @@ function renderAcCard(slot, dev, pauseInfo) {
     + '</div>'
     + '<div class="temp-block">'
     +   '<div class="temp-current">' + (dev.currentF ?? '--') + '<span class="deg">F</span></div>'
-    +   '<div class="temp-target">target <strong>' + (dev.targetF ?? '--') + 'F</strong> &middot; fan <strong>' + (dev.windStrength || '--') + '</strong></div>'
+    +   '<div class="temp-target">target <strong>' + (dev.targetF ?? '--') + 'F</strong>'
+    +     (effectiveTargetF != null && Math.abs(effectiveTargetF - (dev.targetF ?? 0)) > 0.6 ? ' <span style="color:var(--warn)">(loop wants ' + effectiveTargetF + 'F)</span>' : '')
+    +     ' &middot; mode <strong>' + (dev.jobMode === 'AIR_DRY' ? 'DRY' : (dev.jobMode || '--')) + '</strong>'
+    +     ' &middot; fan <strong>' + (dev.windStrength || '--') + '</strong></div>'
+    +   (effectiveTargetF != null && dev.currentF != null && (dev.jobMode === 'COOL' || dev.jobMode === 'FAN')
+        ? '<div class="mode-hint">'
+          + (dev.currentF < effectiveTargetF
+            ? 'Below target. Loop will run as <strong>FAN</strong> (no compressor)'
+            : 'At/above target. Loop will run as <strong>COOL</strong>')
+          + '</div>'
+        : (dev.jobMode === 'AIR_DRY'
+          ? '<div class="mode-hint" style="color:var(--accent)">DRY mode. Loop is leaving this AC alone (manual choice).</div>'
+          : ''))
     + '</div>'
     + '<div class="controls">'
     +   '<div class="controls-row">'
@@ -381,6 +406,14 @@ function renderAcCard(slot, dev, pauseInfo) {
     +       '<input id="t-' + slot + '" type="number" value="' + (dev.targetF ?? '') + '" step="1" min="60" max="85">'
     +       '<button class="btn btn-ghost btn-sm" onclick="bumpTarget(\'' + slot + '\', +1)">+</button>'
     +       '<button class="btn btn-primary btn-sm" onclick="setTarget(\'' + slot + '\')">Set</button>'
+    +     '</div>'
+    +   '</div>'
+    +   '<div class="controls-row">'
+    +     '<label>Mode</label>'
+    +     '<div class="seg">'
+    +       '<button class="' + (dev.jobMode === 'COOL' ? 'active' : '') + '" onclick="setMode(\'' + slot + '\',\'COOL\')">Cool</button>'
+    +       '<button class="' + (dev.jobMode === 'FAN' ? 'active' : '') + '" onclick="setMode(\'' + slot + '\',\'FAN\')">Fan</button>'
+    +       '<button class="' + (dev.jobMode === 'AIR_DRY' ? 'active' : '') + '" onclick="setMode(\'' + slot + '\',\'AIR_DRY\')">Dry</button>'
     +     '</div>'
     +   '</div>'
     +   '<div class="controls-row">'
@@ -416,7 +449,7 @@ function renderDashboard(s) {
   const slots = Object.keys(s.devices || {});
   if (!slots.length) { grid.innerHTML = '<div class="card"><div class="card-title">No ACs configured</div></div>'; return; }
   for (const slot of slots) {
-    grid.appendChild(renderAcCard(slot, s.devices[slot], s.pauses?.[slot]));
+    grid.appendChild(renderAcCard(slot, s.devices[slot], s.pauses?.[slot], s.slotTargets?.[slot]));
   }
 }
 
@@ -575,6 +608,33 @@ async function saveLadders() {
   } catch (e) { toast('Save failed: ' + e.message, 'error'); }
 }
 
+function renderRoomOverrides(slots, overrides) {
+  const container = $('cfg-room-overrides');
+  if (!slots.length) { container.innerHTML = ''; return; }
+  container.innerHTML = slots.map(slot => {
+    const o = (overrides && overrides[slot]) || {};
+    const dayVal = (o.dayTargetF == null) ? '' : o.dayTargetF;
+    const nightVal = (o.nightTargetF == null) ? '' : o.nightTargetF;
+    return '<div class="form-row" style="align-items:end">'
+      + '<div class="form-group" style="flex:0 0 90px"><label style="text-transform:none;letter-spacing:0;font-weight:600;color:var(--text)">' + slot + '</label></div>'
+      + '<div class="form-group"><label>Day target</label><input data-slot="' + slot + '" data-field="dayTargetF" type="number" step="1" min="60" max="85" placeholder="(global)" value="' + dayVal + '"></div>'
+      + '<div class="form-group"><label>Night target</label><input data-slot="' + slot + '" data-field="nightTargetF" type="number" step="1" min="60" max="85" placeholder="(global)" value="' + nightVal + '"></div>'
+      + '</div>';
+  }).join('');
+}
+
+function readRoomOverridesFromForm() {
+  const out = {};
+  document.querySelectorAll('#cfg-room-overrides input[data-slot]').forEach(el => {
+    const slot = el.dataset.slot;
+    const field = el.dataset.field;
+    if (!out[slot]) out[slot] = {};
+    const raw = el.value.trim();
+    out[slot][field] = raw === '' ? null : Number(raw);
+  });
+  return out;
+}
+
 async function loadConfig() {
   try {
     const c = await api('/api/climate/config');
@@ -604,6 +664,7 @@ async function loadConfig() {
     knownSlots = Object.keys(c.devices || {});
     if (!knownSlots.length) knownSlots = ['office', 'kitchen']; // sensible default
     renderEditableLadders();
+    renderRoomOverrides(knownSlots, c.schedule.overrides);
   } catch (e) { toast('Config load failed: ' + e.message, 'error'); }
 }
 
@@ -618,6 +679,7 @@ async function saveConfig() {
       officeQuietStart: $('cfg-quiet-start').value,
       officeQuietEnd: $('cfg-quiet-end').value,
       officeQuietDays: days,
+      overrides: readRoomOverridesFromForm(),
     },
     fanRamp: { pollSeconds: Number($('cfg-poll-seconds').value) },
     overrideCooldownMs: Number($('cfg-override-cooldown').value) * 60000,
@@ -645,20 +707,52 @@ function bumpTarget(slot, delta) {
 async function setTarget(slot) {
   const v = Number($('t-' + slot).value);
   if (!Number.isFinite(v)) return;
+  // Skip write if the AC is already at this target (within 1F rounding).
+  const cur = lastState && lastState.devices && lastState.devices[slot];
+  if (cur && cur.targetF != null && Math.abs(cur.targetF - v) < 1.0) {
+    toast(slot + ' already at ' + v + 'F', 'success');
+    return;
+  }
   try { await api('/api/climate/' + slot + '/target', { method: 'POST', body: JSON.stringify({ targetF: v }) });
     toast(slot + ' target ' + v + 'F', 'success'); setTimeout(refreshAll, 800);
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
 async function setFan(slot, speed) {
+  // Skip if fan is already at the requested speed.
+  const cur = lastState && lastState.devices && lastState.devices[slot];
+  const desired = String(speed).toUpperCase() === 'MEDIUM' ? 'MID' : String(speed).toUpperCase();
+  if (cur && cur.windStrength === desired) {
+    toast(slot + ' fan already ' + speed, 'success');
+    return;
+  }
   try { await api('/api/climate/' + slot + '/fan', { method: 'POST', body: JSON.stringify({ speed }) });
     toast(slot + ' fan ' + speed, 'success'); setTimeout(refreshAll, 800);
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
 async function setPower(slot, on) {
+  // Skip if power is already in the requested state.
+  const cur = lastState && lastState.devices && lastState.devices[slot];
+  const want = on ? 'POWER_ON' : 'POWER_OFF';
+  if (cur && cur.power === want) {
+    toast(slot + ' already ' + (on ? 'on' : 'off'), 'success');
+    return;
+  }
   try { await api('/api/climate/' + slot + '/power', { method: 'POST', body: JSON.stringify({ on }) });
     toast(slot + ' ' + (on ? 'on' : 'off'), 'success'); setTimeout(refreshAll, 800);
+  } catch (e) { toast('Failed: ' + e.message, 'error'); }
+}
+
+async function setMode(slot, mode) {
+  // Skip if mode is already what was requested.
+  const cur = lastState && lastState.devices && lastState.devices[slot];
+  if (cur && cur.jobMode === mode) {
+    toast(slot + ' already in ' + mode, 'success');
+    return;
+  }
+  try { await api('/api/climate/' + slot + '/mode', { method: 'POST', body: JSON.stringify({ mode }) });
+    toast(slot + ' mode ' + mode, 'success'); setTimeout(refreshAll, 800);
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
@@ -674,22 +768,42 @@ async function resumeScope(scope) {
   } catch (e) { toast('Failed: ' + e.message, 'error'); }
 }
 
+let logEntriesCache = [];
+let currentLogSort = 'newest';
+
+function renderLogList() {
+  const list = $('log-list');
+  if (!logEntriesCache.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px">No recent activity (or /api/log not exposed -- run journalctl on the Pi).</div>';
+    return;
+  }
+  // Sort by timestamp explicitly so we don't depend on server order.
+  const sorted = [...logEntriesCache].sort((a, b) => {
+    const ta = new Date(a.ts || a.time || 0).getTime();
+    const tb = new Date(b.ts || b.time || 0).getTime();
+    return currentLogSort === 'newest' ? tb - ta : ta - tb;
+  });
+  list.innerHTML = sorted.map(e => {
+    const t = new Date(e.ts || e.time || Date.now());
+    const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
+    return '<div class="log-entry"><span class="log-time">' + hh + '</span><span class="log-msg">' + (e.message || e.msg || JSON.stringify(e)) + '</span></div>';
+  }).join('');
+}
+
+function setLogSort(direction) {
+  currentLogSort = direction;
+  $('log-sort-newest').classList.toggle('active', direction === 'newest');
+  $('log-sort-oldest').classList.toggle('active', direction === 'oldest');
+  renderLogList();
+}
+
 async function loadLog() {
-  // Reuse the orchestrator's general log endpoint, filter to climate.
   try {
     const r = await fetch('/api/log?type=climate&limit=80');
     const j = await r.json().catch(() => ({}));
     const items = j.entries || j.log || j || [];
-    const list = $('log-list');
-    if (!Array.isArray(items) || !items.length) {
-      list.innerHTML = '<div style="color:var(--muted);font-size:13px">No recent activity (or /api/log not exposed -- run journalctl on the Pi).</div>';
-      return;
-    }
-    list.innerHTML = items.slice(-80).reverse().map(e => {
-      const t = new Date(e.ts || e.time || Date.now());
-      const hh = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
-      return '<div class="log-entry"><span class="log-time">' + hh + '</span><span class="log-msg">' + (e.message || e.msg || JSON.stringify(e)) + '</span></div>';
-    }).join('');
+    logEntriesCache = Array.isArray(items) ? items : [];
+    renderLogList();
   } catch (e) {
     $('log-list').innerHTML = '<div style="color:var(--muted);font-size:13px">No log endpoint available.</div>';
   }

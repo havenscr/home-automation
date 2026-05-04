@@ -1,0 +1,314 @@
+# ============================================================
+# Bi-weekly Home Automation Health Audit
+#
+# Reads the audit-data.json snapshot the Pi pushes to the
+# audit-data branch every 12 hours, asks Claude to review the
+# past 14 days of logs across all services, and creates a
+# GitHub issue with findings. The "home-audit" label triggers
+# email notification via your GitHub label subscription.
+#
+# Auth: claude-code-oauth-token pulled from Azure Key Vault
+#       (ae-secrets-vault) via OIDC federation. No API cost
+#       (Claude Max subscription).
+# Cost per run: $0
+# ============================================================
+
+name: Home Health Audit
+
+on:
+  schedule:
+    # Every other Monday at 02:00 UTC (~ Sunday 6PM/7PM PT depending on DST).
+    # Cron has no native bi-weekly; we run weekly and gate on ISO week parity.
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      force_run:
+        description: "Force run regardless of week parity (yes/no)"
+        required: false
+        default: "yes"
+
+permissions:
+  contents: read
+  issues: write
+  id-token: write  # Required for azure/login OIDC federation
+
+jobs:
+  audit:
+    name: Audit Home Automation Health
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check bi-weekly parity
+        id: parity
+        run: |
+          set -euo pipefail
+          # Run only on even ISO weeks to enforce bi-weekly cadence.
+          # workflow_dispatch with force_run=yes bypasses the gate.
+          WEEK=$(date -u +%V)
+          FORCE="${{ github.event.inputs.force_run || 'no' }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$FORCE" = "yes" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Manual trigger with force_run=yes; running."
+          elif [ $((10#$WEEK % 2)) -eq 0 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "ISO week $WEEK is even; running."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "ISO week $WEEK is odd; skipping (bi-weekly cadence)."
+          fi
+
+      - name: Checkout main
+        if: steps.parity.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+
+      - name: Fetch audit-data.json from audit-data branch
+        if: steps.parity.outputs.should_run == 'true'
+        id: fetch_snapshot
+        run: |
+          set -euo pipefail
+          # The audit-data branch is orphan; fetch and check out just that file.
+          git fetch origin audit-data --depth 1
+          git show origin/audit-data:audit-data.json > audit-data.json
+          SIZE=$(stat -c%s audit-data.json)
+          echo "Snapshot size: ${SIZE} bytes"
+          if [ "$SIZE" -lt 1000 ]; then
+            echo "Snapshot suspiciously small (${SIZE} bytes); aborting." >&2
+            exit 1
+          fi
+          # Sanity-check freshness: if older than 36h, the Pi cron may be broken.
+          SNAPSHOT_AT=$(jq -r '.snapshotAt' audit-data.json)
+          AGE_SEC=$(( $(date -u +%s) - $(date -u -d "$SNAPSHOT_AT" +%s) ))
+          AGE_HOURS=$(( AGE_SEC / 3600 ))
+          echo "snapshotAt=$SNAPSHOT_AT (${AGE_HOURS}h old)"
+          if [ "$AGE_HOURS" -gt 36 ]; then
+            echo "stale=true" >> "$GITHUB_OUTPUT"
+            echo "WARNING: snapshot is ${AGE_HOURS}h old; Pi cron may have stopped pushing"
+          else
+            echo "stale=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "snapshot_at=$SNAPSHOT_AT" >> "$GITHUB_OUTPUT"
+          echo "age_hours=$AGE_HOURS" >> "$GITHUB_OUTPUT"
+
+      - name: Load previous audit rolling summary
+        if: steps.parity.outputs.should_run == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const audits = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'home-audit',
+              state: 'all',
+              sort: 'created',
+              direction: 'desc',
+              per_page: 1,
+            });
+            if (audits.data.length === 0) {
+              core.info('No previous audits found; this is the first run');
+              fs.writeFileSync('prev_summary.txt', '');
+              return;
+            }
+            const body = audits.data[0].body || '';
+            const m = body.match(/<!--ROLLING_SUMMARY\n([\s\S]*?)\nROLLING_SUMMARY-->/);
+            if (m) {
+              fs.writeFileSync('prev_summary.txt', m[1].trim());
+              core.info(`Loaded rolling summary from issue #${audits.data[0].number}`);
+            } else {
+              fs.writeFileSync('prev_summary.txt', '');
+              core.info(`Latest audit issue #${audits.data[0].number} has no rolling summary`);
+            }
+
+      - name: Login to Azure (OIDC)
+        if: steps.parity.outputs.should_run == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Fetch Claude OAuth token from Key Vault
+        if: steps.parity.outputs.should_run == 'true'
+        id: kv
+        run: |
+          set -euo pipefail
+          TOKEN=$(az keyvault secret show \
+            --vault-name ae-secrets-vault \
+            --name claude-code-oauth-token \
+            --query value -o tsv)
+          if [ -z "$TOKEN" ] || [ "${#TOKEN}" -lt 20 ]; then
+            echo "Failed to fetch claude-code-oauth-token from Key Vault" >&2
+            exit 1
+          fi
+          # Mask the token in any subsequent log output
+          echo "::add-mask::$TOKEN"
+          echo "claude_token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Install Claude Code CLI
+        if: steps.parity.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          npm install -g @anthropic-ai/claude-code
+
+      - name: Build prompt
+        if: steps.parity.outputs.should_run == 'true'
+        run: |
+          set -euo pipefail
+          {
+            cat <<'HEADER'
+          You are a home-automation health auditor reviewing a Raspberry Pi 3B+ that runs three services (home-orchestrator, sonos-commander, Homebridge) plus a stack of HomeKit dummy switches.
+
+          Below is a snapshot of the past 14 days of logs and live state, followed by the rolling summary from the previous audit (if any).
+
+          IMPORTANT CONTEXT:
+          - The Pi has only ~400MB available RAM. Memory pressure matters.
+          - Services restart frequently during development; restart counts above ~5 in a 14-day window are only worth flagging if accompanied by errors.
+          - Some HomeKit-side automations (arrive-home, sunrise wake-up) have failed silently in the past. If a "Dummy - Fade Start Sunrise" or similar daily-expected dummy fired 0 times in 14 days, that is a STRONG signal of a broken HomeKit automation -- flag it.
+          - The climate controller is new and still being tuned. Override-pause events ("manual override") and rate-limit hits (HTTP 401 / code 1314) are expected occasionally; flag only if frequent (>5/week) or worsening.
+          - Activity log entries have a "type" field: climate, gradient, fade, routine, startup. Use that to bucket findings.
+
+          Produce a CONCISE markdown report with these sections (max ~600 words total):
+
+          ### 1. Service Health
+          For each of the 3 services, one line: active state, restart count, memory, any flags.
+
+          ### 2. Climate Controller Review
+          Override events, rate-limit hits, pressure stability, mode-switch behavior, any anomalies. If everything looks normal, say so in one sentence.
+
+          ### 3. Lighting Routines (fade + gradient)
+          Did sunrise + sunset fire daily? Any incomplete routines? Override-confirmed events on the gradient? Anything degrading?
+
+          ### 4. Sonos
+          Routine triggers, any speaker discovery failures, group transitions. Brief.
+
+          ### 5. Homebridge / HomeKit
+          Plugin errors (ignore "Duplicate device name Play/Pause" Alexa noise), accessory restoration patterns, automation fire counts. CRITICAL: explicitly check `homebridgeLog.automationFires` for daily-expected dummies that fired ~0 times in 14 days. Common ones to watch:
+          - "Dummy - Fade Start Sunrise" (should fire ~14x in 14d if HomeKit wake-up automation is healthy)
+          - "Dummy - Day Music" or similar (arrive-home indicator)
+          - "Dummy - Fade Start Sunset" (~14x)
+
+          ### 6. Pattern Detection
+          Cross-cutting issues: drift, recurring errors, things getting worse week-over-week. Compare to previous rolling summary.
+
+          ### 7. Top Action Items
+          Max 5 prioritized, specific suggestions. Reference file paths or config keys when relevant.
+
+          ### 8. Severity
+          One line, exactly one of: SEVERITY: GOOD / SEVERITY: NEEDS_ATTENTION / SEVERITY: PROBLEM
+
+          ### 9. Rolling Summary
+          3-5 sentences capturing the trend for next audit's context.
+
+          FORMAT: Markdown. Direct and concise. Never use em dashes or double dashes.
+
+          HEADER
+
+            printf '\n## SNAPSHOT DATA\n\n```json\n'
+            cat audit-data.json
+            printf '\n```\n\n'
+
+            printf '## PREVIOUS AUDIT ROLLING SUMMARY\n\n'
+            if [ -s prev_summary.txt ]; then
+              cat prev_summary.txt
+            else
+              printf '(no previous audit; this is the first run)\n'
+            fi
+            printf '\n'
+
+            STALE_FLAG="${{ steps.fetch_snapshot.outputs.stale }}"
+            if [ "$STALE_FLAG" = "true" ]; then
+              AGE="${{ steps.fetch_snapshot.outputs.age_hours }}"
+              printf '\n## DATA FRESHNESS WARNING\n\nSnapshot is %sh old. The Pi cron may have stopped pushing. Treat all findings as point-in-time only and flag this in your severity assessment.\n' "$AGE"
+            fi
+          } > prompt.txt
+          echo "Prompt size: $(stat -c%s prompt.txt) bytes"
+
+      - name: Run audit analysis
+        if: steps.parity.outputs.should_run == 'true'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ steps.kv.outputs.claude_token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(claude -p --no-session-persistence --max-turns 1 --output-format text < prompt.txt)
+          if [ ${#RESPONSE} -lt 100 ]; then
+            echo "Analysis suspiciously short (${#RESPONSE} chars):" >&2
+            echo "$RESPONSE" >&2
+            exit 1
+          fi
+          printf '%s' "$RESPONSE" > analysis.txt
+          echo "Analysis size: $(stat -c%s analysis.txt) bytes"
+
+      - name: Extract severity
+        if: steps.parity.outputs.should_run == 'true'
+        id: severity
+        run: |
+          set -euo pipefail
+          if grep -q "SEVERITY: PROBLEM" analysis.txt; then
+            echo "level=problem" >> "$GITHUB_OUTPUT"
+          elif grep -q "SEVERITY: NEEDS_ATTENTION" analysis.txt; then
+            echo "level=needs_attention" >> "$GITHUB_OUTPUT"
+          else
+            echo "level=good" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create audit issue
+        if: steps.parity.outputs.should_run == 'true'
+        id: create_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const analysis = fs.readFileSync('analysis.txt', 'utf8');
+            const severity = '${{ steps.severity.outputs.level }}';
+            const snapshotAt = '${{ steps.fetch_snapshot.outputs.snapshot_at }}';
+            const ageHours = '${{ steps.fetch_snapshot.outputs.age_hours }}';
+            const stale = '${{ steps.fetch_snapshot.outputs.stale }}' === 'true';
+            const today = new Date().toISOString().split('T')[0];
+
+            const summaryMatch = analysis.match(/### 9\. Rolling Summary[^\n]*\n([\s\S]+)$/);
+            let rolling = summaryMatch ? summaryMatch[1].trim() : 'No rolling summary extracted.';
+            if (rolling.length > 500) rolling = rolling.slice(0, 500) + '...';
+
+            const titlePrefix = severity === 'problem' ? 'Home Audit Alert' : 'Home Audit';
+            const title = `${titlePrefix}: ${today}`;
+            const stalenote = stale
+              ? `\n> **Snapshot freshness warning:** data is ${ageHours}h old (cron may be broken)\n` : '';
+            const body = [
+              `> Reviewing past 14 days of home automation logs | Severity: **${severity.toUpperCase()}**`,
+              `> Snapshot: ${snapshotAt} (${ageHours}h old)`,
+              stalenote,
+              '',
+              analysis,
+              '',
+              '---',
+              `*Generated by health-audit workflow on ${today}*`,
+              '',
+              '<!--ROLLING_SUMMARY',
+              rolling,
+              'ROLLING_SUMMARY-->',
+            ].join('\n');
+
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['home-audit', 'automated'],
+            });
+
+            if (severity === 'good') {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.data.number,
+                state: 'closed',
+                state_reason: 'completed',
+              });
+              core.info(`Created and closed issue #${issue.data.number} (severity: good)`);
+            } else {
+              core.info(`Created OPEN issue #${issue.data.number} (severity: ${severity})`);
+            }
+            core.setOutput('issue_number', issue.data.number);
+            core.setOutput('issue_url', issue.data.html_url);
+

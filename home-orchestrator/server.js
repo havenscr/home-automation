@@ -2796,6 +2796,16 @@ app.post('/api/climate/:slot/power', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+app.post('/api/climate/:slot/mode', async (req, res) => {
+  try {
+    const mode = req.body && req.body.mode;
+    const valid = ['COOL', 'FAN', 'AIR_DRY'];
+    if (!valid.includes(mode)) return res.status(400).json({ ok: false, error: `mode must be one of ${valid.join('|')}` });
+    const result = await climate.setJobMode(req.params.slot, mode, saveConfig);
+    res.json({ ok: true, slot: req.params.slot, mode, result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // Pause / resume. Body: { minutes: 30 } or { until: <epoch ms> }. Default 30m.
 app.post('/api/climate/:scope/pause', (req, res) => {
   const scope = req.params.scope; // 'global' | 'office' | 'kitchen'
