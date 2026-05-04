@@ -306,6 +306,55 @@ $PI "systemctl is-active home-orchestrator sonos-commander homebridge && curl -s
 
 ---
 
+## Bi-weekly Health Audit
+
+A self-monitoring loop that reviews the past 14 days of logs across every service every 2 weeks and posts findings as a GitHub issue. Zero per-run cost (uses Claude Max OAuth from Azure Key Vault).
+
+**How it works:**
+- Pi runs `/opt/home-orchestrator/scripts/snapshot-logs.sh` every 12 hours via `/etc/cron.d/home-audit-snapshot`
+- The script bundles activity logs, systemd errors, Homebridge plugin errors, automation fire counts, and live climate state into a single JSON file
+- File is pushed to the `audit-data` branch of this repo via a GitHub PAT stored at `/opt/home-orchestrator/.github-pat`
+- GitHub Action `health-audit.yml` runs every other Monday at 02:00 UTC (Sunday 6-7pm Pacific)
+- Workflow pulls `claude-code-oauth-token` from Azure Key Vault `ae-secrets-vault` via OIDC federation
+- Claude reads the snapshot + previous audit's rolling summary, produces a 9-section report, posts as a GitHub issue with `home-audit` label
+- Issue auto-closed if `SEVERITY: GOOD`, left open for `NEEDS_ATTENTION` or `PROBLEM`
+
+**Files:**
+- [scripts/snapshot-logs.sh](scripts/snapshot-logs.sh) — Pi-side log bundler
+- [scripts/install-pi-snapshot.sh](scripts/install-pi-snapshot.sh) — one-time Pi setup (sets up cron, configures PAT, runs first snapshot)
+- [.github/workflows/health-audit.yml](.github/workflows/health-audit.yml) — bi-weekly audit Action
+- `audit-data` branch (orphan) — holds the latest snapshot, overwritten each push
+
+**Required setup (one-time):**
+1. Repo secrets in Settings → Secrets → Actions: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`
+2. Azure App Registration `gh-actions-keyvault-reader` has a federated credential for `repo:havenscr/home-automation:ref:refs/heads/main`
+3. Azure App Registration's service principal has `secrets/get` and `secrets/list` on `ae-secrets-vault`
+4. KV secret `claude-code-oauth-token` populated (shared with agents-and-automation)
+5. On Pi: fine-grained PAT scoped to this repo, Contents: Read+Write, stored in `/opt/home-orchestrator/.github-pat` mode 600
+
+**Manual trigger:**
+```bash
+# Force the audit to run regardless of bi-weekly week parity
+gh workflow run health-audit.yml --repo havenscr/home-automation -f force_run=yes
+```
+
+**Manually run a snapshot from Pi:**
+```bash
+sudo -u claude /opt/home-orchestrator/scripts/snapshot-logs.sh
+```
+
+**View past audits:**
+```bash
+gh issue list --repo havenscr/home-automation --label home-audit
+```
+
+**Operational risks:**
+- PAT expires (not currently, but if rotated): script will fail at `git push`. Rotation procedure: regenerate PAT, paste over `/opt/home-orchestrator/.github-pat`, snapshot resumes on next 12h cron.
+- Snapshot file growing too large: capped at 500KB; truncates oldest activity-log entries first.
+- If the Pi cron stops pushing for >36h, the workflow's `Fetch audit-data.json` step will warn but still run with stale data.
+
+---
+
 ## Where to look for what
 
 | Question | Answer |
@@ -318,6 +367,7 @@ $PI "systemctl is-active home-orchestrator sonos-commander homebridge && curl -s
 | How do I add a new HomeKit dummy? | Append to the existing `HomebridgeDummy` platform's `accessories` array in `/var/lib/homebridge/config.json`. Use the naming convention. |
 | What's the deploy flow? | This file's "Deployment" section above |
 | Why's the Pi running out of memory? | Check `free -m`. Each service should stay <50MB resident. Watch for socket/handle leaks. |
+| What's the latest audit say? | `gh issue list --repo havenscr/home-automation --label home-audit --limit 1` or check the [Issues tab](https://github.com/havenscr/home-automation/issues?q=label%3Ahome-audit) |
 
 ---
 

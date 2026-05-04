@@ -10,10 +10,17 @@
 - Config schema (new top-level key in config.json, breaking change to existing key)
 - Deploy commands, Pi hardware setup, network IPs, or service-port assignments
 - New pairing scripts or one-shot setup tooling
+- The bi-weekly health audit pipeline (snapshot script, install script, workflow, secrets)
 
 **Before declaring a task done that touched any of the above, verify README.md reflects the new reality.** The expected sections are: Architecture diagram, Services (with file paths), Routines tables, Homebridge pattern + naming, Hardware/IP table, Deployment flow, Common pitfalls, Where-to-look-for-what.
 
 If the README is stale relative to the code, treat that as a defect on par with a failing test. Stale docs cause Reid (and future-me) to make decisions based on wrong assumptions.
+
+## Branches
+
+- `main` is the only branch you should commit to. Always.
+- `audit-data` is an **orphan branch** holding a single file (`audit-data.json`) the Pi pushes to every 12 hours. Never check it out, never commit to it from a dev session, never try to merge it. The Pi's `home-audit-bot` is the only writer. The bi-weekly `health-audit.yml` workflow is the only reader.
+- If you accidentally commit elsewhere on `audit-data`, the next Pi snapshot push will refuse with a non-fast-forward error and the audit pipeline silently degrades. Don't.
 
 ## Target Hardware
 
