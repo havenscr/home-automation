@@ -2823,7 +2823,7 @@ app.post('/api/climate/:scope/resume', (req, res) => {
 // Patch climate config (schedule, ladder, override cooldown). Body keys are merged.
 // Allowed top-level keys only; nested keys merged 1 level deep.
 app.patch('/api/climate/config', (req, res) => {
-  const allowed = ['schedule', 'fanRamp', 'ladder', 'overrideCooldownMs'];
+  const allowed = ['schedule', 'fanRamp', 'ladder', 'overrideCooldownMs', 'fanDwellMinutes'];
   const patch = req.body || {};
   if (!config.climate) config.climate = {};
   for (const k of Object.keys(patch)) {
@@ -2849,6 +2849,7 @@ app.get('/api/climate/config', (req, res) => {
     fanRamp: c.fanRamp || {},
     ladder: c.ladder || {},
     overrideCooldownMs: c.overrideCooldownMs ?? null,
+    fanDwellMinutes: c.fanDwellMinutes ?? 5,
     devices: Object.fromEntries(Object.entries(c.devices || {}).map(([k, v]) => [k, { displayName: v.displayName }])),
   });
 });

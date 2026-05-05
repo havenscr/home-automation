@@ -25,9 +25,8 @@ const SETPOINT_TOLERANCE_C = 0.6;
 // apartment is actually uncomfortable.
 const RUNG_THRESHOLDS_F = [1.5, 2.5, 3.5, 4.5];
 const HYSTERESIS_F = 0.5;
-// Mode-switch deadband. Switch COOL->FAN when room <= target - this. Switch FAN->COOL when room >= target + this.
-// Keeps the compressor from cycling on every poll near setpoint.
-const MODE_DEADBAND_F = 0.5;
+// Note: COOL<->FAN auto-switching was removed; the LG unit's native thermostat handles
+// compressor cycling at target. The setJobMode helper is kept for the manual UI button.
 
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
@@ -567,46 +566,33 @@ function createClimate({ getConfig, logActivity }) {
         slotActions.setpointDeferred = `${observed.jobMode || 'unknown'} mode -- will set when COOL`;
       }
 
-      // 3a.5) Mode switch: if room is below target, run as FAN (no compressor); if above, COOL.
-      // Deadband prevents flapping near setpoint. Leaves AIR_DRY alone -- if the user picked DRY, that's intentional.
-      let didModeSwitch = false;
-      if (observed.currentF != null && (observed.jobMode === 'COOL' || observed.jobMode === 'FAN')) {
-        const wantCool = observed.jobMode === 'COOL'
-          ? observed.currentF >= slotTargetF - MODE_DEADBAND_F  // stay COOL until well below target
-          : observed.currentF >= slotTargetF + MODE_DEADBAND_F; // need to climb above target to go back to COOL
-        const desiredMode = wantCool ? 'COOL' : 'FAN';
-        slotActions.modeDecision = { current: observed.jobMode, desired: desiredMode, currentF: observed.currentF, targetF: slotTargetF };
-        if (desiredMode !== observed.jobMode) {
-          try {
-            await setJobMode(slot, desiredMode, saveConfigFn);
-            slotActions.wrote.jobMode = desiredMode;
-            didModeSwitch = true;
-          } catch (e) {
-            if (logActivity) logActivity('climate', `mode ${slot} failed: ${e.message}`);
-            slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'mode: ' + e.message;
-          }
-        }
-      } else if (observed.jobMode && observed.jobMode !== 'COOL' && observed.jobMode !== 'FAN') {
-        // User has the unit in AIR_DRY (or some other mode we don't manage). Don't touch.
-        slotActions.modeDecision = { current: observed.jobMode, desired: observed.jobMode, leftAlone: true };
+      // 3a.5) Mode awareness only -- no auto-switching.
+      // The LG unit's native thermostat handles compressor cycling: when room reaches
+      // target in COOL mode, the unit shuts the compressor off but keeps the fan running.
+      // The loop used to write COOL<->FAN every few minutes; that was unnecessary churn
+      // (~133 writes/day in production). AIR_DRY is left alone (user intent).
+      // The override detector still watches jobMode for external manual changes.
+      if (observed.jobMode && observed.jobMode !== 'COOL' && observed.jobMode !== 'FAN') {
+        slotActions.modeDecision = { current: observed.jobMode, leftAlone: true };
       }
 
       // 3b) Fan speed from ladder.
-      // If we just switched mode, the AC may auto-reset fan speed -- always force-rewrite
-      // the desired fan after a mode switch to overcome that reset.
-      // Debounce: if observed already matches desired AND we wrote that same value
-      // recently (within 5 min), skip. Belt-and-suspenders against subtle field-naming
-      // drift (windStrength vs windStrengthDetail) causing repeated identical writes.
-      const FAN_DEBOUNCE_MS = 5 * 60 * 1000;
+      // Dwell guard: once a fan-speed write happens, hold for at least dwellMs
+      // before another change (default 5 min, configurable via cfg.fanDwellMinutes).
+      // Smooths out the LOW->HIGH->LOW micro-cycles seen when pressure oscillates
+      // across rung thresholds. The ladder hysteresis already protects against
+      // small drift; dwell adds a time-domain filter on top.
+      const dwellMs = (cfg.fanDwellMinutes ?? 5) * 60 * 1000;
       const desiredRank = highestRankForSlot(slot, engagedRungs) || WIND_RANK.LOW;
       const desiredWind = RANK_TO_WIND[desiredRank];
       const lwSlot = (cfg.lastState && cfg.lastState[slot] && cfg.lastState[slot].lastWritten) || {};
-      const lastFanWriteWasMatching = lwSlot.windStrength === desiredWind
-        && lwSlot.windStrengthAt
-        && (Date.now() - lwSlot.windStrengthAt) < FAN_DEBOUNCE_MS;
-      const fanNeedsWrite = didModeSwitch
-        || (observed.windStrength && observed.windStrength !== desiredWind && !lastFanWriteWasMatching);
-      if (fanNeedsWrite) {
+      const ageOfLastFanWriteMs = lwSlot.windStrengthAt
+        ? Date.now() - lwSlot.windStrengthAt
+        : Number.POSITIVE_INFINITY;
+      const fanMismatch = observed.windStrength && observed.windStrength !== desiredWind;
+      if (fanMismatch && ageOfLastFanWriteMs < dwellMs) {
+        slotActions.fanDwellHeld = `holding ${observed.windStrength}; want ${desiredWind} but last fan write was ${Math.round(ageOfLastFanWriteMs / 1000)}s ago (dwell ${Math.round(dwellMs / 1000)}s)`;
+      } else if (fanMismatch) {
         try {
           await setFanSpeed(slot, desiredWind.toLowerCase(), saveConfigFn);
           slotActions.wrote.windStrength = desiredWind;
