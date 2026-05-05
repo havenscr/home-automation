@@ -20,7 +20,10 @@ const DEFAULT_OVERRIDE_COOLDOWN_MS = 30 * 60 * 1000;
 const SETPOINT_TOLERANCE_C = 0.6;
 // Pressure thresholds in F. Engaging rung N requires pressure to cross thresholds[N-1].
 // Hysteresis: stepping down requires pressure to drop HYSTERESIS_F below the threshold that engaged it.
-const RUNG_THRESHOLDS_F = [0.5, 1.5, 2.5, 3.5];
+// Quieter-by-default: previous values were 0.5/1.5/2.5/3.5 (too eager -- ramped fans on tiny
+// overshoots). Now small overshoots stay at baseline LOW and ramping only kicks in when the
+// apartment is actually uncomfortable.
+const RUNG_THRESHOLDS_F = [1.5, 2.5, 3.5, 4.5];
 const HYSTERESIS_F = 0.5;
 // Mode-switch deadband. Switch COOL->FAN when room <= target - this. Switch FAN->COOL when room >= target + this.
 // Keeps the compressor from cycling on every poll near setpoint.
