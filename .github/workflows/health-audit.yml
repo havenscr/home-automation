@@ -199,6 +199,8 @@ jobs:
           - `routineCompletions.sunset_transition` (sunset fade; expect ~14 in 14d)
           - `stateToggles["Dummy - Routine Start"]` (the upstream trigger; expect ~14 in 14d)
 
+          **homebridge-zp watchdog**: explicitly grep `homebridgeLog.errors` for any line containing "homebridge-zp" or "ERROR LOADING PLUGIN homebridge-zp". This plugin has a history of breaking on dependency upgrades (v1.4.65 broke May 4 2026 due to upstream homebridge-lib renaming Bonjour.js -> MdnsClient.js). If any such error appears in the snapshot, flag it as PROBLEM severity with reproduction details. The current pinned version is v1.4.64; if a future upgrade reintroduces ERROR LOADING, the audit must catch it. Note that *absence* of homebridge-zp from the load list is also a signal (plugin not loaded means no HomeKit Sonos accessories).
+
           ### 6. Pattern Detection
           Cross-cutting issues: drift, recurring errors, things getting worse week-over-week. Compare to previous rolling summary.
 

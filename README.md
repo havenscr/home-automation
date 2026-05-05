@@ -302,6 +302,9 @@ $PI "sudo cp /tmp/config.json /var/lib/homebridge/config.json && sudo systemctl 
 $PI "systemctl is-active home-orchestrator sonos-commander homebridge && curl -s http://localhost:5006/api/climate/state | head -c 200 && echo && curl -s http://localhost:5005/api/speakers | head -c 200"
 ```
 
+**Homebridge systemd override** (`/etc/systemd/system/homebridge.service.d/override.conf`):
+The override sets `KillMode=mixed` and `TimeoutStopSec=10` so child processes (Apple TV plugin's `atvscript`/`atvremote` workers) are killed cleanly when Homebridge stops. Without this, every restart leaves zombie processes behind and systemd warns about left-over processes. If you re-deploy Homebridge or its UI rewrites the override file, restore those two lines.
+
 ---
 
 ## Common pitfalls
