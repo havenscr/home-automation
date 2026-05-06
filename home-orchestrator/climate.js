@@ -577,21 +577,24 @@ function createClimate({ getConfig, logActivity }) {
       }
 
       // 3b) Fan speed from ladder.
-      // Dwell guard: once a fan-speed write happens, hold for at least dwellMs
-      // before another change (default 5 min, configurable via cfg.fanDwellMinutes).
-      // Smooths out the LOW->HIGH->LOW micro-cycles seen when pressure oscillates
-      // across rung thresholds. The ladder hysteresis already protects against
-      // small drift; dwell adds a time-domain filter on top.
+      // ASYMMETRIC dwell: block stepping UP (to a louder fan) until dwellMs has
+      // passed since the last fan write, but ALWAYS allow stepping DOWN to a quieter
+      // fan. Stepping up is what causes the LOW->HIGH micro-cycles we want to suppress;
+      // stepping down is always safe and desirable (quieter, less wear, less power).
+      // Without this asymmetry, a transient pressure spike could leave fans pinned
+      // high for 5 minutes even after the room cooled below target.
       const dwellMs = (cfg.fanDwellMinutes ?? 5) * 60 * 1000;
       const desiredRank = highestRankForSlot(slot, engagedRungs) || WIND_RANK.LOW;
       const desiredWind = RANK_TO_WIND[desiredRank];
+      const observedRank = WIND_RANK[observed.windStrength] || 0;
       const lwSlot = (cfg.lastState && cfg.lastState[slot] && cfg.lastState[slot].lastWritten) || {};
       const ageOfLastFanWriteMs = lwSlot.windStrengthAt
         ? Date.now() - lwSlot.windStrengthAt
         : Number.POSITIVE_INFINITY;
       const fanMismatch = observed.windStrength && observed.windStrength !== desiredWind;
-      if (fanMismatch && ageOfLastFanWriteMs < dwellMs) {
-        slotActions.fanDwellHeld = `holding ${observed.windStrength}; want ${desiredWind} but last fan write was ${Math.round(ageOfLastFanWriteMs / 1000)}s ago (dwell ${Math.round(dwellMs / 1000)}s)`;
+      const isStepUp = desiredRank > observedRank;
+      if (fanMismatch && isStepUp && ageOfLastFanWriteMs < dwellMs) {
+        slotActions.fanDwellHeld = `holding ${observed.windStrength}; want step-up to ${desiredWind} but last fan write was ${Math.round(ageOfLastFanWriteMs / 1000)}s ago (dwell ${Math.round(dwellMs / 1000)}s)`;
       } else if (fanMismatch) {
         try {
           await setFanSpeed(slot, desiredWind.toLowerCase(), saveConfigFn);
