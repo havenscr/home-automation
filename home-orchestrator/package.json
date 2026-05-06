@@ -4,7 +4,7 @@
   "description": "Local home automation orchestrator for Hue light fading, SwitchBot control, and routines",
   "main": "server.js",
   "dependencies": {
-    "express": "4.22.1",
+    "express": "5.2.1",
     "node-cron": "4.2.1",
     "ws": "8.20.0"
   }
