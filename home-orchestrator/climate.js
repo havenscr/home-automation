@@ -58,8 +58,15 @@ function createClimate({ getConfig, logActivity }) {
   function smoothedTempF(slot, fallback) {
     const h = tempHistory[slot];
     if (!h || !h.length) return fallback;
-    const sum = h.reduce((a, b) => a + b, 0);
-    return sum / h.length;
+    // Median of the buffered samples. Median (not mean) so a single outlier
+    // reading from the LG API doesn't propagate -- with mean, one bad sample
+    // creates a ~3 min "pressure ghost" that engages ladder rungs and writes
+    // fan changes the loop will immediately want to undo.
+    const sorted = [...h].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 0
+      ? (sorted[mid - 1] + sorted[mid]) / 2
+      : sorted[mid];
   }
 
   function thinq({ pathname, method = 'GET', body = null }) {
