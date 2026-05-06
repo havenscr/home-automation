@@ -25,8 +25,14 @@ const SETPOINT_TOLERANCE_C = 0.6;
 // apartment is actually uncomfortable.
 const RUNG_THRESHOLDS_F = [1.5, 2.5, 3.5, 4.5];
 const HYSTERESIS_F = 0.5;
-// Note: COOL<->FAN auto-switching was removed; the LG unit's native thermostat handles
-// compressor cycling at target. The setJobMode helper is kept for the manual UI button.
+// Mode-switch deadband. We initially removed auto-switching but reinstated it after
+// observing that LG units sometimes keep the compressor running against stale internal
+// sensor readings even when room is well below target. Forcing FAN mode is a hard
+// guarantee that the compressor cannot run. Deadband + dwell prevent flapping.
+//   - Switch COOL -> FAN when room drops MODE_DEADBAND_F below target
+//   - Switch FAN -> COOL when room rises MODE_DEADBAND_F above target
+const MODE_DEADBAND_F = 1.0;
+const MODE_DWELL_MS = 5 * 60 * 1000;  // min time between mode writes per slot
 
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
@@ -573,13 +579,40 @@ function createClimate({ getConfig, logActivity }) {
         slotActions.setpointDeferred = `${observed.jobMode || 'unknown'} mode -- will set when COOL`;
       }
 
-      // 3a.5) Mode awareness only -- no auto-switching.
-      // The LG unit's native thermostat handles compressor cycling: when room reaches
-      // target in COOL mode, the unit shuts the compressor off but keeps the fan running.
-      // The loop used to write COOL<->FAN every few minutes; that was unnecessary churn
-      // (~133 writes/day in production). AIR_DRY is left alone (user intent).
-      // The override detector still watches jobMode for external manual changes.
-      if (observed.jobMode && observed.jobMode !== 'COOL' && observed.jobMode !== 'FAN') {
+      // 3a.5) COOL <-> FAN auto-switch (with protective tuning).
+      // Reinstated after observing LG units keep compressor running against stale
+      // internal sensor reads even when room is below target. FAN mode is a hard
+      // guarantee that compressor cannot run.
+      // Protection against the flapping that earlier removal was intended to fix:
+      //   - 1.0F deadband (was 0.5F) -- room must be 1F below to go FAN, 1F above to go COOL
+      //   - 5-min dwell -- mode can only flip every 5 min
+      //   - Median temp smoothing already in place upstream
+      // AIR_DRY (or any non-COOL/non-FAN mode) is left alone -- user intent.
+      let didModeSwitch = false;
+      if (observed.jobMode === 'COOL' || observed.jobMode === 'FAN') {
+        const wantCool = observed.jobMode === 'COOL'
+          ? observed.currentF >= slotTargetF - MODE_DEADBAND_F   // stay COOL until 1F below target
+          : observed.currentF >= slotTargetF + MODE_DEADBAND_F;  // need 1F above to flip back to COOL
+        const desiredMode = wantCool ? 'COOL' : 'FAN';
+        const lwSlotForMode = (cfg.lastState && cfg.lastState[slot] && cfg.lastState[slot].lastWritten) || {};
+        const ageOfLastModeWriteMs = lwSlotForMode.jobModeAt
+          ? Date.now() - lwSlotForMode.jobModeAt
+          : Number.POSITIVE_INFINITY;
+        slotActions.modeDecision = { current: observed.jobMode, desired: desiredMode, currentF: observed.currentF, targetF: slotTargetF };
+        if (desiredMode !== observed.jobMode && ageOfLastModeWriteMs < MODE_DWELL_MS) {
+          slotActions.modeDwellHeld = `holding ${observed.jobMode}; want ${desiredMode} but last mode write was ${Math.round(ageOfLastModeWriteMs / 1000)}s ago (dwell ${Math.round(MODE_DWELL_MS / 1000)}s)`;
+        } else if (desiredMode !== observed.jobMode) {
+          try {
+            await setJobMode(slot, desiredMode, saveConfigFn);
+            slotActions.wrote.jobMode = desiredMode;
+            didModeSwitch = true;
+          } catch (e) {
+            if (logActivity) logActivity('climate', `mode ${slot} failed: ${e.message}`);
+            slotActions.error = (slotActions.error ? slotActions.error + '; ' : '') + 'mode: ' + e.message;
+          }
+        }
+      } else if (observed.jobMode) {
+        // AIR_DRY or other non-COOL/non-FAN -- user picked it, leave it alone.
         slotActions.modeDecision = { current: observed.jobMode, leftAlone: true };
       }
 
@@ -600,7 +633,9 @@ function createClimate({ getConfig, logActivity }) {
         : Number.POSITIVE_INFINITY;
       const fanMismatch = observed.windStrength && observed.windStrength !== desiredWind;
       const isStepUp = desiredRank > observedRank;
-      if (fanMismatch && isStepUp && ageOfLastFanWriteMs < dwellMs) {
+      // Bypass dwell after a mode switch (LG ACs auto-reset fan speed on mode transitions,
+      // so we must rewrite immediately or the unit could be stuck at the wrong speed).
+      if (fanMismatch && isStepUp && ageOfLastFanWriteMs < dwellMs && !didModeSwitch) {
         slotActions.fanDwellHeld = `holding ${observed.windStrength}; want step-up to ${desiredWind} but last fan write was ${Math.round(ageOfLastFanWriteMs / 1000)}s ago (dwell ${Math.round(dwellMs / 1000)}s)`;
       } else if (fanMismatch) {
         try {

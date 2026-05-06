@@ -392,8 +392,8 @@ function renderAcCard(slot, dev, pauseInfo, effectiveTargetF) {
     +   (effectiveTargetF != null && dev.currentF != null && (dev.jobMode === 'COOL' || dev.jobMode === 'FAN')
         ? '<div class="mode-hint">'
           + (dev.currentF < effectiveTargetF
-            ? 'Below target. Loop will run as <strong>FAN</strong> (no compressor)'
-            : 'At/above target. Loop will run as <strong>COOL</strong>')
+            ? 'Below target. Compressor should be idle (' + dev.jobMode + ' mode). Switch to FAN manually if cold air persists.'
+            : 'At/above target. Loop manages fan speed via the ladder; mode (' + dev.jobMode + ') is your choice.')
           + '</div>'
         : (dev.jobMode === 'AIR_DRY'
           ? '<div class="mode-hint" style="color:var(--accent)">DRY mode. Loop is leaving this AC alone (manual choice).</div>'
