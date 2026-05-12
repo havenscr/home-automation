@@ -3393,6 +3393,10 @@ function pollHomekitHealth() {
       else if (yesterday >= exp.minPerDay) status = 'missing-today';
       else if (last7dHits >= 3) status = 'missing-yesterday';
       else status = 'chronic';
+      // Suppress alarms for presence-gated dummies when nobody is home.
+      if (exp.presenceGated && !presenceState.debouncedHome && status !== 'ok') {
+        status = 'ok-while-away';
+      }
       const prev = homekitHealthState.lastStatus[exp.name];
       if (prev != null && prev !== status) {
         if (status === 'ok') {
@@ -3411,6 +3415,170 @@ function startHomekitHealthProbe() {
   // First check 60s after startup, after the homebridge log has had time to be tailable.
   setTimeout(() => { try { pollHomekitHealth(); } catch (e) {} }, 60 * 1000);
 }
+
+// Presence detection. Reads the "Dummy - Anyone Home" stateful HomeKit switch
+// via the homebridge-config-ui-x API. The dummy itself is driven by iOS Home
+// app automations ("first person arrives" -> ON, "last person leaves" -> OFF).
+// Implements asymmetric debounce on home-orchestrator's side:
+//   - Away->Home: act immediately (you want lights/music when you walk in)
+//   - Home->Away: wait DEBOUNCE_AWAY_MS of consecutive "off" before flipping
+//     so a single iOS geofence misfire doesn't suppress anything.
+const presenceState = {
+  // The raw HomeKit state of the dummy as last seen.
+  rawOn: null,
+  // Our debounced verdict that downstream code uses.
+  debouncedHome: true,  // default to "home" -- conservative; don't silently suppress
+  // Timestamp the dummy first transitioned to "off". null when currently "on".
+  firstOffAt: null,
+  lastChangedAt: null,
+  lastPolledAt: null,
+  // Cached UIX bearer token + expiry.
+  token: null,
+  tokenExpiresAt: 0,
+  // Dummy uniqueId cached after first lookup so we don't re-scan 200+ accessories each poll.
+  dummyUniqueId: null,
+};
+const DEBOUNCE_AWAY_MS = 30 * 60 * 1000;     // 30 min consecutive "off" before believing
+const PRESENCE_POLL_MS = 60 * 1000;          // poll the dummy once a minute
+const UIX_BASE = 'http://localhost:8581';
+
+function uixGet(path) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(UIX_BASE + path);
+    const headers = {};
+    if (presenceState.token) headers['Authorization'] = 'Bearer ' + presenceState.token;
+    const req = http.request({
+      hostname: url.hostname, port: url.port, path: url.pathname + url.search,
+      method: 'GET', headers, timeout: 5000,
+    }, (res) => {
+      let data = ''; res.on('data', c => data += c);
+      res.on('end', () => {
+        if (res.statusCode === 401) return reject(new Error('UNAUTHORIZED'));
+        if (res.statusCode < 200 || res.statusCode >= 300) return reject(new Error(`HTTP ${res.statusCode}: ${data.slice(0,120)}`));
+        try { resolve(JSON.parse(data)); } catch (e) { reject(new Error('bad json: ' + e.message)); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(new Error('uix timeout')); });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+async function uixGetToken() {
+  return new Promise((resolve, reject) => {
+    const body = '{}';
+    const req = http.request({
+      hostname: 'localhost', port: 8581, path: '/api/auth/noauth',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: 5000,
+    }, (res) => {
+      let data = ''; res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(data);
+          if (!j.access_token) return reject(new Error(`no token in response (HTTP ${res.statusCode}): ${data.slice(0,160)}`));
+          presenceState.token = j.access_token;
+          presenceState.tokenExpiresAt = Date.now() + ((j.expires_in || 86400) * 1000) - 60000; // refresh 1 min early
+          resolve();
+        } catch (e) { reject(new Error(`token parse failed (HTTP ${res.statusCode}): ${data.slice(0,160)}`)); }
+      });
+    });
+    req.on('timeout', () => { req.destroy(new Error('uix token timeout')); });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function uixCall(path) {
+  // Get token if missing / expired.
+  if (!presenceState.token || Date.now() >= presenceState.tokenExpiresAt) {
+    await uixGetToken();
+  }
+  try {
+    return await uixGet(path);
+  } catch (e) {
+    if (e.message === 'UNAUTHORIZED') {
+      // Token rotated underneath us; refresh and retry once.
+      await uixGetToken();
+      return await uixGet(path);
+    }
+    throw e;
+  }
+}
+
+async function pollPresence() {
+  presenceState.lastPolledAt = Date.now();
+  try {
+    let data;
+    if (presenceState.dummyUniqueId) {
+      data = await uixCall('/api/accessories/' + presenceState.dummyUniqueId);
+    } else {
+      // First poll: find the dummy by serviceName, cache its uniqueId.
+      const all = await uixCall('/api/accessories');
+      const found = (all || []).find(a => a && a.serviceName === 'Dummy - Anyone Home');
+      if (!found) {
+        if (logActivity) logActivity('presence', 'Dummy - Anyone Home not found in homebridge -- has the switch been added?');
+        return;
+      }
+      presenceState.dummyUniqueId = found.uniqueId;
+      data = found;
+    }
+    const onChar = (data.serviceCharacteristics || []).find(c => c.type === 'On');
+    if (!onChar) return;
+    const rawOn = !!onChar.value;
+    const now = Date.now();
+    if (presenceState.rawOn !== rawOn) {
+      presenceState.lastChangedAt = now;
+      presenceState.rawOn = rawOn;
+    }
+    if (rawOn) {
+      // ON observed: clear any pending "going away" debounce and act immediately.
+      presenceState.firstOffAt = null;
+      if (!presenceState.debouncedHome) {
+        presenceState.debouncedHome = true;
+        if (logActivity) logActivity('presence', 'home -> anyoneHome=true (instant on dummy ON)');
+      }
+    } else {
+      // OFF observed. Start the debounce timer if not already running.
+      if (presenceState.firstOffAt == null) presenceState.firstOffAt = now;
+      const offAge = now - presenceState.firstOffAt;
+      if (presenceState.debouncedHome && offAge >= DEBOUNCE_AWAY_MS) {
+        presenceState.debouncedHome = false;
+        if (logActivity) logActivity('presence', `away -> anyoneHome=false (dummy OFF for ${Math.round(offAge/60000)}m, debounce ${DEBOUNCE_AWAY_MS/60000}m)`);
+      }
+    }
+  } catch (e) {
+    if (logActivity) logActivity('presence', `poll failed: ${e.message}`);
+  }
+}
+
+function startPresenceProbe() {
+  setInterval(() => { try { pollPresence(); } catch (e) {} }, PRESENCE_POLL_MS);
+  // First poll 8s after startup; homebridge needs a moment to register the dummy on cold start.
+  setTimeout(() => { try { pollPresence(); } catch (e) {} }, 8 * 1000);
+}
+
+app.get('/api/presence', (req, res) => {
+  res.json({
+    ok: true,
+    anyoneHome: presenceState.debouncedHome,
+    rawDummyOn: presenceState.rawOn,
+    debounce: {
+      awayMs: DEBOUNCE_AWAY_MS,
+      awayMinutes: Math.round(DEBOUNCE_AWAY_MS / 60000),
+      firstOffAt: presenceState.firstOffAt ? new Date(presenceState.firstOffAt).toISOString() : null,
+      awayPendingFor: presenceState.firstOffAt ? Date.now() - presenceState.firstOffAt : null,
+    },
+    lastChangedAt: presenceState.lastChangedAt ? new Date(presenceState.lastChangedAt).toISOString() : null,
+    lastPolledAt: presenceState.lastPolledAt ? new Date(presenceState.lastPolledAt).toISOString() : null,
+    dummyFound: !!presenceState.dummyUniqueId,
+  });
+});
 
 // HomeKit automation chain health. Reads the homebridge log to count how often
 // each named dummy switch has fired (state-toggle "is on" lines and commandOn
@@ -3481,6 +3649,10 @@ app.get('/api/homekit/health', (req, res) => {
   const yesterdayKey = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
   // Build the per-dummy health: status (ok | missing-today | missing-yesterday | chronic),
   // last 7d streak (how many of the last 7 days had >= minPerDay fires).
+  // Expectations with presenceGated=true get downgraded to ok-while-away when
+  // presenceState says nobody is home -- otherwise they'd false-alarm whenever
+  // Reid/Gabby are traveling and the home-app automations correctly skip firing.
+  const anyoneHome = presenceState.debouncedHome;
   const health = expectations.map(exp => {
     const d = perDummy[exp.name] || { total: 0, commands: 0, toggles: 0, lastFireAt: null, perDayCounts: {} };
     const today = d.perDayCounts[todayKey] || 0;
@@ -3495,10 +3667,15 @@ app.get('/api/homekit/health', (req, res) => {
     else if (yesterday >= exp.minPerDay) status = 'missing-today';
     else if (last7dHits >= 3) status = 'missing-yesterday';
     else status = 'chronic';
+    // Downgrade presence-gated dummies to 'ok-while-away' when nobody is home.
+    if (exp.presenceGated && !anyoneHome && status !== 'ok') {
+      status = 'ok-while-away';
+    }
     return {
       name: exp.name,
       minPerDay: exp.minPerDay,
       kind: exp.kind || 'any',
+      presenceGated: !!exp.presenceGated,
       status,
       today,
       yesterday,
@@ -3508,17 +3685,18 @@ app.get('/api/homekit/health', (req, res) => {
       perDayCounts: d.perDayCounts,
     };
   });
-  // Sort: most-broken first (chronic > missing-today > missing-yesterday > ok)
-  const statusRank = { chronic: 0, 'missing-today': 1, 'missing-yesterday': 2, ok: 3 };
+  // Sort: most-broken first (chronic > missing-today > missing-yesterday > ok-while-away > ok)
+  const statusRank = { chronic: 0, 'missing-today': 1, 'missing-yesterday': 2, 'ok-while-away': 3, ok: 4 };
   health.sort((a, b) => statusRank[a.status] - statusRank[b.status] || a.name.localeCompare(b.name));
-  // Top-line summary
-  const broken = health.filter(h => h.status !== 'ok');
+  // Top-line summary: only count actually-broken (not the ok-while-away downgrades).
+  const broken = health.filter(h => h.status !== 'ok' && h.status !== 'ok-while-away');
   res.json({
     ok: true,
     days,
     fireCount: fires.length,
     expectations: expectations.length,
     brokenCount: broken.length,
+    anyoneHome,
     health,
     topDummiesByTotal: Object.values(perDummy)
       .sort((a, b) => b.total - a.total)
@@ -3607,6 +3785,7 @@ async function start() {
   startHueHealthProbe();
   startAuditHealthProbe();
   startHomekitHealthProbe();
+  startPresenceProbe();
 
   // Verify Hue bridge
   try {
