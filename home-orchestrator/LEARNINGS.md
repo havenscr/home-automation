@@ -47,67 +47,95 @@ Parameter order is `rootCert, privateKey, cert` -- getting this wrong gives "bad
 
 ---
 
-## LG ThinQ Connect API - CRITICAL
+## LG ThinQ Connect API
 
-Captured from production trial and error against two LG portable ACs (Office + Kitchen, both LP1419IVSM-style 8000-BTU units). The official LG ThinQ Connect REST API has thin public documentation and several quirks that are not obvious until you've burned a few hours on each.
+Notes from running two LG portable ACs (Office + Kitchen) against the **new** LG ThinQ Connect REST API (PAT-auth, 2024+). Each claim below is tagged with confidence: **[VERIFIED]** = confirmed against LG's own SDK source or developer docs; **[OBSERVED]** = we've seen this behavior in our system but cannot point to a primary source; **[UNVERIFIED]** = the doc previously asserted this without checking, and post-research we still cannot confirm.
 
-### Authentication & headers
-- Auth: Personal Access Token (PAT), passed as `Authorization: Bearer <pat>`. Get one from the LG ThinQ developer portal. No OAuth refresh dance, the PAT is long-lived until revoked.
-- Required headers on every request:
+References:
+- [thinq-connect/pythinqconnect](https://github.com/thinq-connect/pythinqconnect) — LG's official Python SDK, Apache-2.0, our authoritative source for headers/error codes/endpoints
+- [wideq](https://github.com/sampsyo/wideq) — community reverse-engineering of the **legacy** ThinQ v1/v2 API. Useful for device-level behavior carryover but payload shapes differ.
+- [smartthinq-sensors (HA integration)](https://github.com/ollo69/ha-smartthinq-sensors) — best source for portable-AC quirks the community has documented.
+
+### Authentication & headers — [VERIFIED]
+- Auth: Personal Access Token, `Authorization: Bearer <pat>`. Get one from the LG ThinQ developer portal. No refresh flow — PAT is long-lived until manually revoked. Error 1103 INVALID_TOKEN / 1218 INVALID_TOKEN_AGAIN signal revocation.
+- Required headers on every request (per [thinq_api.py `_generate_headers`](https://github.com/thinq-connect/pythinqconnect/blob/main/thinqconnect/thinq_api.py)):
   - `Authorization: Bearer <pat>`
-  - `x-country: US` (or whatever your account is registered to)
-  - `x-message-id`: a 22-char base64url string, must be unique per request. We generate with `crypto.randomBytes(16).toString('base64url').slice(0, 22)`.
-  - `x-client-id`: a stable UUID per integration, persisted in `config.climate.thinq.clientId`. Get from `pair-thinq.js` run once.
-  - `x-api-key: v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3` (this is the public API key for the developer-portal flow, baked into climate.js)
-  - `x-service-phase: OP` (means production, not staging)
-- Region matters in the hostname: US accounts hit `api-aic.lgthinq.com`. The full `COUNTRY_TO_REGION` map is in climate.js -- if you move countries, update the mapping. Sending a US request to the EU host returns generic auth failures with no helpful detail.
+  - `x-country: US`
+  - `x-message-id`: 22-char urlsafe-base64, unique per request (16 random bytes, padding stripped). Our `crypto.randomBytes(16).toString('base64url').slice(0, 22)` matches the SDK exactly.
+  - `x-client-id`: stable UUID4 per integration. Persisted in `config.climate.thinq.clientId`. LG explicitly warns against generating new client IDs frequently — it can get your API calls blocked.
+  - `x-api-key: v6GFvkweNo7DK7yD3ylIZ9w52aKBU0eJ7wLXkSR3` — hardcoded constant in LG's SDK (`const.py` `API_KEY`). Identical value baked into our climate.js.
+  - `x-service-phase: OP` — operational/production. "QA" exists for staging but the public SDK only ships OP.
+- Region-specific hostname: `api-{region}.lgthinq.com` where region is `aic` (Americas including US), `eic` (Europe/MEA), `kic` (Asia-Pacific). Full mapping in our `COUNTRY_TO_REGION` matches LG's [country.py](https://github.com/thinq-connect/pythinqconnect/blob/main/thinqconnect/country.py).
 
-### Native unit is Celsius
-- AC reports current and target temperature in `temperature.unit: "C"`. Even if your unit's physical display shows Fahrenheit, the API returns Celsius.
-- climate.js converts at the API boundary so config.json and the UI work in Fahrenheit. Do NOT change the unit on the physical AC -- it complicates conversion logic without benefit.
-- Rounding: `roundC(c)` rounds to the nearest 0.5°C, matching what the AC accepts as setpoint resolution.
+### Temperature units — [VERIFIED, contradicts our earlier claim]
+**Previously asserted "Celsius is the native unit, F is a UI conversion." That's wrong.** Per [air_conditioner.py](https://github.com/thinq-connect/pythinqconnect/blob/main/thinqconnect/devices/air_conditioner.py), the AC profile exposes BOTH simultaneously: `currentTemperatureC`, `currentTemperatureF`, `targetTemperatureC`, `targetTemperatureF`, plus min/max/cool/heat/auto variants in both units. A separate `temperature.unit` field reports the user's account-level display preference ("C" or "F") — that's a UI hint, not a data format.
+- **Implication for our climate.js**: we currently call `cToF(temperature.currentTemperature)` and treat C as primary. We could read `temperature.currentTemperatureF` directly and skip the conversion. Functionally identical today, but cleaner. **Follow-up item.**
+- Per wideq source (legacy API), C-to-F was a per-device lookup table, not arithmetic. The Connect API exposing both fields side-steps that.
 
-### Sensor resolution and smoothing
-- The AC reports current temperature at 0.5°F resolution (e.g. 74.0, 74.5, 75.0 -- nothing in between).
-- This causes pressure-calculation flapping at threshold boundaries: room reads 74.5F, computes pressure 0.5F, engages a fan rung; next poll reads 74.0F, computes pressure 0.0F, disengages -- and the loop oscillates every 60 seconds.
-- Fix: a 3-sample median smoother on `currentF` per slot (`tempHistory[slot]`, `TEMP_HISTORY_LEN = 3`). Median (not mean) so a single outlier reading doesn't propagate. Display value stays raw; only pressure calc uses the smoothed value.
+### Sensor resolution — [PARTIALLY VERIFIED]
+- Native granularity is 0.5°C per [wideq/ac.py](https://github.com/sampsyo/wideq/blob/master/wideq/ac.py) parsing logic (whole numbers parsed as int, non-whole as float).
+- The 0.5°F observed flapping at threshold boundaries is **[OBSERVED]** — pressure calc oscillates when room walks between two adjacent 0.5°F values.
+- Our 3-sample median smoother on `currentF` (`tempHistory[slot]`, `TEMP_HISTORY_LEN = 3`) addresses this in our code. Median over mean so a single outlier reading from the LG API doesn't propagate. Display value stays raw; only pressure calc uses the smoothed value.
 
-### COOL <-> FAN mode quirks
-- Setpoint writes are silently ignored when the AC is in FAN or AIR_DRY mode. The unit accepts the request and returns 200, but the setpoint doesn't change. climate.js skips setpoint writes when `jobMode !== 'COOL'` and re-asserts the setpoint automatically when the loop returns the unit to COOL (`setpointEnforceable` check).
-- **Compressor stays running against stale sensor**: we observed LG units keeping the compressor active for several minutes after the room dropped below target, presumably because internal sensor readings lagged. To guarantee the compressor cannot run when the room is cool, climate.js force-writes `jobMode: FAN` rather than trusting target temp alone.
-- **Mode transitions auto-reset fan speed**: when the AC switches between COOL and FAN, it resets `windStrength` to a default (usually LOW). climate.js handles this with a `MODE_GRACE_MS = 75s` grace period in the override detector AND by force-rewriting fan speed on the same tick as the mode switch (`didModeSwitch` bypass of the fan-dwell check).
-- **Mode-switch dwell + deadband**: at default settings the room walks the deadband faster than the dwell timer, defeating it. After observing 5-6 min COOL↔FAN cycles overnight, we widened to `MODE_DEADBAND_F = 2.0` and `MODE_DWELL_MS = 10 min` on 2026-05-12. Tune these if oscillation returns.
-- **AIR_DRY (and any non-COOL/non-FAN) is user intent**: the loop never auto-switches to or from AIR_DRY. If you set it manually, the loop leaves it alone. The override detector still fires on direct mode changes from the LG app though, pausing the slot for 60 min.
+### Job modes (jobMode enum) — [PARTIALLY VERIFIED]
+- LG ThinQ Connect developer portal documents `currentJobMode` for AC as: `AIR_CLEAN`, `COOL`, `AIR_DRY`. (HEAT and AUTO target-temp fields exist on heat-pump-capable units; our portables don't have these.)
+- The legacy [wideq ACMode enum](https://github.com/sampsyo/wideq/blob/master/wideq/ac.py) is broader: `COOL, DRY, FAN, AI, HEAT, AIRCLEAN, ACO, AROMA, ENERGY_SAVING, ENERGY_SAVER`. Note `DRY` (legacy) vs `AIR_DRY` (Connect). Our code uses Connect spelling.
+- **[OBSERVED / unconfirmed]**: We see `FAN` reported by our portable ACs. The Connect docs don't list it explicitly for AC. Per [smartthinq-sensors #734](https://github.com/ollo69/ha-smartthinq-sensors/issues/734), **portable/window units sometimes expose `AIRCLEAN` as the actual fan-only mode** rather than a true `FAN` mode. Worth confirming what our ACs actually return when set to fan-only via the LG app vs. via our API write. If we're writing `FAN` and they're interpreting it as `AIRCLEAN`, fine — but the naming inconsistency is a footgun for anyone reading the code.
 
-### Override detection field timestamps
-- Each `cfg.lastState[slot].lastWritten.<field>At` stores when we last wrote that field. The override detector only compares a field if its write age is between `SETTLE_MS = 15s` (give the AC time to reflect it) and `STALE_MS = 5 min` (forget old writes so they can't trigger spurious overrides).
-- The `targetC` comparison only fires when both writer and reader were in COOL mode. In FAN/AIR_DRY the AC's "target" field drifts independently and would false-positive every poll otherwise.
-- After detection, `lastWritten` is deleted so the same change doesn't re-detect on the next poll.
+### COOL / FAN auto-switching — [OBSERVED, mostly unconfirmed]
+**Our current code makes several behavioral assumptions about LG portables that we have NOT been able to verify in LG's docs or in community reverse-engineering. Treat these as "this is what we built; here's why" rather than "this is documented LG behavior."**
+- **Setpoint writes ignored in FAN/AIR_DRY** — [UNVERIFIED]. Our `setpointEnforceable` check skips setpoint writes when `jobMode !== 'COOL'` on the assumption the AC silently drops them. LG has a documented error code `2305 COMMAND_NOT_SUPPORTED_IN_MODE` that would explain this — but it's an *error*, not silent success. **It's possible the API returns 2305 and our code is swallowing it as a generic error.** Worth instrumenting next time we touch this.
+- **Compressor running against stale sensor reads** — [UNVERIFIED, possibly hardware-side]. We force-write `jobMode: FAN` when room is cool rather than trusting the AC's own temperature comparison. No community evidence of this; thermistor-placement issues are widely discussed for portables generally but that's hardware, not API.
+- **Mode transitions auto-reset fan speed** — [UNVERIFIED]. Our `MODE_GRACE_MS = 75s` window and `didModeSwitch` dwell-bypass exist on the assumption that switching COOL↔FAN drops `windStrength` to a default. Nobody has documented this; we observed it once and hardcoded a workaround.
+- **MODE_DEADBAND_F = 2.0, MODE_DWELL_MS = 10min** — [OBSERVED, our tuning]. Set 2026-05-12 after watching the loop cycle COOL↔FAN every 5-6 min overnight. Earlier 1°F/5min defeated itself because the room walked the band in the same time as the dwell.
+- **AIR_DRY left alone** — our policy. Loop never auto-switches to or from AIR_DRY. User-set mode is treated as intent and preserved. Override detector still fires on direct mode changes via the LG app, pausing the slot 60 min.
 
-### Rate limits and observed error codes
+### Override detection — [our design, no LG-side equivalent]
+- Each `cfg.lastState[slot].lastWritten.<field>At` stores when we last wrote that field. The override detector only compares if write age is between `SETTLE_MS = 15s` (give the AC time to reflect) and `STALE_MS = 5 min` (forget old writes).
+- The `targetC` comparison only fires when both writer and reader were in COOL mode. In FAN/AIR_DRY the AC's reported "target" can drift independently of what we wrote — would false-positive every poll otherwise.
+- After detection, `lastWritten` is deleted so the same change doesn't re-trigger.
 
-| HTTP | LG code | Meaning | Handled? |
-|---|---|---|---|
-| 401 | 1314 | "Exceeded User API calls" -- you hit the per-account rate limit | YES - exponential backoff per slot, 60s -> 10min cap (`trackRateLimit`) |
-| 416 | 1222 | "Not connected device" -- AC is offline, sleeping, or LG cloud lost it | NO - bubbles as generic error, next tick retries. Self-recovers when AC reconnects. |
-| 400 | 2214 | "Fail Request" -- generic catch-all, no actionable detail | NO - same as above. Often transient, often clusters around config patches. |
+### Error codes — [partially VERIFIED, partially CONTRADICTED]
+LG's SDK ([thinq_api.py error class](https://github.com/thinq-connect/pythinqconnect/blob/main/thinqconnect/thinq_api.py)) enumerates these. Codes we've definitely seen vs codes we *thought* we saw:
 
+| LG code | Meaning | Status |
+|---|---|---|
+| **1306** | EXCEEDED_API_CALLS — rate limit | **VERIFIED** in SDK. **Our code matches on `/1314/` instead. 1314 is NOT in LG's SDK error table.** We may have mis-read the error body once and pattern-matched on the wrong number for the last year. Worth grepping production logs for "1306" to see what's actually been firing. |
+| 1222 | NOT_CONNECTED_DEVICE — AC's WiFi is offline | VERIFIED. Per [HA core #139022](https://github.com/home-assistant/core/issues/139022), persists until the device's WiFi reassociates. No auto-recovery interval. |
+| 2214 | FAIL_REQUEST — generic catch-all | VERIFIED. No actionable detail. Often transient. |
+| 1103 / 1218 | INVALID_TOKEN — PAT revoked | VERIFIED. Rotate via developer portal. |
+| 2305 | COMMAND_NOT_SUPPORTED_IN_MODE | VERIFIED (existence). May be the *real* signal we attribute to "silent failure in FAN mode." |
+| 2209 / 2210 / 2212 | DEVICE_RESPONSE_DELAY / RETRY_REQUEST / SYNCING | VERIFIED. **Our code doesn't distinguish these.** They suggest retry-with-backoff is appropriate rather than bubbling as errors. |
+| 2301 / 2304 | COMMAND_NOT_SUPPORTED_IN_REMOTE_OFF / _IN_POWER_OFF | VERIFIED. Useful for diagnosing failed writes after a power cycle. |
+
+**Action items from this audit** (logged for future work, not fixing here):
+- Fix the rate-limit regex to match `1306` not `1314`. Grep production logs to confirm what the body actually contains.
+- Add explicit handling for 2209/2210/2212 (transient, retry) vs 2305 (mode-incompatible, give up).
+- Surface 1103/1218 (revoked PAT) loudly — currently they bubble as generic errors and the loop just keeps failing.
+
+### Rate-limit observations — [our system, no LG-published numbers]
+- LG does not publish a rate-limit threshold. Community reports ([smartthinq-sensors #903](https://github.com/ollo69/ha-smartthinq-sensors/issues/903)) ask for it; LG never answered.
+- Our exponential backoff per slot (60s base, 10min cap) is a guess that has held up empirically.
 - Rate-limit backoff is **per-slot**, not global. Office getting rate-limited doesn't pause Kitchen.
-- Rate-limit events log to activity.log as `<slot> rate-limited by LG; backing off Xs`.
-- The bi-weekly audit reads activity.log and flags rate-limit clusters. Don't chase a one-time burst (usually a config-tuning artifact); investigate sustained clusters.
 
-### Runaway-write breaker
-- Added 2026-05-12 as defense against a stuck control loop. If a slot crosses 30 writes in a rolling 10-min window, the breaker engages a 30-min global pause and logs loudly. Clear via `POST /api/climate/global/resume` or the diagnostics tab button.
-- Threshold (30 in 10 min = 3 writes/min) is intentionally well above normal traffic (we observed ~12-25 writes/hour at peak during the 2026-05-12 oscillation incident, comfortably below the cap). If you see legitimate writes tripping it, the loop has a real bug.
+### Runaway-write breaker — [our design]
+- Added 2026-05-12. If a slot crosses 30 writes in a rolling 10-min window, the breaker engages a 30-min global pause and logs loudly. Clear via `POST /api/climate/global/resume` or the diagnostics tab button.
+- Threshold (30 in 10 min = 3 writes/min) is well above normal traffic (peak ~12-25 writes/hour during the 2026-05-12 oscillation incident).
 
-### "Not connected" recovery and HTTP 416 handling
-- After power outages or LG cloud blips, ACs sometimes report HTTP 416 / code 1222 for a few minutes before reconnecting. climate.js does not require special handling -- the next successful read repopulates cache and the loop resumes.
-- We never auto-power an AC on. If both ACs report POWER_OFF, the loop excludes them from pressure calculation entirely (`userOff`) and waits. Reid turns them back on manually.
+### Recovery semantics — [VERIFIED behavior, our handling]
+- After power outages or LG cloud blips, expect code 1222 episodes lasting until WiFi reassociates. No special handling needed — next successful read repopulates cache and the loop resumes.
+- We never auto-power an AC on. If both ACs report POWER_OFF, the loop excludes them (`userOff`) and waits.
 
-### Discovery and device IDs
-- Run `pair-thinq.js` once to enumerate your account's devices. It prints each AC's `deviceId` (a 64-char hex string) and `displayName`.
-- Stick the IDs in `config.climate.devices.<slot>.deviceId`. Slot name (`office`, `kitchen`) is arbitrary local-to-us, used in logs, UI, and ladder rungs.
-- IDs are stable across firmware updates and account moves. Replace only if you swap the physical AC.
+### Discovery and device IDs — [VERIFIED]
+- Run `pair-thinq.js` once to enumerate devices. Each AC's `deviceId` (64-char hex per our observation, but LG treats it as opaque string — don't depend on format) and `displayName` get printed.
+- Stick the IDs in `config.climate.devices.<slot>.deviceId`. Slot name (`office`, `kitchen`) is arbitrary local-to-us.
+
+### Architecture options we're NOT using — [VERIFIED, worth knowing]
+LG offers a documented push-event subscription via AWS IoT Core MQTT (`POST /event/{device_id}/subscribe`, 186-day lease per subscription; also `POST /push/{device_id}/subscribe` for device-level notifications). Client cert flow via `POST /client/certificate`. **This would eliminate polling and the rate-limit pressure entirely.** Not pursued today because polling-and-control works, but if rate limits become a real problem this is the LG-blessed path forward.
+
+LG also exposes an energy-usage endpoint (`GET /devices/energy/{id}/usage?property=&period=&startDate=&endDate=`) that could feed the bi-weekly audit pipeline.
+
+The SDK auto-adds `x-conditional-control: true` header on control writes. We don't. Worth checking whether some of our writes are failing state-consistency checks that this header would bypass.
 
 ---
 
