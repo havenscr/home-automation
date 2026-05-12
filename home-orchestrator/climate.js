@@ -740,9 +740,73 @@ function createClimate({ getConfig, logActivity }) {
     return inFlightTick;
   }
 
+  // Boot-time validator: walks config.climate.ladder and surfaces drift that
+  // we've manually fixed before so the next occurrence shows up in the log
+  // immediately instead of waiting for a symptom. Warn-only -- never mutates
+  // config. Returns an array of warning strings (also pushed to activity log).
+  function validateLadder() {
+    const warnings = [];
+    const cfg = getConfig().climate || {};
+    const ladder = cfg.ladder;
+    if (ladder == null) {
+      warnings.push('ladder missing entirely; control loop will be a no-op until populated');
+      return warnings;
+    }
+    if (typeof ladder !== 'object' || Array.isArray(ladder)) {
+      warnings.push(`ladder must be a plain object, got ${Array.isArray(ladder) ? 'array' : typeof ladder}`);
+      return warnings;
+    }
+    // Numeric/junk keys from a prior char-spread corruption bug.
+    const junkKeys = Object.keys(ladder).filter(k => /^\d+$/.test(k));
+    if (junkKeys.length) {
+      warnings.push(`ladder has ${junkKeys.length} numeric junk keys (likely leftover from a string-spread bug): ${junkKeys.join(',')}`);
+    }
+    // Each named ladder must be an array of [room, speed] pairs with allowed speeds.
+    const allowedSpeeds = new Set(['low', 'mid', 'medium', 'high']);
+    const slotNames = new Set(Object.keys(cfg.devices || {}));
+    for (const name of Object.keys(ladder)) {
+      if (/^\d+$/.test(name)) continue; // already flagged
+      const rungs = ladder[name];
+      if (!Array.isArray(rungs)) {
+        warnings.push(`ladder.${name} must be an array of [room, speed] pairs, got ${typeof rungs}`);
+        continue;
+      }
+      rungs.forEach((rung, i) => {
+        if (!Array.isArray(rung) || rung.length !== 2) {
+          warnings.push(`ladder.${name}[${i}] must be a 2-element [room, speed] tuple`);
+          return;
+        }
+        const [room, speed] = rung;
+        if (typeof room !== 'string' || !room.length) {
+          warnings.push(`ladder.${name}[${i}] room must be a non-empty string`);
+        } else if (slotNames.size && !slotNames.has(room)) {
+          warnings.push(`ladder.${name}[${i}] references unknown room "${room}" (known slots: ${[...slotNames].join(', ')})`);
+        }
+        if (typeof speed !== 'string' || !allowedSpeeds.has(String(speed).toLowerCase())) {
+          warnings.push(`ladder.${name}[${i}] speed "${speed}" not in ${[...allowedSpeeds].join('|')}`);
+        }
+      });
+    }
+    // Drift checks: officeQuiet ladder shouldn't allow office HIGH (per project memory).
+    // This is a known historical drift; warn but don't fix -- forces a human decision.
+    const oq = Array.isArray(ladder.officeQuiet) ? ladder.officeQuiet : [];
+    const officeHighInQuiet = oq.find(r => Array.isArray(r) && r[0] === 'office' && String(r[1]).toLowerCase() === 'high');
+    if (officeHighInQuiet) {
+      warnings.push('ladder.officeQuiet contains ["office","high"] -- project convention caps office at MID during quiet hours; drop the rung or move the cap');
+    }
+    // Sanity: default and officeQuiet should both exist.
+    if (!ladder.default) warnings.push('ladder.default missing -- the controller will engage zero rungs outside office quiet hours');
+    if (!ladder.officeQuiet) warnings.push('ladder.officeQuiet missing -- weekday 10-6 will fall back to default ladder');
+    return warnings;
+  }
+
   function start(saveConfigFn) {
     const cfg = getConfig().climate || {};
     const intervalSec = (cfg.fanRamp && cfg.fanRamp.pollSeconds) || 60;
+    const ladderWarnings = validateLadder();
+    for (const w of ladderWarnings) {
+      if (logActivity) logActivity('climate', `ladder-validator: ${w}`);
+    }
     setInterval(() => {
       const c = getConfig().climate || {};
       if (!c.enabled) return;
@@ -750,7 +814,7 @@ function createClimate({ getConfig, logActivity }) {
         if (logActivity) logActivity('climate', `tick error: ${e.message}`);
       });
     }, intervalSec * 1000);
-    if (logActivity) logActivity('climate', `controller started (poll ${intervalSec}s)`);
+    if (logActivity) logActivity('climate', `controller started (poll ${intervalSec}s, ${ladderWarnings.length} ladder warnings)`);
   }
 
   // ---- Public snapshot ----
@@ -818,6 +882,8 @@ function createClimate({ getConfig, logActivity }) {
     readAll,
     readDevice,
     getSnapshot,
+    validateLadder,
+    pressureToRungCount,
     getMode,
     getActiveLadder,
     setTargetTempF,

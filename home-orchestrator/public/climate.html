@@ -272,21 +272,21 @@
     <div id="stats-summary" style="font-size:13px;color:var(--muted);margin-bottom:12px"></div>
     <div id="stats-table"></div>
   </div>
-  <div class="card" style="margin-top:14px">
-    <div class="section-title">HomeKit automation chain health</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Tracks dummy switches that should fire daily (e.g. Routine Start, Fade Start Sunset). When a switch goes missing from the homebridge log for a day or more, the HomeKit-side automation that triggers it is likely broken (disabled, wrong condition, deleted). Catches broken chains within hours instead of waiting for the bi-weekly audit. Configure expectations in `config.homekitExpectations`.</div>
+  <details class="card" style="margin-top:14px" open>
+    <summary style="cursor:pointer;list-style:none"><div class="section-title" style="display:inline-block;margin:0">HomeKit automation chain health</div></summary>
+    <div style="font-size:12px;color:var(--muted);margin:10px 0">Tracks dummy switches that should fire daily (e.g. Routine Start, Fade Start Sunset). When a switch goes missing from the homebridge log for a day or more, the HomeKit-side automation that triggers it is likely broken (disabled, wrong condition, deleted). Catches broken chains within hours instead of waiting for the bi-weekly audit. Configure expectations in `config.homekitExpectations`.</div>
     <div id="homekit-health"></div>
-  </div>
-  <div class="card" style="margin-top:14px">
-    <div class="section-title">Runaway-write breaker</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">If a slot does more than the threshold of writes inside the rolling window, the breaker engages a global pause for 30 minutes. Defense against a stuck loop burning the LG API quota.</div>
+  </details>
+  <details class="card" style="margin-top:14px">
+    <summary style="cursor:pointer;list-style:none"><div class="section-title" style="display:inline-block;margin:0">Runaway-write breaker</div></summary>
+    <div style="font-size:12px;color:var(--muted);margin:10px 0">If a slot does more than the threshold of writes inside the rolling window, the breaker engages a global pause for 30 minutes. Defense against a stuck loop burning the LG API quota.</div>
     <div id="breaker-state"></div>
-  </div>
-  <div class="card" style="margin-top:14px">
-    <div class="section-title">Last manual override evidence</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When the loop pauses an AC because it detected a setting change it didn't make, this shows what it saw. Helps tell a real human/app override apart from a spurious one (e.g. fan reset by the LG unit on a mode transition).</div>
+  </details>
+  <details class="card" style="margin-top:14px">
+    <summary style="cursor:pointer;list-style:none"><div class="section-title" style="display:inline-block;margin:0">Last manual override evidence</div></summary>
+    <div style="font-size:12px;color:var(--muted);margin:10px 0">When the loop pauses an AC because it detected a setting change it didn't make, this shows what it saw. Helps tell a real human/app override apart from a spurious one (e.g. fan reset by the LG unit on a mode transition).</div>
     <div id="override-evidence"></div>
-  </div>
+  </details>
 </div>
 
 <div class="tab-content" id="tab-log">

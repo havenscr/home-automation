@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Local home automation orchestrator for Hue light fading, SwitchBot control, and routines",
   "main": "server.js",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  },
   "dependencies": {
     "express": "5.2.1",
     "node-cron": "4.2.1",

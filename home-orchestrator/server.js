@@ -3000,11 +3000,8 @@ app.get('/api/climate/config', (req, res) => {
   });
 });
 
-// Kick off the polling loop. tickInterval gates itself on config.climate.enabled.
-climate.start(saveConfig);
-startHueHealthProbe();
-startAuditHealthProbe();
-startHomekitHealthProbe();
+// Background pollers are started from start() after loadConfig() so they see
+// the loaded config rather than the empty default object.
 
 // Picture mode
 app.post('/api/tv/picture-mode/:mode', async (req, res) => {
@@ -3604,6 +3601,12 @@ app.use('/api/sonos', (req, res) => {
 // ─── Startup ────────────────────────────────────────────────────────────────
 async function start() {
   loadConfig();
+
+  // Background pollers depend on config being loaded.
+  climate.start(saveConfig);
+  startHueHealthProbe();
+  startAuditHealthProbe();
+  startHomekitHealthProbe();
 
   // Verify Hue bridge
   try {

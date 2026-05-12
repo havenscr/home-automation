@@ -115,7 +115,8 @@ The newest addition. Replaces fragile LG-side routines with a polling control lo
 - **Setpoint writes are skipped when AC is in FAN/AIR_DRY mode** (the unit ignores them anyway). Re-asserted automatically when the loop returns the unit to COOL.
 - **Fan write debounce**: skips redundant fan writes if the same value was set within the last 5 minutes and the AC reflects it.
 - **Pressure smoothing**: 3-sample moving average on each room's `currentF` before computing pressure, so the 0.5F-resolution temp sensor doesn't cause ladder rungs to flap at thresholds.
-- **Runaway-write circuit breaker**: if any slot accumulates 30+ writes in a rolling 10-minute window, the breaker engages a 30-min global pause and logs loudly. Defense against a stuck loop hammering the LG API. Per-slot counter visible in the diagnostics tab. Clear via `POST /api/climate/global/resume`.
+- **Runaway-write circuit breaker**: if any slot accumulates 30+ writes in a rolling 10-minute window, the breaker engages a 30-min global pause and logs loudly. Defense against a stuck loop hammering the LG API. Per-slot counter visible in the diagnostics tab. Clear via `POST /api/climate/global/resume` (or the "Clear pause now" button in the diagnostics tab when paused).
+- **Ladder startup validator**: on boot, `climate.start()` runs a shape check on `config.climate.ladder` and logs warnings to `activity.log` under `ladder-validator:` for any drift (junk numeric keys, malformed `[room, speed]` tuples, unknown room references, invalid speed values, office-HIGH-in-officeQuiet violating the quiet-hours cap, missing `default` or `officeQuiet`). Warn-only — never mutates config. Tests in `home-orchestrator/test/climate.test.js` cover the known bug shapes.
 - **UI** at `/climate.html` is fully editable: dashboard with per-AC manual control, settings tab for all schedule + override values, a ladder tab where you can add/remove rungs, reorder via up/down buttons, and edit room or fan speed inline, and a diagnostics tab showing rolling-window mode flips, fan changes, override pauses, the breaker state, and the last manual-override evidence (what the loop wrote vs what the AC reported, so genuine overrides can be told apart from spurious LG-side fan-resets). All edits saved via `PATCH /api/climate/config`. Diagnostics pulled from `GET /api/climate/stats?hours=N`.
 
 #### Daytime gradient
@@ -264,6 +265,16 @@ The Pi is at the absolute edge of its capacity. Avoid heavy frameworks (no React
 
 ---
 
+## Tests
+
+`home-orchestrator/test/climate.test.js` exercises the ladder validator, `pressureToRungCount` hysteresis, and C/F unit conversions using Node's built-in test runner (no Jest dependency on the Pi). Run with:
+
+```bash
+cd home-orchestrator && npm test
+```
+
+Coverage is intentionally narrow — only the bug shapes we have actually hit (char-spread corruption, office-HIGH drift, off-by-one hysteresis). Add a test when you fix a bug that's worth not regressing on, not for completeness.
+
 ## Deployment
 
 **SSH note:** use Windows native OpenSSH, never Git's bundled SSH (it silently eats stdout):
@@ -374,7 +385,7 @@ gh issue list --repo havenscr/home-automation --label home-audit
 
 **Freshness self-check:** `GET http://192.168.1.61:5006/api/audit/health` returns `{state: fresh|stale|missing, ageHours}` for the snapshot file. Polled internally every hour; logs once on state transitions. Threshold is 14h (one missed 12h cron + buffer). Was added 2026-05-12 after the cron silently no-op'd for 7 days due to a `/var/log` permission denial on its redirect target. Reach it from HomeKit by adding a Homebridge dummy switch whose `commandOn` curl-pings this endpoint and toggles a HomeKit notification accessory when state != fresh.
 
-**HomeKit chain self-check:** `GET http://192.168.1.61:5006/api/homekit/health?days=14` returns per-dummy fire counts (today, yesterday, last 7d streak) and a status field (`ok` / `missing-today` / `missing-yesterday` / `chronic`). Expected dummies are declared in `home-orchestrator/config.json` under the top-level `homekitExpectations` key (array of `{name, minPerDay}`); if absent, falls back to a default list including `Dummy - Routine Start` and `Dummy - Fade Start Sunset` — the two known-problematic ones the bi-weekly audit kept flagging. Polled internally every hour and logs transitions to `homekit-health` activity type. Catches a broken Home app automation within hours instead of the 14-day audit window. Constraint: depends on `/var/lib/homebridge/homebridge.log` which only retains ~2 days of fires at current verbosity, so the 14d window is best-effort and may report fewer `last7dHits` than reality. Surfaced in the climate.html Diagnostics tab.
+**HomeKit chain self-check:** `GET http://192.168.1.61:5006/api/homekit/health?days=14` returns per-dummy fire counts (today, yesterday, last 7d streak) and a status field (`ok` / `missing-today` / `missing-yesterday` / `chronic`). Expected dummies are declared in `home-orchestrator/config.json` under the top-level `homekitExpectations` key (array of `{name, minPerDay}`); if absent, falls back to a default list including `Dummy - Routine Start` and `Dummy - Fade Start Sunset` — the two known-problematic ones the bi-weekly audit kept flagging. Polled internally every hour and logs transitions to `homekit-health` activity type. Catches a broken Home app automation within hours instead of the 14-day audit window. Constraint: depends on `/var/lib/homebridge/homebridge.log` which homebridge-config-ui-x truncates when it exceeds `log.maxSize` (raised on 2026-05-12 from the default 1MB / 200KB-retained to 10MB / 2MB-retained, giving ~20 days of history instead of ~2). Surfaced in the climate.html Diagnostics tab.
 
 ---
 
