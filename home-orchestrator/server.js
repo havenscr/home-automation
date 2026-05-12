@@ -3588,33 +3588,9 @@ app.get('/api/presence', (req, res) => {
 // happened with Dummy - Routine Start firing 2/14 days before the audit
 // flagged it on 2026-05-04).
 const HOMEBRIDGE_LOG = '/var/lib/homebridge/homebridge.log';
-function parseHbTimestamp(s) {
-  // Format: "12/05/2026, 07:55:02" -- DD/MM/YYYY, HH:MM:SS
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4}),\s+(\d{2}):(\d{2}):(\d{2})$/);
-  if (!m) return null;
-  // Local time (Pi is set to America/Los_Angeles). Use Date(year, monthIdx, day, hr, min, sec) which is local.
-  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6])).getTime();
-}
+const { readDummyFiresFromFile } = require('./lib/homebridge-log');
 function readHomebridgeFires(maxAgeMs) {
-  let raw;
-  try { raw = fs.readFileSync(HOMEBRIDGE_LOG, 'utf8'); } catch { return []; }
-  const lines = raw.split('\n');
-  // Tail to last 200000 lines; older than 200000 is older than ~2 weeks even at
-  // peak chatter. Avoids reading multi-MB on every probe.
-  const tail = lines.slice(-200000);
-  const cutoff = Date.now() - maxAgeMs;
-  const fires = [];
-  // Strip ANSI from each line; match "[ts] [Homebridge Dummy] Name is on" or "...executed command"
-  const re = /^\[([^\]]+)\]\s+\[Homebridge Dummy\]\s+(.+?)\s+(is on|executed command)/;
-  for (const lineRaw of tail) {
-    const line = lineRaw.replace(/\x1b\[[0-9;]*m/g, '');
-    const m = line.match(re);
-    if (!m) continue;
-    const ts = parseHbTimestamp(m[1]);
-    if (ts == null || ts < cutoff) continue;
-    fires.push({ ts, name: m[2].trim(), kind: m[3] === 'is on' ? 'toggle' : 'command' });
-  }
-  return fires;
+  return readDummyFiresFromFile(HOMEBRIDGE_LOG, maxAgeMs);
 }
 app.get('/api/homekit/health', (req, res) => {
   const days = Math.min(Math.max(Number(req.query.days) || 14, 1), 30);

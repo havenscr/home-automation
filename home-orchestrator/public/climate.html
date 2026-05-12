@@ -20,6 +20,14 @@
   .tab:hover { color:var(--text); }
   .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
   .tab-content { display:none; padding:16px; max-width:1100px; margin:0 auto; }
+  /* Horizontally-scrollable wrapper for diagnostics tab tables. The
+     diagnostics tables (stats, HomeKit health, breaker, override evidence)
+     have multiple columns that overflow on iPhone width (375px). Wrap each
+     table render in <div class="table-scroll">...</div> so the user swipes
+     sideways within the card instead of the whole page becoming wider than
+     the viewport. */
+  .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .table-scroll table { min-width:max-content; }
   .tab-content.active { display:block; }
   .card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
   .card.paused { border-left:3px solid var(--warn); }
@@ -893,11 +901,11 @@ async function loadStats() {
         + '<td>' + s.rateLimits + '</td>'
         + '</tr>';
     }).join('');
-    $('stats-table').innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+    $('stats-table').innerHTML = '<div class="table-scroll"><table style="width:100%;border-collapse:collapse;font-size:13px">'
       + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
       + '<th style="padding:6px 8px">Slot</th><th style="padding:6px 8px">Mode flips</th><th style="padding:6px 8px">Fan changes</th>'
       + '<th style="padding:6px 8px">Overrides</th><th style="padding:6px 8px">Read fails</th><th style="padding:6px 8px">Rate limits</th></tr></thead>'
-      + '<tbody>' + rows + '</tbody></table>';
+      + '<tbody>' + rows + '</tbody></table></div>';
   } catch (e) {
     $('stats-table').innerHTML = '<div style="color:var(--danger);font-size:13px">Stats load failed: ' + e.message + '</div>';
   }
@@ -930,12 +938,12 @@ async function loadStats() {
       + hk.brokenCount + ' of ' + hk.expectations + ' expected dummies have issues. '
       + hk.fireCount + ' total dummy fires logged in last ' + hk.days + ' days.</div>';
     $('homekit-health').innerHTML = summary
-      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<div class="table-scroll"><table style="width:100%;border-collapse:collapse;font-size:13px">'
       + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
       + '<th style="padding:4px 8px">Dummy</th><th style="padding:4px 8px">Status</th>'
       + '<th style="padding:4px 8px">Today</th><th style="padding:4px 8px">Yesterday</th>'
       + '<th style="padding:4px 8px">Last 7d</th><th style="padding:4px 8px">Last fire</th></tr></thead>'
-      + '<tbody>' + rows + '</tbody></table>';
+      + '<tbody>' + rows + '</tbody></table></div>';
   } catch (e) {
     $('homekit-health').innerHTML = '<div style="color:var(--danger);font-size:13px">HomeKit health load failed: ' + e.message + '</div>';
   }
@@ -960,10 +968,10 @@ async function loadStats() {
         + ' <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="clearBreakerPause()">Clear pause now</button></div>'
       : '';
     $('breaker-state').innerHTML = pauseBanner + tripped
-      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<div class="table-scroll"><table style="width:100%;border-collapse:collapse;font-size:13px">'
       + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
       + '<th style="padding:4px 8px">Slot</th><th style="padding:4px 8px">Writes in last ' + br.windowMinutes + 'm</th></tr></thead>'
-      + '<tbody>' + writesRows + '</tbody></table>';
+      + '<tbody>' + writesRows + '</tbody></table></div>';
   } else {
     $('breaker-state').innerHTML = '<div style="color:var(--muted);font-size:13px">No breaker data.</div>';
   }
@@ -992,10 +1000,10 @@ async function loadStats() {
     return '<div style="margin-bottom:14px"><div style="font-weight:600;margin-bottom:6px">' + slot
       + ' <span style="color:var(--muted);font-size:11px;font-weight:400">@ ' + fmtTs(e.at) + '</span></div>'
       + '<div style="color:var(--muted);font-size:12px;margin-bottom:6px">Triggered by: ' + e.reasons.join(', ') + '</div>'
-      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<div class="table-scroll"><table style="width:100%;border-collapse:collapse;font-size:13px">'
       + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
       + '<th style="padding:4px 8px">Field</th><th style="padding:4px 8px">We wrote</th><th style="padding:4px 8px">AC reported</th><th style="padding:4px 8px">Write age</th></tr></thead>'
-      + '<tbody>' + fields + '</tbody></table></div>';
+      + '<tbody>' + fields + '</tbody></table></div></div>';
   }).join('');
 }
 

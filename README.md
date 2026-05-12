@@ -267,13 +267,21 @@ The Pi is at the absolute edge of its capacity. Avoid heavy frameworks (no React
 
 ## Tests
 
-`home-orchestrator/test/climate.test.js` exercises the ladder validator, `pressureToRungCount` hysteresis, and C/F unit conversions using Node's built-in test runner (no Jest dependency on the Pi). Run with:
+Both services have smoke-test suites using Node's built-in test runner (no Jest dependency on the Pi). Run from each service directory:
 
 ```bash
-cd home-orchestrator && npm test
+cd home-orchestrator && npm test    # 31 tests
+cd sonos-commander && npm test      # 21 tests
 ```
 
-Coverage is intentionally narrow — only the bug shapes we have actually hit (char-spread corruption, office-HIGH drift, off-by-one hysteresis). Add a test when you fix a bug that's worth not regressing on, not for completeness.
+Coverage:
+- `home-orchestrator/test/climate.test.js`: ladder validator (corruption shapes, office-HIGH drift, malformed tuples, unknown rooms, invalid speeds), `pressureToRungCount` hysteresis, C/F unit conversions.
+- `home-orchestrator/test/homebridge-log.test.js`: timestamp parser (DD/MM/YYYY format, malformed input), ANSI strip, dummy-fire line extraction (toggle vs command), windowing.
+- `sonos-commander/test/helpers.test.js`: model→capabilities mapping (Playbar/Playbase/Beam/Arc/Ray → tv; Five/Play:5/Port/Amp/Connect → lineIn), Boost detection, TV-mode preflight skip decision, join-candidate selection with the real production speaker set.
+
+Coverage is intentionally narrow — only the bug shapes we have actually hit (char-spread corruption, office-HIGH drift, off-by-one hysteresis, malformed homebridge log lines, Boost-not-filtered, TV-mode 402 retries). Add a test when you fix a bug that's worth not regressing on, not for completeness.
+
+Pure helpers shared between server.js and tests live in `lib/` per service: `home-orchestrator/lib/homebridge-log.js` and `sonos-commander/lib/sonos-helpers.js`. server.js imports from them so the tests can exercise the same code paths without booting the full service.
 
 ## Deployment
 

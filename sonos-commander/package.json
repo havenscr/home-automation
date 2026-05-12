@@ -3,6 +3,9 @@
   "version": "2.0.0",
   "description": "Local Sonos automation controller",
   "main": "server.js",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\""
+  },
   "dependencies": {
     "express": "4.22.1",
     "sonos": "1.14.2"

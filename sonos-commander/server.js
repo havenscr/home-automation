@@ -104,15 +104,9 @@ function getDefaultGroupPresets() {
 }
 
 // ─── Speaker Capabilities ────────────────────────────────────────────────────
-function getModelCapabilities(model) {
-  const m = (model || '').toLowerCase();
-  const caps = [];
-  // Speakers with line-in (3.5mm or auto-detect)
-  if (m.includes('five') || m.includes('play:5') || m.includes('port') || m.includes('amp') || m.includes('connect')) caps.push('lineIn');
-  // Speakers with TV input (HDMI ARC / optical)
-  if (m.includes('playbase') || m.includes('playbar') || m.includes('beam') || m.includes('arc') || m.includes('ray')) caps.push('tv');
-  return caps;
-}
+// Pure helpers extracted to lib/sonos-helpers.js so they can be unit-tested.
+const sonosHelpers = require('./lib/sonos-helpers');
+const getModelCapabilities = sonosHelpers.getModelCapabilities;
 
 // ─── Sonos Discovery ────────────────────────────────────────────────────────
 async function discoverSpeakers() {
@@ -1010,8 +1004,7 @@ async function executeRoutine(id, options = {}) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function isBoost(name) {
-  const info = speakerInfo[name];
-  return info && info.model && info.model.indexOf('Boost') !== -1;
+  return sonosHelpers.isBoostInfo(speakerInfo[name]);
 }
 function speakerNames() { return Object.keys(speakers).filter(n => !isBoost(n)); }
 
