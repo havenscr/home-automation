@@ -56,7 +56,7 @@ Both Node services are stateless restartable — config lives on disk, no databa
 The "brain" service. Runs lighting routines, climate control, time-of-day color gradients, and TV input switching.
 
 **What it controls:**
-- **Philips Hue** lights via the Bridge at `192.168.1.2` (group commands to avoid rate limiting)
+- **Philips Hue** lights via the Bridge at `192.168.1.2` (group commands to avoid rate limiting). Health probe at `GET /api/hue/health` returns last latency + 1h reachability % from a rolling 60-sample buffer (5-min poll). Logs once on reachable<->unreachable transitions, two consecutive failures required before flipping state to suppress single-probe noise.
 - **Lutron Caseta** dimmers via the LEAP TLS protocol (Smart Bridge 2 at `192.168.1.14`)
 - **Nanoleaf** panels at `192.168.1.149`
 - **SwitchBot** scenes via cloud API (no local LAN protocol exists)
@@ -107,7 +107,7 @@ The newest addition. Replaces fragile LG-side routines with a polling control lo
 - **Office quiet hours** (Mon-Fri 10am-6pm): office capped at MID fan; kitchen ramps to compensate when room is hot. Outside these hours, the default ladder lets office go HIGH and become the apt's primary cooler.
 - **Manual override auto-detect**: if the LG app, the unit's buttons, or anyone else changes a setpoint or fan speed, the orchestrator pauses that AC for 30 minutes (configurable) before resuming control. Detection is automatic — no button press needed.
 - **User-off detection**: if you turn an AC fully off (LG app, the unit, or our `/power` endpoint), the loop excludes it from pressure calculation and never tries to write to it or wake it back up. The other AC continues normal control. Banner in the UI makes it obvious. Turn it back on and control resumes immediately.
-- **COOL ↔ FAN auto-switching with protection**: when room drops 1°F below target the loop switches that AC from COOL to FAN (compressor forced off). When room rises 1°F above target it switches back to COOL. A 5-minute mode-write dwell prevents flapping (we observed LG units sometimes keep the compressor running against stale internal sensors when the loop didn't force FAN explicitly). AIR_DRY mode (and any non-COOL/non-FAN mode) is detected as user intent and left alone. Manual mode changes from LG app or unit still trigger the override detector + 60-min pause.
+- **COOL ↔ FAN auto-switching with protection**: when room drops 2°F below target the loop switches that AC from COOL to FAN (compressor forced off). When room rises 2°F above target it switches back to COOL. A 10-minute mode-write dwell prevents flapping (we observed LG units sometimes keep the compressor running against stale internal sensors when the loop didn't force FAN explicitly). Earlier 1°F deadband + 5-min dwell caused 5-6 min COOL↔FAN cycles because the room walked the band in ~5 min, defeating the dwell; widened on 2026-05-12. AIR_DRY mode (and any non-COOL/non-FAN mode) is detected as user intent and left alone. Manual mode changes from LG app or unit still trigger the override detector + 60-min pause.
 - **Fan dwell time**: after any fan-speed write, the loop holds that speed for at least `fanDwellMinutes` (default 5, configurable in the Settings UI). Smooths out micro-cycles where pressure oscillates across rung thresholds.
 - **Power-outage recovery**: if both ACs go offline temporarily and come back, the loop resumes seamlessly on the next poll. Never auto-powers an AC ON — that's always a user action.
 - **Per-AC and global pause** with explicit duration buttons in the UI.
@@ -115,7 +115,8 @@ The newest addition. Replaces fragile LG-side routines with a polling control lo
 - **Setpoint writes are skipped when AC is in FAN/AIR_DRY mode** (the unit ignores them anyway). Re-asserted automatically when the loop returns the unit to COOL.
 - **Fan write debounce**: skips redundant fan writes if the same value was set within the last 5 minutes and the AC reflects it.
 - **Pressure smoothing**: 3-sample moving average on each room's `currentF` before computing pressure, so the 0.5F-resolution temp sensor doesn't cause ladder rungs to flap at thresholds.
-- **UI** at `/climate.html` is fully editable: dashboard with per-AC manual control, settings tab for all schedule + override values, and a ladder tab where you can add/remove rungs, reorder via up/down buttons, and edit room or fan speed inline. All edits saved via `PATCH /api/climate/config`.
+- **Runaway-write circuit breaker**: if any slot accumulates 30+ writes in a rolling 10-minute window, the breaker engages a 30-min global pause and logs loudly. Defense against a stuck loop hammering the LG API. Per-slot counter visible in the diagnostics tab. Clear via `POST /api/climate/global/resume`.
+- **UI** at `/climate.html` is fully editable: dashboard with per-AC manual control, settings tab for all schedule + override values, a ladder tab where you can add/remove rungs, reorder via up/down buttons, and edit room or fan speed inline, and a diagnostics tab showing rolling-window mode flips, fan changes, override pauses, the breaker state, and the last manual-override evidence (what the loop wrote vs what the AC reported, so genuine overrides can be told apart from spurious LG-side fan-resets). All edits saved via `PATCH /api/climate/config`. Diagnostics pulled from `GET /api/climate/stats?hours=N`.
 
 #### Daytime gradient
 
@@ -319,6 +320,7 @@ The override sets `KillMode=mixed` and `TimeoutStopSec=10` so child processes (A
 7. **HomebridgeDummy `commandOff` only fires on stateful switches** (`resetOnRestart: false`, no `timer`). The 1-sec timer pattern is stateless and ignores `commandOff`.
 8. **Samsung S95F (2025 model)**: `KEY_HDMI1/2/3` is broken. Input switching uses SmartThings cloud API with OAuth auto-refresh every 12h.
 9. **LG ThinQ unit native**: ACs report in Celsius. `climate.js` converts at the API boundary so config and UI use Fahrenheit. Don't change unit on the units themselves — it complicates the conversion logic.
+10. **S1 Playbar/Playbase 402 on join**: TV-capable speakers running S1 firmware (Master Bedroom Playbar `86.6-75110` is at the final S1 build; Sonos won't ship further updates) can refuse to become a slave with UPnP 402 "Invalid Args" when their TV input is or was recently active. `groupAllSpeakers` preflights `inputSource` and skips TV-mode speakers from the join list; remaining 402s on retry are logged as informational and the routine falls back via `findGroupCoordinator` to use that speaker as the group coordinator instead. Behavior is correct either way: music plays. The preflight just removes log noise that the bi-weekly audit was flagging.
 
 ---
 
@@ -368,6 +370,10 @@ gh issue list --repo havenscr/home-automation --label home-audit
 - PAT expires (not currently, but if rotated): script will fail at `git push`. Rotation procedure: regenerate PAT, paste over `/opt/home-orchestrator/.github-pat`, snapshot resumes on next 12h cron.
 - Snapshot file growing too large: capped at 500KB; truncates oldest activity-log entries first.
 - If the Pi cron stops pushing for >36h, the workflow's `Fetch audit-data.json` step will warn but still run with stale data.
+
+**Freshness self-check:** `GET http://192.168.1.61:5006/api/audit/health` returns `{state: fresh|stale|missing, ageHours}` for the snapshot file. Polled internally every hour; logs once on state transitions. Threshold is 14h (one missed 12h cron + buffer). Was added 2026-05-12 after the cron silently no-op'd for 7 days due to a `/var/log` permission denial on its redirect target. Reach it from HomeKit by adding a Homebridge dummy switch whose `commandOn` curl-pings this endpoint and toggles a HomeKit notification accessory when state != fresh.
+
+**HomeKit chain self-check:** `GET http://192.168.1.61:5006/api/homekit/health?days=14` returns per-dummy fire counts (today, yesterday, last 7d streak) and a status field (`ok` / `missing-today` / `missing-yesterday` / `chronic`). Expected dummies are configurable via `config.homekitExpectations` (array of `{name, minPerDay}`); falls back to a default list including `Dummy - Routine Start` and `Dummy - Fade Start Sunset` — the two known-problematic ones the bi-weekly audit kept flagging. Polled internally every hour and logs transitions to `homekit-health` activity type. Catches a broken Home app automation within hours instead of the 14-day audit window. Constraint: depends on `/var/lib/homebridge/homebridge.log` which only retains ~2 days of fires at current verbosity, so the 14d window is best-effort and may report fewer `last7dHits` than reality. Surfaced in the climate.html Diagnostics tab.
 
 ---
 

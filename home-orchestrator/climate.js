@@ -31,8 +31,10 @@ const HYSTERESIS_F = 0.5;
 // guarantee that the compressor cannot run. Deadband + dwell prevent flapping.
 //   - Switch COOL -> FAN when room drops MODE_DEADBAND_F below target
 //   - Switch FAN -> COOL when room rises MODE_DEADBAND_F above target
-const MODE_DEADBAND_F = 1.0;
-const MODE_DWELL_MS = 5 * 60 * 1000;  // min time between mode writes per slot
+// Widened from 1.0F/5min to 2.0F/10min after observing 5-6 min COOL<->FAN cycles
+// overnight: the room walked the 2F band in ~5 min, so dwell never braked anything.
+const MODE_DEADBAND_F = 2.0;
+const MODE_DWELL_MS = 10 * 60 * 1000;  // min time between mode writes per slot
 
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
@@ -48,6 +50,15 @@ function createClimate({ getConfig, logActivity }) {
   const rateLimit = {};
   const RL_BASE_MS = 60 * 1000;
   const RL_MAX_MS = 10 * 60 * 1000;
+  // Runaway-write circuit breaker. Tracks per-slot write timestamps in a rolling
+  // 10-minute window. If a slot crosses RUNAWAY_WRITE_THRESHOLD in that window,
+  // engage a global 30-min pause so a bug or stuck state can't burn the LG API
+  // quota (or wear the hardware). The breaker self-clears when the pause expires.
+  const writeTimestamps = {};
+  const RUNAWAY_WINDOW_MS = 10 * 60 * 1000;
+  const RUNAWAY_WRITE_THRESHOLD = 30;  // > 3 writes/min sustained = something's wrong
+  const RUNAWAY_PAUSE_MS = 30 * 60 * 1000;
+  const breakerState = { lastTrippedAt: null, lastTrippedSlot: null, lastTrippedCount: null };
   // Per-slot ring buffer of recent currentF readings, used to smooth pressure
   // calculation. The AC reports temp at 0.5F resolution which causes ladder rungs to
   // flap when room is between two adjacent values. The 3-sample average eliminates this.
@@ -373,6 +384,28 @@ function createClimate({ getConfig, logActivity }) {
       if (!cfg.lastState[slot]) cfg.lastState[slot] = {};
       cfg.lastState[slot].overrideUntil = Date.now() + cooldownMs;
       cfg.lastState[slot].overrideReason = reasons.join(', ');
+      // Diagnostic: capture the exact field comparison that triggered the override.
+      // Helps tell genuine human/app overrides apart from spurious ones where the
+      // AC's reported state lags or differs from what we wrote (e.g. LG dropping
+      // fan to LOW on mode transition before our regrace logic kicks in).
+      const ageMs = (f) => {
+        const t = lw[`${f}At`] ?? lw.at;
+        return t ? Math.round((Date.now() - t) / 1000) : null;
+      };
+      cfg.lastState[slot].overrideEvidence = {
+        at: new Date(now).toISOString(),
+        reasons,
+        wrote: {
+          targetC: lw.targetC, windStrength: lw.windStrength,
+          power: lw.power, jobMode: lw.jobMode,
+          ageSec: { targetC: ageMs('targetC'), windStrength: ageMs('windStrength'),
+                    power: ageMs('power'), jobMode: ageMs('jobMode') },
+        },
+        observed: {
+          targetC: observed.targetC, windStrength: observed.windStrength,
+          power: observed.power, jobMode: observed.jobMode,
+        },
+      };
       // Clear lastWritten so we don't re-detect the same change on the next poll.
       delete cfg.lastState[slot].lastWritten;
       if (saveConfigFn) saveConfigFn();
@@ -386,10 +419,45 @@ function createClimate({ getConfig, logActivity }) {
 
   // ---- Writes ----
 
+  // Returns true if the runaway-write breaker is currently engaged for this slot.
+  // Side effect: trips the breaker (records timestamp, sets global pause via config)
+  // when the per-slot write rate crosses the threshold within the rolling window.
+  function checkRunawayBreaker(slot, saveConfigFn) {
+    const now = Date.now();
+    if (!writeTimestamps[slot]) writeTimestamps[slot] = [];
+    const buf = writeTimestamps[slot];
+    // Evict samples older than the window.
+    while (buf.length && buf[0] < now - RUNAWAY_WINDOW_MS) buf.shift();
+    if (buf.length >= RUNAWAY_WRITE_THRESHOLD) {
+      const cfg = getConfig().climate || (getConfig().climate = {});
+      if (!cfg.lastState) cfg.lastState = {};
+      const until = now + RUNAWAY_PAUSE_MS;
+      cfg.lastState.pausedUntil = until;
+      cfg.lastState.pausedReason = `runaway breaker: ${slot} did ${buf.length} writes in ${Math.round(RUNAWAY_WINDOW_MS / 60000)}m`;
+      breakerState.lastTrippedAt = new Date(now).toISOString();
+      breakerState.lastTrippedSlot = slot;
+      breakerState.lastTrippedCount = buf.length;
+      buf.length = 0; // reset so the next genuine write doesn't immediately re-trip
+      if (saveConfigFn) saveConfigFn();
+      if (logActivity) logActivity('climate',
+        `RUNAWAY BREAKER tripped: ${slot} did ${RUNAWAY_WRITE_THRESHOLD}+ writes in ${Math.round(RUNAWAY_WINDOW_MS / 60000)}m -- pausing all climate ${Math.round(RUNAWAY_PAUSE_MS / 60000)}m`);
+      return true;
+    }
+    return false;
+  }
+
   async function writeControl(slot, deviceId, payload, intent, saveConfigFn) {
     if (!payload || !Object.keys(payload).length) return null;
     if (rateLimitedNow(slot)) {
       throw new Error('rate-limit backoff active for ' + slot);
+    }
+    // Record the write attempt and check the breaker BEFORE making the HTTPS call.
+    // If a bug is causing the loop to flap, we want to stop hammering the API,
+    // not measure post-hoc how much damage was done.
+    writeTimestamps[slot] = writeTimestamps[slot] || [];
+    writeTimestamps[slot].push(Date.now());
+    if (checkRunawayBreaker(slot, saveConfigFn)) {
+      throw new Error('runaway-write breaker tripped; global climate paused');
     }
     let res;
     try {
@@ -691,7 +759,12 @@ function createClimate({ getConfig, logActivity }) {
     const cfg = getConfig().climate || {};
     const slots = Object.keys(cfg.devices || {});
     const pauses = {};
-    for (const s of slots) pauses[s] = getPauseState(s);
+    const overrideEvidence = {};
+    for (const s of slots) {
+      pauses[s] = getPauseState(s);
+      const ls = (cfg.lastState && cfg.lastState[s]) || {};
+      if (ls.overrideEvidence) overrideEvidence[s] = ls.overrideEvidence;
+    }
     const globalPause = (() => {
       const until = (cfg.lastState && cfg.lastState.pausedUntil) || 0;
       return { paused: until > Date.now(), until };
@@ -725,6 +798,18 @@ function createClimate({ getConfig, logActivity }) {
       lastTickAt,
       globalPause,
       pauses,
+      overrideEvidence,
+      breaker: {
+        ...breakerState,
+        windowWrites: Object.fromEntries(
+          Object.entries(writeTimestamps).map(([s, ts]) => {
+            const cutoff = Date.now() - RUNAWAY_WINDOW_MS;
+            return [s, ts.filter(t => t >= cutoff).length];
+          })
+        ),
+        windowMinutes: Math.round(RUNAWAY_WINDOW_MS / 60000),
+        threshold: RUNAWAY_WRITE_THRESHOLD,
+      },
       cache,
     };
   }

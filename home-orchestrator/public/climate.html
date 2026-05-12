@@ -136,6 +136,7 @@
   <div class="tab active" data-tab="dashboard">Dashboard</div>
   <div class="tab" data-tab="settings">Settings</div>
   <div class="tab" data-tab="ladder">Ladder</div>
+  <div class="tab" data-tab="diagnostics">Diagnostics</div>
   <div class="tab" data-tab="log">Log</div>
 </div>
 
@@ -163,7 +164,8 @@
 
 <div class="tab-content" id="tab-settings">
   <div class="card">
-    <div class="section-title">Schedule</div>
+    <div class="section-title">Global day/night targets</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Default temperature target for every room. Per-room overrides below take precedence when set.</div>
     <div class="form-row">
       <div class="form-group"><label>Day target</label><input id="cfg-day-target" type="number" step="1" min="60" max="85"></div>
       <div class="form-group"><label>Night target</label><input id="cfg-night-target" type="number" step="1" min="60" max="85"></div>
@@ -172,8 +174,8 @@
       <div class="form-group"><label>Day starts</label><input id="cfg-day-start" type="time"></div>
       <div class="form-group"><label>Night starts</label><input id="cfg-night-start" type="time"></div>
     </div>
-    <div class="section-title" style="margin-top:18px">Per-room targets (optional)</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Override the global day/night targets for a specific room. Leave blank to use the global target. Pressure is measured per-room against each room's effective target.</div>
+    <div class="section-title" style="margin-top:18px">Per-room target overrides</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Set a different target for a specific room (e.g. office 72F day, kitchen 74F day). Leave blank to inherit the global target. Heat pressure is computed per-room against each room's effective target -- so a 72F office gives a +2F pressure reading at 74F, ramping fans earlier than if both rooms shared 74F.</div>
     <div id="cfg-room-overrides"></div>
     <div class="section-title" style="margin-top:18px">Office quiet hours</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When in quiet hours, the office is capped at medium fan; kitchen ramps up to compensate.</div>
@@ -249,6 +251,41 @@
       </div>
     </div>
     <div class="ladder-list editable" id="edit-ladder-quiet"></div>
+  </div>
+</div>
+
+<div class="tab-content" id="tab-diagnostics">
+  <div class="card">
+    <div class="card-header">
+      <div class="section-title" style="margin:0">Activity stats</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Window</span>
+        <div class="seg" id="stats-window-seg">
+          <button class="active" onclick="setStatsWindow(6)">6h</button>
+          <button onclick="setStatsWindow(12)">12h</button>
+          <button onclick="setStatsWindow(24)">24h</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadStats()">Refresh</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Counts pulled from the rolling activity log. Mode flips and fan changes above ~2/hour suggest the deadband or dwell is too tight; pressure peaks &gt;3.5F repeatedly mean the system is genuinely fighting heat load (not a tuning issue).</div>
+    <div id="stats-summary" style="font-size:13px;color:var(--muted);margin-bottom:12px"></div>
+    <div id="stats-table"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="section-title">HomeKit automation chain health</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Tracks dummy switches that should fire daily (e.g. Routine Start, Fade Start Sunset). When a switch goes missing from the homebridge log for a day or more, the HomeKit-side automation that triggers it is likely broken (disabled, wrong condition, deleted). Catches broken chains within hours instead of waiting for the bi-weekly audit. Configure expectations in `config.homekitExpectations`.</div>
+    <div id="homekit-health"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="section-title">Runaway-write breaker</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">If a slot does more than the threshold of writes inside the rolling window, the breaker engages a global pause for 30 minutes. Defense against a stuck loop burning the LG API quota.</div>
+    <div id="breaker-state"></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="section-title">Last manual override evidence</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">When the loop pauses an AC because it detected a setting change it didn't make, this shows what it saw. Helps tell a real human/app override apart from a spurious one (e.g. fan reset by the LG unit on a mode transition).</div>
+    <div id="override-evidence"></div>
   </div>
 </div>
 
@@ -633,6 +670,12 @@ function readRoomOverridesFromForm() {
     const raw = el.value.trim();
     out[slot][field] = raw === '' ? null : Number(raw);
   });
+  // Drop slots where every override is null. Keeps config.json tidy and matches
+  // the "absent = inherit global" semantics in getEffectiveTargetF.
+  for (const slot of Object.keys(out)) {
+    const vals = Object.values(out[slot]);
+    if (vals.every(v => v == null)) delete out[slot];
+  }
   return out;
 }
 
@@ -812,6 +855,133 @@ async function loadLog() {
   }
 }
 
+let statsWindowHours = 6;
+function setStatsWindow(h) {
+  statsWindowHours = h;
+  document.querySelectorAll('#stats-window-seg button').forEach(b => b.classList.toggle('active', b.textContent === h + 'h'));
+  loadStats();
+}
+function fmtTs(ts) { if (!ts) return '--'; try { return new Date(ts).toLocaleString(); } catch { return ts; } }
+async function loadStats() {
+  try {
+    const j = await api('/api/climate/stats?hours=' + statsWindowHours);
+    const win = j.actualWindow || {};
+    const winSpan = (win.start && win.end) ? (fmtTs(win.start) + ' to ' + fmtTs(win.end)) : 'no entries';
+    $('stats-summary').innerHTML = '<strong>' + j.ticks + ' ticks</strong> across ' + win.entryCount + ' log entries ('
+      + winSpan + '). Pressure peaks &gt;3.5F: <strong>' + j.pressurePeaksOver3_5F + '</strong>.';
+    const slots = Object.keys(j.perSlot || {});
+    if (!slots.length) { $('stats-table').innerHTML = '<div style="color:var(--muted);font-size:13px">No slot data.</div>'; return; }
+    const rows = slots.map(slot => {
+      const s = j.perSlot[slot];
+      return '<tr>'
+        + '<td><strong>' + slot + '</strong></td>'
+        + '<td>' + (s.modeFlips.coolToFan + s.modeFlips.fanToCool) + '<span style="color:var(--muted);font-size:11px"> (' + s.modeFlips.coolToFan + 'C&rarr;F / ' + s.modeFlips.fanToCool + 'F&rarr;C)</span></td>'
+        + '<td>' + (s.fanChanges.up + s.fanChanges.down) + '<span style="color:var(--muted);font-size:11px"> (' + s.fanChanges.up + ' up / ' + s.fanChanges.down + ' down)</span></td>'
+        + '<td>' + s.overrides + '</td>'
+        + '<td>' + s.readFails + '</td>'
+        + '<td>' + s.rateLimits + '</td>'
+        + '</tr>';
+    }).join('');
+    $('stats-table').innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
+      + '<th style="padding:6px 8px">Slot</th><th style="padding:6px 8px">Mode flips</th><th style="padding:6px 8px">Fan changes</th>'
+      + '<th style="padding:6px 8px">Overrides</th><th style="padding:6px 8px">Read fails</th><th style="padding:6px 8px">Rate limits</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table>';
+  } catch (e) {
+    $('stats-table').innerHTML = '<div style="color:var(--danger);font-size:13px">Stats load failed: ' + e.message + '</div>';
+  }
+  // HomeKit chain health: fetch and render.
+  try {
+    const hk = await api('/api/homekit/health?days=14');
+    const rows = (hk.health || []).map(h => {
+      const colors = {
+        ok: 'var(--success)',
+        'missing-today': 'var(--warn)',
+        'missing-yesterday': 'var(--warn)',
+        chronic: 'var(--danger)',
+      };
+      const labels = {
+        ok: 'OK',
+        'missing-today': 'missing today',
+        'missing-yesterday': '2+ days missing',
+        chronic: 'chronic',
+      };
+      return '<tr>'
+        + '<td style="padding:4px 8px"><strong>' + h.name + '</strong></td>'
+        + '<td style="padding:4px 8px;color:' + (colors[h.status] || 'var(--muted)') + ';font-weight:600">' + (labels[h.status] || h.status) + '</td>'
+        + '<td style="padding:4px 8px">' + h.today + '</td>'
+        + '<td style="padding:4px 8px">' + h.yesterday + '</td>'
+        + '<td style="padding:4px 8px">' + h.last7dHits + ' / 7</td>'
+        + '<td style="padding:4px 8px;color:var(--muted);font-size:12px">' + (h.lastFireAt ? fmtTs(h.lastFireAt) : 'never') + '</td>'
+        + '</tr>';
+    }).join('');
+    const summary = '<div style="font-size:13px;color:' + (hk.brokenCount > 0 ? 'var(--danger)' : 'var(--muted)') + ';margin-bottom:8px">'
+      + hk.brokenCount + ' of ' + hk.expectations + ' expected dummies have issues. '
+      + hk.fireCount + ' total dummy fires logged in last ' + hk.days + ' days.</div>';
+    $('homekit-health').innerHTML = summary
+      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
+      + '<th style="padding:4px 8px">Dummy</th><th style="padding:4px 8px">Status</th>'
+      + '<th style="padding:4px 8px">Today</th><th style="padding:4px 8px">Yesterday</th>'
+      + '<th style="padding:4px 8px">Last 7d</th><th style="padding:4px 8px">Last fire</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table>';
+  } catch (e) {
+    $('homekit-health').innerHTML = '<div style="color:var(--danger);font-size:13px">HomeKit health load failed: ' + e.message + '</div>';
+  }
+  // Breaker state from the live snapshot.
+  const br = (lastState && lastState.breaker) || null;
+  if (br) {
+    const slots = Object.keys(br.windowWrites || {});
+    const writesRows = slots.map(s => {
+      const n = br.windowWrites[s];
+      const warn = n >= Math.round(br.threshold * 0.6);
+      return '<tr' + (warn ? ' style="color:var(--warn)"' : '') + '><td style="padding:4px 8px">' + s + '</td>'
+        + '<td style="padding:4px 8px">' + n + ' / ' + br.threshold + '</td></tr>';
+    }).join('');
+    const tripped = br.lastTrippedAt
+      ? '<div style="color:var(--danger);margin-bottom:8px"><strong>Last tripped:</strong> ' + fmtTs(br.lastTrippedAt)
+        + ' by <strong>' + br.lastTrippedSlot + '</strong> (' + br.lastTrippedCount + ' writes)</div>'
+      : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Never tripped.</div>';
+    $('breaker-state').innerHTML = tripped
+      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
+      + '<th style="padding:4px 8px">Slot</th><th style="padding:4px 8px">Writes in last ' + br.windowMinutes + 'm</th></tr></thead>'
+      + '<tbody>' + writesRows + '</tbody></table>';
+  } else {
+    $('breaker-state').innerHTML = '<div style="color:var(--muted);font-size:13px">No breaker data.</div>';
+  }
+  // Override evidence comes from the live snapshot, not the rolling log.
+  const ev = (lastState && lastState.overrideEvidence) || {};
+  const slots = Object.keys(ev);
+  if (!slots.length) {
+    $('override-evidence').innerHTML = '<div style="color:var(--muted);font-size:13px">No recorded overrides.</div>';
+    return;
+  }
+  $('override-evidence').innerHTML = slots.map(slot => {
+    const e = ev[slot];
+    const fields = ['targetC', 'windStrength', 'power', 'jobMode'].map(f => {
+      const w = e.wrote[f];
+      const o = e.observed[f];
+      if (w == null && o == null) return '';
+      const age = e.wrote.ageSec ? e.wrote.ageSec[f] : null;
+      const diff = (w != null && o != null && String(w) !== String(o));
+      return '<tr' + (diff ? ' style="color:var(--warn)"' : '') + '>'
+        + '<td style="padding:4px 8px">' + f + '</td>'
+        + '<td style="padding:4px 8px">' + (w == null ? '--' : w) + '</td>'
+        + '<td style="padding:4px 8px">' + (o == null ? '--' : o) + '</td>'
+        + '<td style="padding:4px 8px;color:var(--muted)">' + (age == null ? '--' : age + 's ago') + '</td>'
+        + '</tr>';
+    }).join('');
+    return '<div style="margin-bottom:14px"><div style="font-weight:600;margin-bottom:6px">' + slot
+      + ' <span style="color:var(--muted);font-size:11px;font-weight:400">@ ' + fmtTs(e.at) + '</span></div>'
+      + '<div style="color:var(--muted);font-size:12px;margin-bottom:6px">Triggered by: ' + e.reasons.join(', ') + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
+      + '<th style="padding:4px 8px">Field</th><th style="padding:4px 8px">We wrote</th><th style="padding:4px 8px">AC reported</th><th style="padding:4px 8px">Write age</th></tr></thead>'
+      + '<tbody>' + fields + '</tbody></table></div>';
+  }).join('');
+}
+
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
@@ -819,6 +989,7 @@ document.querySelectorAll('.tab').forEach(t => {
     t.classList.add('active');
     $('tab-' + t.dataset.tab).classList.add('active');
     if (t.dataset.tab === 'log') loadLog();
+    if (t.dataset.tab === 'diagnostics') loadStats();
     if (t.dataset.tab === 'ladder' || t.dataset.tab === 'settings') loadConfig();
   });
 });

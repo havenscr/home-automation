@@ -103,6 +103,56 @@ function hueGetGroups() { return hueRequest('GET', '/groups'); }
 function hueGetLight(id) { return hueRequest('GET', `/lights/${id}`); }
 async function hueGetGroupState(id) { return hueRequest('GET', `/groups/${id}`); }
 
+// ─── Hue Bridge Health Probe ────────────────────────────────────────────────
+// Periodic ping to /config (lightweight, no auth required from the bridge's
+// perspective beyond the API key). Captures latency + reachability so that
+// next time the bridge has a wobble like the unexplained one on 2026-05-11,
+// we have telemetry instead of guesses. Ring buffer of last 60 samples
+// (5h at 5-min poll). Logs transitions reachable->unreachable and back.
+const hueHealth = {
+  samples: [],
+  consecutiveFails: 0,
+  lastStateLogged: null,  // 'reachable' | 'unreachable'
+  SAMPLE_LIMIT: 60,
+};
+async function probeHueHealth() {
+  if (!config.hue || !config.hue.apiKey) return;
+  const start = Date.now();
+  let ok = false, error = null, name = null;
+  try {
+    const res = await hueRequest('GET', '/config');
+    ok = !!(res && (res.name || res.bridgeid));
+    if (ok) name = res.name;
+    else error = 'unexpected response shape';
+  } catch (e) {
+    error = e.message;
+  }
+  const latencyMs = Date.now() - start;
+  const sample = { ts: new Date().toISOString(), ok, latencyMs, error, name };
+  hueHealth.samples.push(sample);
+  if (hueHealth.samples.length > hueHealth.SAMPLE_LIMIT) hueHealth.samples.shift();
+  if (ok) hueHealth.consecutiveFails = 0;
+  else hueHealth.consecutiveFails++;
+  // Only log state transitions, not every probe. Two consecutive fails
+  // before declaring unreachable so a single transient hiccup doesn't spam.
+  const currentState = hueHealth.consecutiveFails >= 2 ? 'unreachable' : 'reachable';
+  if (currentState !== hueHealth.lastStateLogged) {
+    if (hueHealth.lastStateLogged != null) {
+      logActivity('hue-health',
+        currentState === 'unreachable'
+          ? `bridge unreachable after ${hueHealth.consecutiveFails} consecutive failures: ${error}`
+          : `bridge recovered after ${hueHealth.consecutiveFails} prior failures (latency ${latencyMs}ms)`);
+    }
+    hueHealth.lastStateLogged = currentState;
+  }
+}
+function startHueHealthProbe() {
+  const intervalMs = (config.hue && config.hue.healthProbeMs) || 5 * 60 * 1000;
+  setInterval(() => { probeHueHealth().catch(() => {}); }, intervalMs);
+  // First probe after 10s so startup logs aren't crowded.
+  setTimeout(() => { probeHueHealth().catch(() => {}); }, 10 * 1000);
+}
+
 // ─── Scene Transition Helpers ────────────────────────────────────────────────
 async function detectActiveScene(groupId) {
   // Get all scenes for this group
@@ -2824,19 +2874,115 @@ app.post('/api/climate/:scope/resume', (req, res) => {
 // Allowed top-level keys only; nested keys merged 1 level deep.
 app.patch('/api/climate/config', (req, res) => {
   const allowed = ['schedule', 'fanRamp', 'ladder', 'overrideCooldownMs', 'fanDwellMinutes'];
+  // Keys that MUST be a plain object when present. A prior bug let a string
+  // "not an object" through, which the spread operator then char-iterated into
+  // numeric keys, leaving 13 junk keys in config.json's ladder.
+  const objectOnly = new Set(['schedule', 'fanRamp', 'ladder']);
   const patch = req.body || {};
   if (!config.climate) config.climate = {};
   for (const k of Object.keys(patch)) {
     if (!allowed.includes(k)) continue;
-    if (typeof patch[k] === 'object' && !Array.isArray(patch[k]) && patch[k] !== null) {
-      config.climate[k] = { ...(config.climate[k] || {}), ...patch[k] };
+    const v = patch[k];
+    const isPlainObject = typeof v === 'object' && v !== null && !Array.isArray(v);
+    if (objectOnly.has(k) && !isPlainObject) {
+      return res.status(400).json({ ok: false, error: `${k} must be a plain object, got ${Array.isArray(v) ? 'array' : typeof v}` });
+    }
+    if (isPlainObject) {
+      config.climate[k] = { ...(config.climate[k] || {}), ...v };
     } else {
-      config.climate[k] = patch[k];
+      config.climate[k] = v;
     }
   }
   saveConfig();
   logActivity('climate', `config patched: ${Object.keys(patch).join(', ')}`);
   res.json({ ok: true, climate: { schedule: config.climate.schedule, fanRamp: config.climate.fanRamp, ladder: config.climate.ladder, overrideCooldownMs: config.climate.overrideCooldownMs } });
+});
+
+// Climate stats over a rolling window. Source: activity.log (JSON-lines, ~500-line
+// rolling buffer = roughly 8-12h at current poll rate). Returns counts per slot for
+// the diagnostic categories we care about: mode flips, fan changes, override pauses,
+// rate limits, read failures. Helps spot whether the deadband + dwell tuning is
+// actually preventing oscillation without grepping journals by hand.
+app.get('/api/climate/stats', (req, res) => {
+  const hours = Math.min(Math.max(Number(req.query.hours) || 24, 1), 48);
+  const cutoff = Date.now() - hours * 3600 * 1000;
+  let entries = [];
+  try {
+    entries = fs.readFileSync(LOG_FILE, 'utf8').split('\n').filter(Boolean)
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(e => e && e.type === 'climate' && new Date(e.ts).getTime() >= cutoff);
+  } catch { /* missing log file is fine */ }
+  const slots = Object.keys((config.climate && config.climate.devices) || {});
+  const stats = {};
+  for (const slot of slots) {
+    stats[slot] = {
+      writes: { jobMode: 0, windStrength: 0, targetC: 0, power: 0 },
+      modeFlips: { coolToFan: 0, fanToCool: 0 },
+      fanChanges: { up: 0, down: 0 },
+      overrides: 0,
+      readFails: 0,
+      rateLimits: 0,
+      lastModeAt: null,
+      lastFanAt: null,
+    };
+  }
+  const rank = { LOW: 1, MID: 2, HIGH: 3 };
+  let pressurePeaks = 0;
+  let totalTicks = 0;
+  for (const e of entries) {
+    const m = e.message;
+    if (/^ladder=/.test(m)) {
+      totalTicks++;
+      const peak = parseFloat((m.match(/pressure=([0-9.]+)F/) || [])[1] || '0');
+      if (peak >= 3.5) pressurePeaks++;
+      continue;
+    }
+    // write office: {"jobMode":"COOL"} etc.
+    const writeMatch = m.match(/^write (\w+):\s*(\{.+\})/);
+    if (writeMatch) {
+      const slot = writeMatch[1];
+      let payload; try { payload = JSON.parse(writeMatch[2]); } catch { continue; }
+      if (!stats[slot]) continue;
+      if (payload.jobMode) {
+        stats[slot].writes.jobMode++;
+        if (stats[slot].lastModeAt && payload.jobMode === 'COOL') stats[slot].modeFlips.fanToCool++;
+        if (stats[slot].lastModeAt && payload.jobMode === 'FAN') stats[slot].modeFlips.coolToFan++;
+        stats[slot].lastModeAt = e.ts;
+      }
+      if (payload.windStrength) {
+        stats[slot].writes.windStrength++;
+        const prevRank = stats[slot].lastFanRank ?? 0;
+        const newRank = rank[payload.windStrength] || 0;
+        if (prevRank && newRank > prevRank) stats[slot].fanChanges.up++;
+        if (prevRank && newRank < prevRank) stats[slot].fanChanges.down++;
+        stats[slot].lastFanRank = newRank;
+        stats[slot].lastFanAt = e.ts;
+      }
+      if (payload.targetC != null) stats[slot].writes.targetC++;
+      if (payload.power) stats[slot].writes.power++;
+      continue;
+    }
+    const overrideMatch = m.match(/^manual override on (\w+)/);
+    if (overrideMatch && stats[overrideMatch[1]]) { stats[overrideMatch[1]].overrides++; continue; }
+    const readFailMatch = m.match(/^read (\w+) failed/);
+    if (readFailMatch && stats[readFailMatch[1]]) { stats[readFailMatch[1]].readFails++; continue; }
+    const rlMatch = m.match(/^(\w+) rate-limited/);
+    if (rlMatch && stats[rlMatch[1]]) { stats[rlMatch[1]].rateLimits++; continue; }
+  }
+  // Clean transient tracking fields off the response.
+  for (const slot of slots) {
+    delete stats[slot].lastFanRank;
+  }
+  const windowStart = entries.length ? entries[0].ts : null;
+  const windowEnd = entries.length ? entries[entries.length - 1].ts : null;
+  res.json({
+    ok: true,
+    requestedHours: hours,
+    actualWindow: { start: windowStart, end: windowEnd, entryCount: entries.length },
+    ticks: totalTicks,
+    pressurePeaksOver3_5F: pressurePeaks,
+    perSlot: stats,
+  });
 });
 
 // Get sanitized climate config for the UI (omits PAT and deviceIds).
@@ -2856,6 +3002,9 @@ app.get('/api/climate/config', (req, res) => {
 
 // Kick off the polling loop. tickInterval gates itself on config.climate.enabled.
 climate.start(saveConfig);
+startHueHealthProbe();
+startAuditHealthProbe();
+startHomekitHealthProbe();
 
 // Picture mode
 app.post('/api/tv/picture-mode/:mode', async (req, res) => {
@@ -3130,6 +3279,254 @@ app.get('/api/status', (req, res) => {
     switchbot: { configured: !!config.switchbot.token },
     samsung: { configured: !!(config.samsung && config.samsung.ip), paired: !!(config.samsung && config.samsung.token) },
     daytimeGradient: getDaytimeGradientStatus()
+  });
+});
+
+// Hue bridge health endpoint. Returns rolling-window reachability + latency.
+// Status field summarizes the last sample so HomeKit / dashboards can probe one URL.
+app.get('/api/hue/health', (req, res) => {
+  const samples = hueHealth.samples;
+  const last = samples[samples.length - 1] || null;
+  const recent = samples.slice(-12); // last hour at 5-min poll
+  const reachableCount = recent.filter(s => s.ok).length;
+  const reachableLatencies = recent.filter(s => s.ok).map(s => s.latencyMs);
+  const avgLatencyMs = reachableLatencies.length
+    ? Math.round(reachableLatencies.reduce((a, b) => a + b, 0) / reachableLatencies.length)
+    : null;
+  res.json({
+    ok: true,
+    bridgeIp: config.hue && config.hue.bridgeIp,
+    configured: !!(config.hue && config.hue.apiKey),
+    last,
+    status: last ? (hueHealth.consecutiveFails >= 2 ? 'unreachable' : 'reachable') : 'no-probes-yet',
+    consecutiveFails: hueHealth.consecutiveFails,
+    last1hReachable: recent.length ? Math.round((reachableCount / recent.length) * 100) : null,
+    last1hAvgLatencyMs: avgLatencyMs,
+    samples,
+  });
+});
+
+// Audit-data freshness check. The /var/tmp/home-audit-snapshot/audit-data.json
+// file is rewritten by the 12-hourly cron job. If it's older than 14h, the cron
+// silently broke (as happened May 4-12, 2026 when a /var/log permission denial
+// killed every scheduled run). Polled every hour; logs once on stale->fresh
+// transitions to avoid spam.
+const auditHealth = {
+  AUDIT_FILE: '/var/tmp/home-audit-snapshot/audit-data.json',
+  STALE_THRESHOLD_HOURS: 14,
+  lastStateLogged: null, // 'fresh' | 'stale' | 'missing'
+};
+function checkAuditFreshness() {
+  let state, ageHours = null, mtime = null, bytes = null;
+  try {
+    const st = fs.statSync(auditHealth.AUDIT_FILE);
+    mtime = st.mtime.toISOString();
+    bytes = st.size;
+    ageHours = (Date.now() - st.mtimeMs) / 3600000;
+    state = ageHours > auditHealth.STALE_THRESHOLD_HOURS ? 'stale' : 'fresh';
+  } catch (e) {
+    state = 'missing';
+  }
+  if (state !== auditHealth.lastStateLogged) {
+    if (auditHealth.lastStateLogged != null) {
+      const msg = state === 'fresh'
+        ? `audit-data fresh (age ${ageHours.toFixed(1)}h, ${bytes} bytes)`
+        : state === 'stale'
+          ? `audit-data STALE: age ${ageHours.toFixed(1)}h exceeds ${auditHealth.STALE_THRESHOLD_HOURS}h threshold (mtime ${mtime}) -- snapshot cron may be broken`
+          : `audit-data MISSING at ${auditHealth.AUDIT_FILE} -- snapshot cron has never produced output or file was deleted`;
+      logActivity('audit-health', msg);
+    }
+    auditHealth.lastStateLogged = state;
+  }
+  return { state, ageHours, mtime, bytes };
+}
+app.get('/api/audit/health', (req, res) => {
+  const r = checkAuditFreshness();
+  res.json({
+    ok: true,
+    file: auditHealth.AUDIT_FILE,
+    state: r.state,
+    ageHours: r.ageHours == null ? null : Math.round(r.ageHours * 10) / 10,
+    mtime: r.mtime,
+    bytes: r.bytes,
+    staleThresholdHours: auditHealth.STALE_THRESHOLD_HOURS,
+  });
+});
+function startAuditHealthProbe() {
+  const intervalMs = 60 * 60 * 1000; // hourly
+  setInterval(() => { try { checkAuditFreshness(); } catch (e) {} }, intervalMs);
+  // First check 30s after startup so server is fully up.
+  setTimeout(() => { try { checkAuditFreshness(); } catch (e) {} }, 30 * 1000);
+}
+
+// HomeKit chain health: poll hourly, log when a dummy goes from ok->broken or
+// recovers. Suppresses log spam by tracking last-logged status per dummy.
+const homekitHealthState = { lastStatus: {} };
+function pollHomekitHealth() {
+  try {
+    const fires = readHomebridgeFires(14 * 24 * 3600 * 1000);
+    const perDummy = {};
+    for (const f of fires) {
+      if (!perDummy[f.name]) perDummy[f.name] = { perDayCounts: {} };
+      const dayKey = new Date(f.ts).toISOString().slice(0, 10);
+      perDummy[f.name].perDayCounts[dayKey] = (perDummy[f.name].perDayCounts[dayKey] || 0) + 1;
+    }
+    const defaultExpectations = [
+      { name: 'Dummy - Routine Start', minPerDay: 1 },
+      { name: 'Dummy - Fade Start Sunset', minPerDay: 1 },
+      { name: 'Dummy - Fade Start Sunrise', minPerDay: 1 },
+      { name: 'Dummy - Morning Music', minPerDay: 1 },
+      { name: 'Dummy - Day Music', minPerDay: 1 },
+    ];
+    const expectations = (config.homekitExpectations && Array.isArray(config.homekitExpectations))
+      ? config.homekitExpectations : defaultExpectations;
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const yesterdayKey = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+    for (const exp of expectations) {
+      const counts = (perDummy[exp.name] && perDummy[exp.name].perDayCounts) || {};
+      const today = counts[todayKey] || 0;
+      const yesterday = counts[yesterdayKey] || 0;
+      let last7dHits = 0;
+      for (let i = 0; i < 7; i++) {
+        const key = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+        if ((counts[key] || 0) >= exp.minPerDay) last7dHits++;
+      }
+      let status;
+      if (today >= exp.minPerDay) status = 'ok';
+      else if (yesterday >= exp.minPerDay) status = 'missing-today';
+      else if (last7dHits >= 3) status = 'missing-yesterday';
+      else status = 'chronic';
+      const prev = homekitHealthState.lastStatus[exp.name];
+      if (prev != null && prev !== status) {
+        if (status === 'ok') {
+          logActivity('homekit-health', `${exp.name} recovered (last 7d hit ${last7dHits}/7)`);
+        } else if (status === 'chronic' || (status === 'missing-yesterday' && prev === 'ok')) {
+          logActivity('homekit-health', `${exp.name} now ${status} (today=${today}, yesterday=${yesterday}, last 7d=${last7dHits}/7)`);
+        }
+      }
+      homekitHealthState.lastStatus[exp.name] = status;
+    }
+  } catch (e) { /* swallow */ }
+}
+function startHomekitHealthProbe() {
+  const intervalMs = 60 * 60 * 1000; // hourly
+  setInterval(() => { try { pollHomekitHealth(); } catch (e) {} }, intervalMs);
+  // First check 60s after startup, after the homebridge log has had time to be tailable.
+  setTimeout(() => { try { pollHomekitHealth(); } catch (e) {} }, 60 * 1000);
+}
+
+// HomeKit automation chain health. Reads the homebridge log to count how often
+// each named dummy switch has fired (state-toggle "is on" lines and commandOn
+// "executed command" lines). Compares against a set of expected-daily dummies
+// declared in config.homekitExpectations -- gives a per-day deficit signal so
+// broken Home app automations get caught within hours instead of weeks (as
+// happened with Dummy - Routine Start firing 2/14 days before the audit
+// flagged it on 2026-05-04).
+const HOMEBRIDGE_LOG = '/var/lib/homebridge/homebridge.log';
+function parseHbTimestamp(s) {
+  // Format: "12/05/2026, 07:55:02" -- DD/MM/YYYY, HH:MM:SS
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4}),\s+(\d{2}):(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  // Local time (Pi is set to America/Los_Angeles). Use Date(year, monthIdx, day, hr, min, sec) which is local.
+  return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]), Number(m[6])).getTime();
+}
+function readHomebridgeFires(maxAgeMs) {
+  let raw;
+  try { raw = fs.readFileSync(HOMEBRIDGE_LOG, 'utf8'); } catch { return []; }
+  const lines = raw.split('\n');
+  // Tail to last 200000 lines; older than 200000 is older than ~2 weeks even at
+  // peak chatter. Avoids reading multi-MB on every probe.
+  const tail = lines.slice(-200000);
+  const cutoff = Date.now() - maxAgeMs;
+  const fires = [];
+  // Strip ANSI from each line; match "[ts] [Homebridge Dummy] Name is on" or "...executed command"
+  const re = /^\[([^\]]+)\]\s+\[Homebridge Dummy\]\s+(.+?)\s+(is on|executed command)/;
+  for (const lineRaw of tail) {
+    const line = lineRaw.replace(/\x1b\[[0-9;]*m/g, '');
+    const m = line.match(re);
+    if (!m) continue;
+    const ts = parseHbTimestamp(m[1]);
+    if (ts == null || ts < cutoff) continue;
+    fires.push({ ts, name: m[2].trim(), kind: m[3] === 'is on' ? 'toggle' : 'command' });
+  }
+  return fires;
+}
+app.get('/api/homekit/health', (req, res) => {
+  const days = Math.min(Math.max(Number(req.query.days) || 14, 1), 30);
+  const windowMs = days * 24 * 3600 * 1000;
+  const fires = readHomebridgeFires(windowMs);
+  // Per-dummy aggregations.
+  const perDummy = {};
+  for (const f of fires) {
+    if (!perDummy[f.name]) perDummy[f.name] = { name: f.name, total: 0, commands: 0, toggles: 0, lastFireAt: null, perDayCounts: {} };
+    perDummy[f.name].total++;
+    if (f.kind === 'command') perDummy[f.name].commands++;
+    else perDummy[f.name].toggles++;
+    if (perDummy[f.name].lastFireAt == null || f.ts > perDummy[f.name].lastFireAt) perDummy[f.name].lastFireAt = f.ts;
+    const dayKey = new Date(f.ts).toISOString().slice(0, 10);
+    perDummy[f.name].perDayCounts[dayKey] = (perDummy[f.name].perDayCounts[dayKey] || 0) + 1;
+  }
+  // Expected-daily dummies declared in config. Each entry: name + optional
+  // minPerDay (default 1) + optional kind (default 'any' = toggle OR command).
+  // A missing config falls back to a sensible default list seeded from the
+  // dummies the audit has previously flagged + obvious daily routines.
+  const defaultExpectations = [
+    { name: 'Dummy - Routine Start', minPerDay: 1, kind: 'any' },
+    { name: 'Dummy - Fade Start Sunset', minPerDay: 1, kind: 'any' },
+    { name: 'Dummy - Fade Start Sunrise', minPerDay: 1, kind: 'any' },
+    { name: 'Dummy - Morning Music', minPerDay: 1, kind: 'any' },
+    { name: 'Dummy - Day Music', minPerDay: 1, kind: 'any' },
+  ];
+  const expectations = (config.homekitExpectations && Array.isArray(config.homekitExpectations))
+    ? config.homekitExpectations
+    : defaultExpectations;
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const yesterdayKey = new Date(Date.now() - 24 * 3600 * 1000).toISOString().slice(0, 10);
+  // Build the per-dummy health: status (ok | missing-today | missing-yesterday | chronic),
+  // last 7d streak (how many of the last 7 days had >= minPerDay fires).
+  const health = expectations.map(exp => {
+    const d = perDummy[exp.name] || { total: 0, commands: 0, toggles: 0, lastFireAt: null, perDayCounts: {} };
+    const today = d.perDayCounts[todayKey] || 0;
+    const yesterday = d.perDayCounts[yesterdayKey] || 0;
+    let last7dHits = 0;
+    for (let i = 0; i < 7; i++) {
+      const key = new Date(Date.now() - i * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      if ((d.perDayCounts[key] || 0) >= exp.minPerDay) last7dHits++;
+    }
+    let status;
+    if (today >= exp.minPerDay) status = 'ok';
+    else if (yesterday >= exp.minPerDay) status = 'missing-today';
+    else if (last7dHits >= 3) status = 'missing-yesterday';
+    else status = 'chronic';
+    return {
+      name: exp.name,
+      minPerDay: exp.minPerDay,
+      kind: exp.kind || 'any',
+      status,
+      today,
+      yesterday,
+      last7dHits,
+      total: d.total,
+      lastFireAt: d.lastFireAt ? new Date(d.lastFireAt).toISOString() : null,
+      perDayCounts: d.perDayCounts,
+    };
+  });
+  // Sort: most-broken first (chronic > missing-today > missing-yesterday > ok)
+  const statusRank = { chronic: 0, 'missing-today': 1, 'missing-yesterday': 2, ok: 3 };
+  health.sort((a, b) => statusRank[a.status] - statusRank[b.status] || a.name.localeCompare(b.name));
+  // Top-line summary
+  const broken = health.filter(h => h.status !== 'ok');
+  res.json({
+    ok: true,
+    days,
+    fireCount: fires.length,
+    expectations: expectations.length,
+    brokenCount: broken.length,
+    health,
+    topDummiesByTotal: Object.values(perDummy)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 15)
+      .map(d => ({ name: d.name, total: d.total, lastFireAt: d.lastFireAt ? new Date(d.lastFireAt).toISOString() : null })),
   });
 });
 

@@ -353,11 +353,31 @@ async function groupAllSpeakers(coordName) {
       break;
     }
   } catch (e) {}
-  const toJoin = Object.entries(speakers)
+  let toJoin = Object.entries(speakers)
     .filter(([name]) => name !== coordName && !isBoost(name) && !alreadyGrouped.has(name));
+  // Preflight: skip TV-capable speakers (Playbar/Playbase) that are currently on
+  // their TV input. They refuse to become slaves (UPnP 402 "Invalid Args") and the
+  // routine ends up coordinating from the TV speaker anyway via the
+  // findGroupCoordinator fallback. Querying state is cheap and parallel-safe.
+  const tvSkips = [];
+  const stateChecks = await Promise.all(toJoin.map(async ([name]) => {
+    const caps = (speakerInfo[name] && speakerInfo[name].capabilities) || [];
+    if (!caps.includes('tv')) return { name, onTv: false };
+    try {
+      const st = await withTimeout(getState(name), 2000, `state ${name}`);
+      return { name, onTv: !!(st && st.inputSource === 'TV') };
+    } catch (e) {
+      return { name, onTv: false };
+    }
+  }));
+  for (const c of stateChecks) if (c.onTv) tvSkips.push(c.name);
+  if (tvSkips.length) {
+    toJoin = toJoin.filter(([name]) => !tvSkips.includes(name));
+    console.log(`  Skipping ${tvSkips.length} TV-mode speakers: ${tvSkips.join(', ')}`);
+  }
   if (toJoin.length === 0) {
     console.log('  All speakers already grouped under ' + coordName + ', skipping joins');
-    return [];
+    return tvSkips.map(name => ({ room: name, status: 'skipped-tv' }));
   }
   console.log(`  Joining ${toJoin.length} speakers to ${coordName} (${Math.max(0, alreadyGrouped.size - 1)} already grouped)`);
   const results = await Promise.all(toJoin.map(([name, device]) =>
@@ -377,11 +397,23 @@ async function groupAllSpeakers(coordName) {
           f.status = 'joined';
           console.log(`  Retry succeeded: ${f.room}`);
         } catch (e) {
-          console.log(`  Retry failed: ${f.room}: ${e.message}`);
+          // UPnP 402 on a TV-capable speaker means it can't be a slave right now
+          // (TV input just released, or some other transient mode). Benign: the
+          // findGroupCoordinator fallback uses it as coordinator instead. Log
+          // it once at a calmer severity so the audit doesn't flag it as a problem.
+          const caps = (speakerInfo[f.room] && speakerInfo[f.room].capabilities) || [];
+          const is402 = /errorCode>402</.test(e.message);
+          if (is402 && caps.includes('tv')) {
+            console.log(`  Note: ${f.room} declined to join as slave (likely TV-mode quirk on S1 Playbar/Playbase); will fall back to it as coordinator if needed`);
+          } else {
+            console.log(`  Retry failed: ${f.room}: ${e.message}`);
+          }
         }
       }
     }
   }
+  // Include preflight-skipped speakers in the result so callers see them.
+  for (const name of tvSkips) results.push({ room: name, status: 'skipped-tv' });
   return results;
 }
 
