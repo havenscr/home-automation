@@ -100,7 +100,8 @@ LG's SDK ([thinq_api.py error class](https://github.com/thinq-connect/pythinqcon
 
 | LG code | Meaning | Status |
 |---|---|---|
-| **1306** | EXCEEDED_API_CALLS — rate limit | **VERIFIED** in SDK. **Our code matches on `/1314/` instead. 1314 is NOT in LG's SDK error table.** We may have mis-read the error body once and pattern-matched on the wrong number for the last year. Worth grepping production logs for "1306" to see what's actually been firing. |
+| **1314** | "Exceeded User API calls" — rate limit (the actual code LG's live API returns) | **VERIFIED in production.** Pi journal entries from 2026-05-04 09:55-09:58 show LG returning HTTP 401 with `code:"1314"` and `message:"Exceeded User API calls"` during a tuning-burst rate-limit event. Our regex matches both this and the SDK-documented 1306 for forward-compat. |
+| 1306 | EXCEEDED_API_CALLS — listed by LG's SDK error table, but the live API does not actually return this code today | **DOCS-ONLY**. LG's own published SDK ([thinq_api.py](https://github.com/thinq-connect/pythinqconnect/blob/main/thinqconnect/thinq_api.py)) lists 1306 as the rate-limit code, but the running service returns 1314 instead. Their docs are out of sync with the API. Our code matches both. |
 | 1222 | NOT_CONNECTED_DEVICE — AC's WiFi is offline | VERIFIED. Per [HA core #139022](https://github.com/home-assistant/core/issues/139022), persists until the device's WiFi reassociates. No auto-recovery interval. |
 | 2214 | FAIL_REQUEST — generic catch-all | VERIFIED. No actionable detail. Often transient. |
 | 1103 / 1218 | INVALID_TOKEN — PAT revoked | VERIFIED. Rotate via developer portal. |
@@ -108,8 +109,8 @@ LG's SDK ([thinq_api.py error class](https://github.com/thinq-connect/pythinqcon
 | 2209 / 2210 / 2212 | DEVICE_RESPONSE_DELAY / RETRY_REQUEST / SYNCING | VERIFIED. **Our code doesn't distinguish these.** They suggest retry-with-backoff is appropriate rather than bubbling as errors. |
 | 2301 / 2304 | COMMAND_NOT_SUPPORTED_IN_REMOTE_OFF / _IN_POWER_OFF | VERIFIED. Useful for diagnosing failed writes after a power cycle. |
 
-**Action items from this audit** (logged for future work, not fixing here):
-- Fix the rate-limit regex to match `1306` not `1314`. Grep production logs to confirm what the body actually contains.
+**Action items from this audit:**
+- ✅ Verified rate-limit code via production logs. LG returns 1314 (not 1306 as the SDK claims). Regex now matches both codes plus the message text. Tests anchored on real production error strings.
 - Add explicit handling for 2209/2210/2212 (transient, retry) vs 2305 (mode-incompatible, give up).
 - Surface 1103/1218 (revoked PAT) loudly — currently they bubble as generic errors and the loop just keeps failing.
 

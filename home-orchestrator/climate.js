@@ -36,6 +36,19 @@ const HYSTERESIS_F = 0.5;
 const MODE_DEADBAND_F = 2.0;
 const MODE_DWELL_MS = 10 * 60 * 1000;  // min time between mode writes per slot
 
+// Predicate: does this LG error string indicate the per-account API rate limit
+// was hit? LG's live API returns code "1314" with message "Exceeded User API
+// calls" (verified against production journal logs May 4 2026). LG's own
+// official SDK error table lists 1306 as EXCEEDED_API_CALLS instead -- their
+// docs are out of sync with the running service. Match both codes for
+// forward-compat plus the message text as belt-and-suspenders.
+function isRateLimitError(errMsg) {
+  if (!errMsg) return false;
+  return /\b1314\b/.test(errMsg) ||
+         /\b1306\b/.test(errMsg) ||
+         /Exceeded User API/i.test(errMsg);
+}
+
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
 function roundC(c) { return Math.round(c * 2) / 2; }
@@ -159,7 +172,7 @@ function createClimate({ getConfig, logActivity }) {
   }
 
   function trackRateLimit(slot, errMsg) {
-    const isRateLimit = errMsg && (/1314/.test(errMsg) || /Exceeded User API/i.test(errMsg));
+    const isRateLimit = isRateLimitError(errMsg);
     if (!isRateLimit) {
       // Any non-rate-limit error: clear backoff so we don't compound penalties.
       delete rateLimit[slot];
@@ -899,4 +912,4 @@ function createClimate({ getConfig, logActivity }) {
   };
 }
 
-module.exports = { createClimate, cToF, fToC, WIND_MAP };
+module.exports = { createClimate, cToF, fToC, WIND_MAP, isRateLimitError };
