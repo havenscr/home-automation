@@ -1,19 +1,19 @@
 {
-  "snapshotAt": "2026-05-12T18:46:21Z",
+  "snapshotAt": "2026-05-12T19:00:02Z",
   "lookbackDays": 14,
   "host": {
-    "uptime": "up 8 weeks, 3 days, 19 hours, 36 minutes",
+    "uptime": "up 8 weeks, 3 days, 19 hours, 49 minutes",
     "memMB": {
       "total": 921,
-      "available": 382
+      "available": 393
     },
     "diskFreeGB": 19
   },
   "services": {
     "home-orchestrator": {
       "active": true,
-      "restarts": 19,
-      "memResidentMB": 55
+      "restarts": 20,
+      "memResidentMB": 56
     },
     "sonos-commander": {
       "active": true,
@@ -28,16 +28,6 @@
   },
   "activityLog": {
     "home-orchestrator": [
-      {
-        "ts": "2026-05-12T02:00:56.276Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:00:56.281Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
       {
         "ts": "2026-05-12T02:01:56.277Z",
         "type": "climate",
@@ -2531,6 +2521,16 @@
         "ts": "2026-05-12T18:45:48.623Z",
         "type": "startup",
         "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T18:53:29.238Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T18:53:32.159Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
       }
     ],
     "sonos-commander": [
@@ -3498,7 +3498,9 @@
       "[12/05/2026, 11:24:12] [Alexa] WARNING: Duplicate device name Pause",
       "[12/05/2026, 11:24:12] [Alexa] WARNING: Duplicate device name Play",
       "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Play"
+      "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 11:54:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 11:54:12] [Alexa] WARNING: Duplicate device name Play"
     ],
     "automationFires": {
       "Dummy - Day Music": 2,
@@ -3674,7 +3676,7 @@
     },
     "pressureF": 0.3,
     "engagedRungCount": 1,
-    "lastTickAt": 0,
+    "lastTickAt": 1778612369878,
     "globalPause": {
       "paused": false,
       "until": 0
@@ -3691,8 +3693,9 @@
         "reason": null
       }
     },
+    "overrideEvidence": {},
     "cache": {
-      "fetchedAt": 1778611581784,
+      "fetchedAt": 1778612402392,
       "devices": {
         "kitchen": {
           "ok": true,
@@ -3730,8 +3733,8 @@
               }
             ],
             "filterInfo": {
-              "filterLifetime": 35,
-              "usedTime": 215
+              "filterLifetime": 34,
+              "usedTime": 216
             },
             "airFlow": {
               "windStrength": "LOW",
@@ -3751,7 +3754,7 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778611581770
+          "fetchedAt": 1778612402392
         },
         "office": {
           "ok": true,
@@ -3760,8 +3763,8 @@
           "jobMode": "COOL",
           "windStrength": "LOW",
           "unitNative": "C",
-          "currentC": 22.5,
-          "currentF": 72.5,
+          "currentC": 23,
+          "currentF": 73.4,
           "targetC": 23.5,
           "targetF": 74.3,
           "raw": {
@@ -3772,18 +3775,18 @@
               "currentJobMode": "COOL"
             },
             "temperature": {
-              "currentTemperature": 22.5,
+              "currentTemperature": 23,
               "targetTemperature": 23.5,
               "unit": "C"
             },
             "temperatureInUnits": [
               {
-                "currentTemperature": 22.5,
+                "currentTemperature": 23,
                 "targetTemperature": 23.5,
                 "unit": "C"
               },
               {
-                "currentTemperature": 73,
+                "currentTemperature": 74,
                 "targetTemperature": 75,
                 "unit": "F"
               }
@@ -3810,7 +3813,7 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778611581784
+          "fetchedAt": 1778612402089
         }
       }
     },
@@ -3851,8 +3854,8 @@
             }
           ],
           "filterInfo": {
-            "filterLifetime": 35,
-            "usedTime": 215
+            "filterLifetime": 34,
+            "usedTime": 216
           },
           "airFlow": {
             "windStrength": "LOW",
@@ -3872,7 +3875,7 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778611581770
+        "fetchedAt": 1778612402392
       },
       "office": {
         "ok": true,
@@ -3881,8 +3884,8 @@
         "jobMode": "COOL",
         "windStrength": "LOW",
         "unitNative": "C",
-        "currentC": 22.5,
-        "currentF": 72.5,
+        "currentC": 23,
+        "currentF": 73.4,
         "targetC": 23.5,
         "targetF": 74.3,
         "raw": {
@@ -3893,18 +3896,18 @@
             "currentJobMode": "COOL"
           },
           "temperature": {
-            "currentTemperature": 22.5,
+            "currentTemperature": 23,
             "targetTemperature": 23.5,
             "unit": "C"
           },
           "temperatureInUnits": [
             {
-              "currentTemperature": 22.5,
+              "currentTemperature": 23,
               "targetTemperature": 23.5,
               "unit": "C"
             },
             {
-              "currentTemperature": 73,
+              "currentTemperature": 74,
               "targetTemperature": 75,
               "unit": "F"
             }
@@ -3931,7 +3934,7 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778611581784
+        "fetchedAt": 1778612402089
       }
     }
   }
