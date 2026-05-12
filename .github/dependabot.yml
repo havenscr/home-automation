@@ -12,13 +12,9 @@ updates:
       prefix: deps
       include: scope
     groups:
-      production:
-        dependency-type: production
-        update-types:
-          - minor
-          - patch
-      development:
-        dependency-type: development
+      all:
+        patterns:
+          - "*"
 
   - package-ecosystem: github-actions
     directory: "/"
