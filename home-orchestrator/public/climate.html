@@ -750,6 +750,17 @@ function bumpTarget(slot, delta) {
   inp.value = Number(inp.value || 70) + delta;
 }
 
+async function clearBreakerPause() {
+  if (!confirm('Clear the global climate pause now?')) return;
+  try {
+    await api('/api/climate/global/resume', { method: 'POST' });
+    toast('Global pause cleared', 'success');
+    setTimeout(() => { refreshAll(); loadStats(); }, 600);
+  } catch (e) {
+    toast('Failed to clear pause: ' + e.message, 'error');
+  }
+}
+
 async function setTarget(slot) {
   const v = Number($('t-' + slot).value);
   if (!Number.isFinite(v)) return;
@@ -942,7 +953,13 @@ async function loadStats() {
       ? '<div style="color:var(--danger);margin-bottom:8px"><strong>Last tripped:</strong> ' + fmtTs(br.lastTrippedAt)
         + ' by <strong>' + br.lastTrippedSlot + '</strong> (' + br.lastTrippedCount + ' writes)</div>'
       : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">Never tripped.</div>';
-    $('breaker-state').innerHTML = tripped
+    const globalPaused = !!(lastState && lastState.globalPause && lastState.globalPause.paused);
+    const pauseBanner = globalPaused
+      ? '<div style="background:rgba(255,86,48,0.15);border-left:3px solid var(--danger);padding:8px 10px;margin-bottom:10px;font-size:13px">'
+        + '<strong>Global climate paused</strong> until ' + fmtTs(new Date(lastState.globalPause.until).toISOString())
+        + ' <button class="btn btn-ghost btn-sm" style="margin-left:8px" onclick="clearBreakerPause()">Clear pause now</button></div>'
+      : '';
+    $('breaker-state').innerHTML = pauseBanner + tripped
       + '<table style="width:100%;border-collapse:collapse;font-size:13px">'
       + '<thead><tr style="text-align:left;border-bottom:1px solid var(--card-border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">'
       + '<th style="padding:4px 8px">Slot</th><th style="padding:4px 8px">Writes in last ' + br.windowMinutes + 'm</th></tr></thead>'
