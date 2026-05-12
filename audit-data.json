@@ -1,19 +1,19 @@
 {
-  "snapshotAt": "2026-05-12T18:33:36Z",
+  "snapshotAt": "2026-05-12T18:46:21Z",
   "lookbackDays": 14,
   "host": {
-    "uptime": "up 8 weeks, 3 days, 19 hours, 23 minutes",
+    "uptime": "up 8 weeks, 3 days, 19 hours, 36 minutes",
     "memMB": {
       "total": 921,
-      "available": 365
+      "available": 382
     },
     "diskFreeGB": 19
   },
   "services": {
     "home-orchestrator": {
       "active": true,
-      "restarts": 17,
-      "memResidentMB": 50
+      "restarts": 19,
+      "memResidentMB": 55
     },
     "sonos-commander": {
       "active": true,
@@ -23,31 +23,11 @@
     "homebridge": {
       "active": true,
       "restarts": 8,
-      "memResidentMB": 77
+      "memResidentMB": 76
     }
   },
   "activityLog": {
     "home-orchestrator": [
-      {
-        "ts": "2026-05-12T01:58:56.275Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T01:58:56.279Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T01:59:56.275Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T01:59:56.280Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
       {
         "ts": "2026-05-12T02:00:56.276Z",
         "type": "climate",
@@ -2531,6 +2511,26 @@
         "ts": "2026-05-12T17:45:50.415Z",
         "type": "climate",
         "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T18:44:12.151Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T18:44:15.509Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T18:45:45.712Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T18:45:48.623Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
       }
     ],
     "sonos-commander": [
@@ -3496,7 +3496,9 @@
       "[12/05/2026, 11:09:12] [Alexa] WARNING: Duplicate device name Pause",
       "[12/05/2026, 11:09:12] [Alexa] WARNING: Duplicate device name Play",
       "[12/05/2026, 11:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 11:24:12] [Alexa] WARNING: Duplicate device name Play"
+      "[12/05/2026, 11:24:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Play"
     ],
     "automationFires": {
       "Dummy - Day Music": 2,
@@ -3667,16 +3669,12 @@
         [
           "office",
           "medium"
-        ],
-        [
-          "office",
-          "high"
         ]
       ]
     },
     "pressureF": 0.3,
     "engagedRungCount": 1,
-    "lastTickAt": 1778610769309,
+    "lastTickAt": 0,
     "globalPause": {
       "paused": false,
       "until": 0
@@ -3688,73 +3686,14 @@
         "reason": null
       },
       "office": {
-        "paused": true,
+        "paused": false,
         "until": 1778611549383,
-        "reason": "manual-override"
+        "reason": null
       }
     },
     "cache": {
-      "fetchedAt": 1778610816009,
+      "fetchedAt": 1778611581784,
       "devices": {
-        "office": {
-          "ok": true,
-          "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
-          "power": "POWER_ON",
-          "jobMode": "COOL",
-          "windStrength": "LOW",
-          "unitNative": "C",
-          "currentC": 22.5,
-          "currentF": 72.5,
-          "targetC": 23.5,
-          "targetF": 74.3,
-          "raw": {
-            "runState": {
-              "currentState": "NORMAL"
-            },
-            "airConJobMode": {
-              "currentJobMode": "COOL"
-            },
-            "temperature": {
-              "currentTemperature": 22.5,
-              "targetTemperature": 23.5,
-              "unit": "C"
-            },
-            "temperatureInUnits": [
-              {
-                "currentTemperature": 22.5,
-                "targetTemperature": 23.5,
-                "unit": "C"
-              },
-              {
-                "currentTemperature": 73,
-                "targetTemperature": 75,
-                "unit": "F"
-              }
-            ],
-            "filterInfo": {
-              "filterLifetime": 0,
-              "usedTime": 250
-            },
-            "airFlow": {
-              "windStrength": "LOW",
-              "windStrengthDetail": "LOW"
-            },
-            "windDirection": {
-              "rotateUpDown": true
-            },
-            "operation": {
-              "airConOperationMode": "POWER_ON"
-            },
-            "timer": {
-              "relativeStartTimer": "UNSET",
-              "relativeStopTimer": "UNSET"
-            },
-            "sleepTimer": {
-              "relativeStopTimer": "UNSET"
-            }
-          },
-          "fetchedAt": 1778610816009
-        },
         "kitchen": {
           "ok": true,
           "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
@@ -3812,70 +3751,70 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778610815881
-        }
-      }
-    },
-    "devices": {
-      "office": {
-        "ok": true,
-        "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
-        "power": "POWER_ON",
-        "jobMode": "COOL",
-        "windStrength": "LOW",
-        "unitNative": "C",
-        "currentC": 22.5,
-        "currentF": 72.5,
-        "targetC": 23.5,
-        "targetF": 74.3,
-        "raw": {
-          "runState": {
-            "currentState": "NORMAL"
-          },
-          "airConJobMode": {
-            "currentJobMode": "COOL"
-          },
-          "temperature": {
-            "currentTemperature": 22.5,
-            "targetTemperature": 23.5,
-            "unit": "C"
-          },
-          "temperatureInUnits": [
-            {
+          "fetchedAt": 1778611581770
+        },
+        "office": {
+          "ok": true,
+          "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
+          "power": "POWER_ON",
+          "jobMode": "COOL",
+          "windStrength": "LOW",
+          "unitNative": "C",
+          "currentC": 22.5,
+          "currentF": 72.5,
+          "targetC": 23.5,
+          "targetF": 74.3,
+          "raw": {
+            "runState": {
+              "currentState": "NORMAL"
+            },
+            "airConJobMode": {
+              "currentJobMode": "COOL"
+            },
+            "temperature": {
               "currentTemperature": 22.5,
               "targetTemperature": 23.5,
               "unit": "C"
             },
-            {
-              "currentTemperature": 73,
-              "targetTemperature": 75,
-              "unit": "F"
+            "temperatureInUnits": [
+              {
+                "currentTemperature": 22.5,
+                "targetTemperature": 23.5,
+                "unit": "C"
+              },
+              {
+                "currentTemperature": 73,
+                "targetTemperature": 75,
+                "unit": "F"
+              }
+            ],
+            "filterInfo": {
+              "filterLifetime": 0,
+              "usedTime": 250
+            },
+            "airFlow": {
+              "windStrength": "LOW",
+              "windStrengthDetail": "LOW"
+            },
+            "windDirection": {
+              "rotateUpDown": true
+            },
+            "operation": {
+              "airConOperationMode": "POWER_ON"
+            },
+            "timer": {
+              "relativeStartTimer": "UNSET",
+              "relativeStopTimer": "UNSET"
+            },
+            "sleepTimer": {
+              "relativeStopTimer": "UNSET"
             }
-          ],
-          "filterInfo": {
-            "filterLifetime": 0,
-            "usedTime": 250
           },
-          "airFlow": {
-            "windStrength": "LOW",
-            "windStrengthDetail": "LOW"
-          },
-          "windDirection": {
-            "rotateUpDown": true
-          },
-          "operation": {
-            "airConOperationMode": "POWER_ON"
-          },
-          "timer": {
-            "relativeStartTimer": "UNSET",
-            "relativeStopTimer": "UNSET"
-          },
-          "sleepTimer": {
-            "relativeStopTimer": "UNSET"
-          }
-        },
-        "fetchedAt": 1778610816009
-      },
+          "fetchedAt": 1778611581784
+        }
+      }
+    },
+    "devices": {
       "kitchen": {
         "ok": true,
         "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
@@ -3933,7 +3872,66 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778610815881
+        "fetchedAt": 1778611581770
+      },
+      "office": {
+        "ok": true,
+        "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
+        "power": "POWER_ON",
+        "jobMode": "COOL",
+        "windStrength": "LOW",
+        "unitNative": "C",
+        "currentC": 22.5,
+        "currentF": 72.5,
+        "targetC": 23.5,
+        "targetF": 74.3,
+        "raw": {
+          "runState": {
+            "currentState": "NORMAL"
+          },
+          "airConJobMode": {
+            "currentJobMode": "COOL"
+          },
+          "temperature": {
+            "currentTemperature": 22.5,
+            "targetTemperature": 23.5,
+            "unit": "C"
+          },
+          "temperatureInUnits": [
+            {
+              "currentTemperature": 22.5,
+              "targetTemperature": 23.5,
+              "unit": "C"
+            },
+            {
+              "currentTemperature": 73,
+              "targetTemperature": 75,
+              "unit": "F"
+            }
+          ],
+          "filterInfo": {
+            "filterLifetime": 0,
+            "usedTime": 250
+          },
+          "airFlow": {
+            "windStrength": "LOW",
+            "windStrengthDetail": "LOW"
+          },
+          "windDirection": {
+            "rotateUpDown": true
+          },
+          "operation": {
+            "airConOperationMode": "POWER_ON"
+          },
+          "timer": {
+            "relativeStartTimer": "UNSET",
+            "relativeStopTimer": "UNSET"
+          },
+          "sleepTimer": {
+            "relativeStopTimer": "UNSET"
+          }
+        },
+        "fetchedAt": 1778611581784
       }
     }
   }
