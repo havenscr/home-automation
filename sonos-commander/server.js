@@ -661,24 +661,41 @@ async function checkRoutineState(routine) {
       } catch (e) {}
     }
   }
-  // Conditions system: skip based on input source state
-  // conditionLogic: "any" (OR, default) = skip if ANY matches; "all" (AND) = skip only if ALL match
+  // Conditions system: skip when a condition matches.
+  // conditionLogic: "any" (OR, default) = skip if ANY matches; "all" (AND) = skip only if ALL match.
+  // Supported shapes:
+  //   {speaker, source, is}            -- skip when <speaker> is/isn't on <source>
+  //   {type: "presence", is: "home"|"away"}  -- skip when home-orchestrator reports anyoneHome == is
   if (routine.conditions && routine.conditions.length > 0) {
     const useAll = routine.conditionLogic === 'all';
     const results = [];
     for (const cond of routine.conditions) {
-      if (!cond.speaker || !cond.source || !speakers[cond.speaker]) continue;
+      let matches = false;
       try {
-        const st = await getState(cond.speaker);
-        const srcNorm = cond.source.toLowerCase().replace(/\s/g, '');
-        const sourceActive = st && st.inputSource &&
-          st.inputSource.toLowerCase().replace(/\s/g, '') === srcNorm;
-        const wantOn = (cond.is || 'on') === 'on';
-        const matches = (wantOn && sourceActive) || (!wantOn && !sourceActive);
+        if (cond.type === 'presence') {
+          // Query home-orchestrator. Default to "home" if the endpoint is unreachable
+          // so a network blip on the orchestrator doesn't silently disable music
+          // routines forever. (Fail-safe: better to play music in an empty apartment
+          // than to never play it in an occupied one.)
+          const anyoneHome = await fetchAnyoneHome();
+          const want = (cond.is || 'away').toLowerCase();
+          const currentState = anyoneHome ? 'home' : 'away';
+          matches = currentState === want;
+          if (matches) console.log(`[Routine] Condition match: presence is ${currentState} (skip when ${want})`);
+        } else if (cond.speaker && cond.source && speakers[cond.speaker]) {
+          const st = await getState(cond.speaker);
+          const srcNorm = cond.source.toLowerCase().replace(/\s/g, '');
+          const sourceActive = st && st.inputSource &&
+            st.inputSource.toLowerCase().replace(/\s/g, '') === srcNorm;
+          const wantOn = (cond.is || 'on') === 'on';
+          matches = (wantOn && sourceActive) || (!wantOn && !sourceActive);
+          if (matches) console.log(`[Routine] Condition match: ${cond.speaker} ${wantOn ? 'IS' : 'is NOT'} on ${cond.source}`);
+        } else {
+          continue;
+        }
         results.push({ cond, matches });
-        if (matches) console.log(`[Routine] Condition match: ${cond.speaker} ${wantOn ? 'IS' : 'is NOT'} on ${cond.source}`);
       } catch (e) {
-        console.log(`[Routine] Condition check error for ${cond.speaker}: ${e.message}`);
+        console.log(`[Routine] Condition check error: ${e.message}`);
         results.push({ cond, matches: false });
       }
     }
@@ -693,6 +710,40 @@ async function checkRoutineState(routine) {
     }
   }
   return true;
+}
+
+// Lightweight client to home-orchestrator's /api/presence endpoint. Returns
+// the debounced anyoneHome state. Fails open (returns true) so a transient
+// network issue doesn't silently suppress all music routines.
+async function fetchAnyoneHome() {
+  const http = require('http');
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: 'localhost', port: 5006, path: '/api/presence',
+      method: 'GET', timeout: 3000,
+    }, (res) => {
+      let data = ''; res.on('data', c => data += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(data);
+          resolve(j && j.anyoneHome !== false);
+        } catch (e) {
+          console.log(`[Routine] presence check parse failed, defaulting to home: ${e.message}`);
+          resolve(true);
+        }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      console.log('[Routine] presence check timeout, defaulting to home');
+      resolve(true);
+    });
+    req.on('error', (e) => {
+      console.log(`[Routine] presence check error, defaulting to home: ${e.message}`);
+      resolve(true);
+    });
+    req.end();
+  });
 }
 
 async function executeRoutine(id, options = {}) {
