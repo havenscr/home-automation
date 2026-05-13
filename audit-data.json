@@ -1,333 +1,33 @@
 {
-  "snapshotAt": "2026-05-12T19:00:02Z",
+  "snapshotAt": "2026-05-13T07:00:04Z",
   "lookbackDays": 14,
   "host": {
-    "uptime": "up 8 weeks, 3 days, 19 hours, 49 minutes",
+    "uptime": "up 8 weeks, 4 days, 7 hours, 49 minutes",
     "memMB": {
       "total": 921,
-      "available": 393
+      "available": 406
     },
     "diskFreeGB": 19
   },
   "services": {
     "home-orchestrator": {
       "active": true,
-      "restarts": 20,
-      "memResidentMB": 56
+      "restarts": 32,
+      "memResidentMB": 58
     },
     "sonos-commander": {
       "active": true,
-      "restarts": 1,
-      "memResidentMB": 17
+      "restarts": 4,
+      "memResidentMB": 62
     },
     "homebridge": {
       "active": true,
-      "restarts": 8,
-      "memResidentMB": 76
+      "restarts": 11,
+      "memResidentMB": 94
     }
   },
   "activityLog": {
     "home-orchestrator": [
-      {
-        "ts": "2026-05-12T02:01:56.277Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:01:56.282Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:02:56.279Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:02:56.284Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:03:56.278Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:03:56.284Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:04:56.279Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:04:56.284Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:05:56.279Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:05:56.285Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:06:56.279Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:06:56.285Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:07:56.281Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:07:56.286Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:08:56.281Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:08:56.285Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:09:56.280Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:09:56.287Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:10:56.283Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:10:56.289Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:11:56.283Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:11:56.289Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:12:56.284Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:12:56.288Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:13:56.286Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:13:56.290Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:14:56.287Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:14:56.291Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:15:56.288Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:15:56.292Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:16:56.287Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:16:56.292Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:17:56.287Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:17:56.290Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:18:56.287Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:18:56.292Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:19:56.289Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:19:56.293Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:20:56.288Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:20:56.293Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:21:56.289Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:21:56.293Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:22:56.291Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:22:56.296Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:23:56.289Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:23:56.293Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:24:56.289Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:24:56.295Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:25:56.289Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:25:56.294Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:26:56.290Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:26:56.295Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:27:56.290Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:27:56.296Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:28:56.290Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:28:56.295Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:29:56.292Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:29:56.297Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:30:56.293Z",
-        "type": "climate",
-        "message": "read kitchen failed: thinq request timed out"
-      },
-      {
-        "ts": "2026-05-12T02:30:56.297Z",
-        "type": "climate",
-        "message": "read office failed: thinq request timed out"
-      },
       {
         "ts": "2026-05-12T02:31:56.292Z",
         "type": "climate",
@@ -2531,80 +2231,908 @@
         "ts": "2026-05-12T18:53:32.159Z",
         "type": "startup",
         "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T19:10:22.315Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T19:10:25.219Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T19:11:18.738Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:19.527Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:20.262Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:20.990Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:21.790Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:22.537Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:23.227Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:23.648Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:23.933Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:24.788Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:25.538Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:26.222Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:26.934Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:27.620Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:28.309Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:29.118Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:29.834Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:30.542Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:31.347Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:32.262Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:33.362Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:34.174Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:34.889Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:35.619Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:36.359Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:36.999Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:37.792Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:38.509Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:39.166Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:39.238Z",
+        "type": "climate",
+        "message": "RUNAWAY BREAKER tripped: kitchen did 30+ writes in 10m -- pausing all climate 30m"
+      },
+      {
+        "ts": "2026-05-12T19:11:40.013Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T19:11:40.769Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T19:12:22.971Z",
+        "type": "climate",
+        "message": "clear pause global"
+      },
+      {
+        "ts": "2026-05-12T19:13:06.398Z",
+        "type": "audit-health",
+        "message": "audit-data STALE: age 20.0h exceeds 14h threshold (mtime 2026-05-11T23:13:06.351Z) -- snapshot cron may be broken"
+      },
+      {
+        "ts": "2026-05-12T19:13:06.659Z",
+        "type": "audit-health",
+        "message": "audit-data fresh (age 0.0h, 153647 bytes)"
+      },
+      {
+        "ts": "2026-05-12T19:24:03.438Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T19:24:06.393Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T19:56:04.908Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-12T19:57:04.070Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=2.1F rungs=2/4"
+      },
+      {
+        "ts": "2026-05-12T19:57:04.741Z",
+        "type": "climate",
+        "message": "write kitchen: {\"targetC\":23.5,\"targetF\":74}"
+      },
+      {
+        "ts": "2026-05-12T19:57:05.450Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-12T20:02:04.044Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=0.3F rungs=1/4"
+      },
+      {
+        "ts": "2026-05-12T20:02:04.914Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T20:11:00.670Z",
+        "type": "climate",
+        "message": "config patched: schedule"
+      },
+      {
+        "ts": "2026-05-12T20:11:04.844Z",
+        "type": "climate",
+        "message": "write office: {\"targetC\":24.5,\"targetF\":76}"
+      },
+      {
+        "ts": "2026-05-12T20:13:04.999Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-12T20:14:04.758Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T20:16:04.871Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-12T20:17:51.771Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T20:17:54.866Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T20:18:52.346Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=2.8F rungs=3/4"
+      },
+      {
+        "ts": "2026-05-12T20:18:53.057Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-12T20:18:53.800Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-12T20:20:52.207Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=3.7F rungs=4/4"
+      },
+      {
+        "ts": "2026-05-12T20:20:53.579Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-12T20:23:52.184Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=0.0F rungs=1/4"
+      },
+      {
+        "ts": "2026-05-12T20:23:52.807Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T20:23:53.445Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T20:25:23.657Z",
+        "type": "climate",
+        "message": "controller started (poll 60s)"
+      },
+      {
+        "ts": "2026-05-12T20:25:26.616Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T20:25:59.146Z",
+        "type": "climate",
+        "message": "pause global for 5m"
+      },
+      {
+        "ts": "2026-05-12T20:26:01.151Z",
+        "type": "climate",
+        "message": "clear pause global"
+      },
+      {
+        "ts": "2026-05-12T20:39:51.774Z",
+        "type": "climate",
+        "message": "ladder-validator: ladder missing entirely; control loop will be a no-op until populated"
+      },
+      {
+        "ts": "2026-05-12T20:39:51.782Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 1 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T20:39:54.667Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T20:41:35.608Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T20:41:38.919Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T20:42:36.323Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=2.1F rungs=2/4"
+      },
+      {
+        "ts": "2026-05-12T20:42:36.968Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-12T20:42:37.683Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-12T20:47:36.183Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=0.1F rungs=1/4"
+      },
+      {
+        "ts": "2026-05-12T20:47:36.806Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-12T23:04:42.905Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T23:04:46.139Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T23:04:50.992Z",
+        "type": "presence",
+        "message": "poll failed: no token in response"
+      },
+      {
+        "ts": "2026-05-12T23:05:43.092Z",
+        "type": "presence",
+        "message": "poll failed: no token in response"
+      },
+      {
+        "ts": "2026-05-12T23:06:43.085Z",
+        "type": "presence",
+        "message": "poll failed: no token in response"
+      },
+      {
+        "ts": "2026-05-12T23:07:05.963Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T23:07:08.870Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.324Z",
+        "type": "fade",
+        "message": "Snapshot saved for groups: 12, 10",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.345Z",
+        "type": "fade",
+        "message": "Snapshot saved Nanoleaf: bri=100, effect=Color Black Weave",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.361Z",
+        "type": "fade",
+        "message": "Dynamic start: light 25 at bri:100 {\"ct\":346}",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.380Z",
+        "type": "fade",
+        "message": "Dynamic start: light 52 at bri:100 {\"ct\":346}",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.396Z",
+        "type": "fade",
+        "message": "Dynamic start: light 61 at bri:70",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:16:23.770Z",
+        "type": "fade",
+        "message": "Started \"Sunset Transition\" (25 min)",
+        "routineId": "sunset_transition",
+        "durationMin": 25
+      },
+      {
+        "ts": "2026-05-12T23:16:33.810Z",
+        "type": "fade",
+        "message": "Nanoleaf: brightness 70% over 780s, effect: Color Black Weave",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:29:23.928Z",
+        "type": "fade",
+        "message": "Nanoleaf: brightness 50% over 720s",
+        "routineId": "sunset_transition"
+      },
+      {
+        "ts": "2026-05-12T23:29:25.487Z",
+        "type": "fade",
+        "message": "Scene transition: detected \"Day Winter\" on group 10"
+      },
+      {
+        "ts": "2026-05-12T23:29:25.647Z",
+        "type": "fade",
+        "message": "Scene transition: \"Day Winter\" -> \"Evening Winter\" on group 11 over 300s"
+      },
+      {
+        "ts": "2026-05-12T23:33:54.899Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T23:33:58.004Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-12T23:54:18.894Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-12T23:54:21.823Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-13T00:01:35.639Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-13T00:01:38.585Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-13T00:03:26.969Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T00:03:36.705Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T00:03:51.164Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T00:42:37.149Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T00:57:36.923Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T00:58:36.163Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=2.1F rungs=2/4"
+      },
+      {
+        "ts": "2026-05-13T00:58:36.863Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T01:00:36.226Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.1F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-13T01:00:37.004Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T01:00:37.759Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T01:08:36.973Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T01:09:36.261Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T01:14:36.398Z",
+        "type": "climate",
+        "message": "ladder=default pressure=5.5F rungs=5/5"
+      },
+      {
+        "ts": "2026-05-13T01:14:37.181Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T01:14:37.856Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T01:14:38.724Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T01:17:36.341Z",
+        "type": "climate",
+        "message": "ladder=default pressure=3.7F rungs=4/5"
+      },
+      {
+        "ts": "2026-05-13T01:17:37.077Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T01:19:36.439Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T01:19:37.127Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T01:19:37.781Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T01:27:36.953Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T01:42:37.176Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T01:43:36.337Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.1F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-13T01:43:37.027Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T01:45:36.565Z",
+        "type": "presence",
+        "message": "away -> anyoneHome=false (dummy OFF for 30m, debounce 30m)"
+      },
+      {
+        "ts": "2026-05-13T01:48:36.396Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T01:48:37.091Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T02:03:36.985Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T02:04:37.019Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T02:09:36.390Z",
+        "type": "climate",
+        "message": "ladder=default pressure=4.6F rungs=5/5"
+      },
+      {
+        "ts": "2026-05-13T02:09:37.034Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T02:09:37.764Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T02:10:44.390Z",
+        "type": "climate",
+        "message": "fan kitchen failed: thinq request timed out"
+      },
+      {
+        "ts": "2026-05-13T02:11:37.169Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T02:14:36.374Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T02:14:37.126Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T02:14:37.803Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T02:17:37.297Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T02:18:37.005Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T02:21:37.184Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T02:34:36.435Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.9F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-13T02:34:37.106Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T02:37:37.138Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T02:44:36.326Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.1F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T02:44:37.321Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T03:17:37.126Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T03:41:36.979Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T03:42:37.161Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T03:43:36.453Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.1F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-13T03:43:37.615Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T03:46:36.688Z",
+        "type": "climate",
+        "message": "manual override on kitchen (fan LOW->MID) -- pausing 60m"
+      },
+      {
+        "ts": "2026-05-13T03:46:36.691Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T03:46:37.480Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T04:00:36.562Z",
+        "type": "climate",
+        "message": "ladder=default pressure=4.3F rungs=4/5"
+      },
+      {
+        "ts": "2026-05-13T04:00:37.346Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T04:00:38.066Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T04:01:37.275Z",
+        "type": "climate",
+        "message": "write office: {\"targetC\":21,\"targetF\":70}"
+      },
+      {
+        "ts": "2026-05-13T04:10:36.473Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T04:10:37.197Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T04:47:37.141Z",
+        "type": "climate",
+        "message": "write kitchen: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T05:29:37.265Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T05:35:36.494Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-13T05:35:37.299Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-13T05:48:36.985Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T05:49:37.191Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T05:50:36.484Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.5F rungs=3/5"
+      },
+      {
+        "ts": "2026-05-13T05:50:37.137Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T05:55:36.456Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T05:55:37.171Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-13T06:03:37.075Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-13T06:04:36.558Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.5F rungs=3/5"
+      },
+      {
+        "ts": "2026-05-13T06:04:37.230Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-13T06:06:37.952Z",
+        "type": "climate",
+        "message": "write office: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T06:08:36.522Z",
+        "type": "climate",
+        "message": "manual override on office (fan HIGH->MID) -- pausing 60m"
+      },
+      {
+        "ts": "2026-05-13T06:09:36.436Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-13T06:28:36.603Z",
+        "type": "presence",
+        "message": "home -> anyoneHome=true (instant on dummy ON)"
+      },
+      {
+        "ts": "2026-05-13T06:43:37.278Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-13T06:57:38.917Z",
+        "type": "climate",
+        "message": "controller started (poll 60s, 0 ladder warnings)"
+      },
+      {
+        "ts": "2026-05-13T06:57:41.895Z",
+        "type": "startup",
+        "message": "Started with 12 routines"
+      },
+      {
+        "ts": "2026-05-13T06:58:39.576Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
       }
     ],
     "sonos-commander": [
-      {
-        "ts": "2026-04-28T22:26:47.440Z",
-        "type": "routine",
-        "message": "Executed: Workday Music",
-        "played": "Synthwave - beats to chill/game to",
-        "volume": 10,
-        "shuffle": true
-      },
-      {
-        "ts": "2026-04-28T23:10:49.871Z",
-        "type": "routine",
-        "message": "Executed: PC On (Vol 10)",
-        "action": "tvVolume"
-      },
-      {
-        "ts": "2026-04-28T23:10:51.202Z",
-        "type": "routine",
-        "message": "Executed: PC On (Vol 10)",
-        "action": "tvVolume"
-      },
-      {
-        "ts": "2026-04-28T23:10:51.850Z",
-        "type": "routine",
-        "message": "Executed: White Noise Sleep",
-        "played": "Brown Noise + Rain Sound Machine (12 Hours - Ad Free)",
-        "volume": 22,
-        "rooms": [
-          "Master Bedroom",
-          "Bathroom"
-        ],
-        "shuffle": false
-      },
-      {
-        "ts": "2026-04-28T23:25:21.341Z",
-        "type": "routine",
-        "message": "Executed: Day Music",
-        "played": "Poolside: Miami Chill",
-        "volume": 10,
-        "shuffle": false
-      },
-      {
-        "ts": "2026-04-29T00:15:14.565Z",
-        "type": "discovery",
-        "message": "Found 7/6 speakers online",
-        "rooms": [
-          "Bathroom",
-          "Playbase",
-          "Master Bedroom",
-          "Guest Bathroom Speaker",
-          "Office Speaker",
-          "Kitchen",
-          "Boost"
-        ]
-      },
-      {
-        "ts": "2026-04-29T00:15:15.278Z",
-        "type": "startup",
-        "message": "Started with 7 speakers, 70 favorites"
-      },
-      {
-        "ts": "2026-04-29T01:11:22.655Z",
-        "type": "routine",
-        "message": "Executed: PC On (Vol 10)",
-        "action": "tvVolume"
-      },
-      {
-        "ts": "2026-04-29T01:11:23.252Z",
-        "type": "routine",
-        "message": "Executed: PC On (Vol 10)",
-        "action": "tvVolume"
-      },
       {
         "ts": "2026-04-29T07:05:22.876Z",
         "type": "routine",
@@ -3294,6 +3822,153 @@
         "played": "Poolside: Miami Chill",
         "volume": 10,
         "shuffle": false
+      },
+      {
+        "ts": "2026-05-12T19:52:16.576Z",
+        "type": "discovery",
+        "message": "Found 7/6 speakers online",
+        "rooms": [
+          "Bathroom",
+          "Playbase",
+          "Master Bedroom",
+          "Guest Bathroom Speaker",
+          "Office Speaker",
+          "Kitchen",
+          "Boost"
+        ]
+      },
+      {
+        "ts": "2026-05-12T19:52:17.553Z",
+        "type": "startup",
+        "message": "Started with 7 speakers, 70 favorites"
+      },
+      {
+        "ts": "2026-05-12T19:52:58.387Z",
+        "type": "routine",
+        "message": "Executed: Day Music",
+        "played": "Poolside: Miami Chill",
+        "volume": 10,
+        "shuffle": false
+      },
+      {
+        "ts": "2026-05-12T23:34:08.345Z",
+        "type": "discovery",
+        "message": "Found 7/6 speakers online",
+        "rooms": [
+          "Bathroom",
+          "Playbase",
+          "Master Bedroom",
+          "Guest Bathroom Speaker",
+          "Office Speaker",
+          "Kitchen",
+          "Boost"
+        ]
+      },
+      {
+        "ts": "2026-05-12T23:34:10.034Z",
+        "type": "startup",
+        "message": "Started with 7 speakers, 70 favorites"
+      },
+      {
+        "ts": "2026-05-12T23:37:36.308Z",
+        "type": "group_preset",
+        "message": "Applied: Office (Work) (2 groups)",
+        "presetId": "office_kitchen"
+      },
+      {
+        "ts": "2026-05-12T23:37:37.145Z",
+        "type": "group_preset",
+        "message": "Applied: Office (Work) (2 groups)",
+        "presetId": "office_kitchen"
+      },
+      {
+        "ts": "2026-05-12T23:37:37.159Z",
+        "type": "group_preset",
+        "message": "Applied: Office (Work) (2 groups)",
+        "presetId": "office_kitchen"
+      },
+      {
+        "ts": "2026-05-12T23:37:37.444Z",
+        "type": "group_preset",
+        "message": "Applied: Office (Work) (2 groups)",
+        "presetId": "office_kitchen"
+      },
+      {
+        "ts": "2026-05-12T23:37:38.258Z",
+        "type": "group_preset",
+        "message": "Applied: Office (Work) (2 groups)",
+        "presetId": "office_kitchen"
+      },
+      {
+        "ts": "2026-05-13T00:13:54.600Z",
+        "type": "discovery",
+        "message": "Found 7/6 speakers online",
+        "rooms": [
+          "Bathroom",
+          "Playbase",
+          "Master Bedroom",
+          "Guest Bathroom Speaker",
+          "Office Speaker",
+          "Kitchen",
+          "Boost"
+        ]
+      },
+      {
+        "ts": "2026-05-13T00:13:55.160Z",
+        "type": "startup",
+        "message": "Started with 7 speakers, 70 favorites"
+      },
+      {
+        "ts": "2026-05-13T00:14:22.797Z",
+        "type": "routine",
+        "message": "Executed: Day Music",
+        "played": "Poolside: Miami Chill",
+        "volume": 10,
+        "shuffle": false
+      },
+      {
+        "ts": "2026-05-13T00:14:41.574Z",
+        "type": "routine",
+        "message": "Executed: Sonos Off",
+        "action": "pauseAll"
+      },
+      {
+        "ts": "2026-05-13T01:15:07.362Z",
+        "type": "routine",
+        "message": "Executed: Sonos Off",
+        "action": "pauseAll"
+      },
+      {
+        "ts": "2026-05-13T06:28:20.610Z",
+        "type": "routine",
+        "message": "Skipped (state check): Late Night Music"
+      },
+      {
+        "ts": "2026-05-13T06:57:54.115Z",
+        "type": "discovery",
+        "message": "Found 7/6 speakers online",
+        "rooms": [
+          "Bathroom",
+          "Playbase",
+          "Master Bedroom",
+          "Guest Bathroom Speaker",
+          "Office Speaker",
+          "Kitchen",
+          "Boost"
+        ]
+      },
+      {
+        "ts": "2026-05-13T06:57:54.790Z",
+        "type": "startup",
+        "message": "Started with 7 speakers, 70 favorites"
+      },
+      {
+        "ts": "2026-05-13T06:58:21.396Z",
+        "type": "routine",
+        "message": "Executed: Late Night Music",
+        "played": "Jazz for Studying Radio",
+        "volume": 5,
+        "shuffle": false
       }
     ]
   },
@@ -3302,147 +3977,6 @@
   },
   "homebridgeLog": {
     "errors": [
-      "[11/05/2026, 20:36:28] [Sonos] warning: RINCON_949F3E468A5001400 [192.168.1.41]: no ZoneGroupTopology event received in 15s",
-      "[11/05/2026, 20:36:28] [Sonos] error: SyntaxError: initTopology() not yet called",
-      "(node:5967) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [ZpClient]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
-      "[11/05/2026, 20:37:34] [Sonos] Master Bedroom: warning: request 29: timeout after 15 seconds",
-      "[11/05/2026, 20:37:37] [Sonos] Master Bedroom: warning: request 30: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:37:40] [Sonos] Master Bedroom: warning: request 31: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:11] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:38:11] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:38:17] [Sonos] Master Bedroom: warning: request 32: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:20] [Sonos] Master Bedroom: warning: request 33: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:23] [Sonos] Master Bedroom: warning: request 34: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:32] [Sonos] Master Bedroom: warning: request 35: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:35] [Sonos] Master Bedroom: warning: request 36: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:38:39] [Sonos] Master Bedroom: warning: request 37: connect EHOSTUNREACH 192.168.1.140:1400",
-      "[11/05/2026, 20:40:36] [Sonos] warning: recommended version: node v24.14.0",
-      "[11/05/2026, 20:40:36] [Sonos] warning: recommended version: homebridge v1.11.2",
-      "[11/05/2026, 20:40:36] [Hue] warning: recommended version: node v24.14.0 LTS",
-      "[11/05/2026, 20:40:36] [Hue] warning: recommended version: homebridge v1.11.1",
-      "[11/05/2026, 20:40:38] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
-      "[11/05/2026, 20:40:40] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:40:40] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:40:44] [Sonos] warning: latest version: homebridge-zp v1.4.68",
-      "[11/05/2026, 20:40:44] [Hue] warning: latest version: homebridge-hue v0.15.6",
-      "[11/05/2026, 20:41:25] [Sonos] warning: recommended version: node v24.14.0",
-      "[11/05/2026, 20:41:25] [Sonos] warning: recommended version: homebridge v1.11.2",
-      "[11/05/2026, 20:41:25] [Hue] warning: recommended version: node v24.14.0 LTS",
-      "[11/05/2026, 20:41:25] [Hue] warning: recommended version: homebridge v1.11.1",
-      "[11/05/2026, 20:41:27] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
-      "[11/05/2026, 20:41:29] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:41:29] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 20:41:31] [Hue] warning: latest version: homebridge-hue v0.15.6",
-      "[11/05/2026, 20:41:32] [Sonos] warning: latest version: homebridge-zp v1.4.68",
-      "[11/05/2026, 20:41:45] [Sonos] warning: RINCON_949F3E468A5001400 [192.168.1.41]: no ZoneGroupTopology event received in 15s",
-      "[11/05/2026, 20:41:45] [Sonos] error: SyntaxError: initTopology() not yet called",
-      "(node:7745) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [Socket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
-      "(Use `node --trace-warnings ...` to show where the warning was created)",
-      "[11/05/2026, 20:56:46] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 20:56:46] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 21:00:13] [Hue] Hue Bridge: request 244: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:17] [Hue] Hue Bridge: request 245: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:22] [Hue] Hue Bridge: request 246: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:27] [Hue] Hue Bridge: request 247: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:32] [Hue] Hue Bridge: request 248: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:37] [Hue] Hue Bridge: request 249: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:42] [Hue] Hue Bridge: request 250: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:47] [Hue] Hue Bridge: request 251: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:52] [Hue] Hue Bridge: request 252: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:00:57] [Hue] Hue Bridge: request 253: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:01:02] [Hue] Hue Bridge: request 254: connect ECONNREFUSED 192.168.1.2:80",
-      "[11/05/2026, 21:07:01] [Sonos] error: RINCON_949F3E468A5001400: [192.168.1.41]: SyntaxError: initTopology() not yet called",
-      "[11/05/2026, 21:08:51] [Sonos] warning: recommended version: node v24.14.0",
-      "[11/05/2026, 21:08:51] [Sonos] warning: recommended version: homebridge v1.11.2",
-      "[11/05/2026, 21:08:51] [Hue] warning: recommended version: node v24.14.0 LTS",
-      "[11/05/2026, 21:08:51] [Hue] warning: recommended version: homebridge v1.11.1",
-      "[11/05/2026, 21:08:53] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
-      "[11/05/2026, 21:08:55] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 21:08:55] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
-      "[11/05/2026, 21:08:58] [Sonos] warning: latest version: homebridge-zp v1.4.68",
-      "[11/05/2026, 21:08:58] [Hue] warning: latest version: homebridge-hue v0.15.6",
-      "(node:8830) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [Socket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
-      "(Use `node --trace-warnings ...` to show where the warning was created)",
-      "[11/05/2026, 21:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 21:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 21:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 21:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 21:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 21:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 22:08:52] [WeatherPlus] Error retrieving OpenWeatherMap report",
-      "[11/05/2026, 22:08:52] [WeatherPlus] Error result: undefined",
-      "[11/05/2026, 22:08:52] [WeatherPlus] Error message: AggregateError",
-      "[11/05/2026, 22:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 22:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 22:09:40] [Sonos] Master Bedroom: warning: rebooted (243 -> 244)",
-      "[11/05/2026, 22:09:53] [Sonos] Bathroom: warning: rebooted (227 -> 228)",
-      "[11/05/2026, 22:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 22:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 22:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 22:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 22:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 22:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 23:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 23:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 23:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 23:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 23:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 23:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[11/05/2026, 23:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[11/05/2026, 23:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 00:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 00:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 00:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 00:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 00:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 00:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 00:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 00:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 01:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 01:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 01:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 01:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 01:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 01:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 01:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 01:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 02:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 02:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 02:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 02:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 02:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 02:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 02:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 02:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 03:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 03:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 03:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 03:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 03:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 03:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 03:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 03:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 04:01:33] [Hue] Hue Bridge: request 4957: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:01:38] [Hue] Hue Bridge: request 4958: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:01:43] [Hue] Hue Bridge: request 4959: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:01:48] [Hue] Hue Bridge: request 4960: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:01:53] [Hue] Hue Bridge: request 4961: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:01:58] [Hue] Hue Bridge: request 4962: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:02:03] [Hue] Hue Bridge: request 4963: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:02:08] [Hue] Hue Bridge: request 4964: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:02:13] [Hue] Hue Bridge: request 4965: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:02:18] [Hue] Hue Bridge: request 4966: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:02:23] [Hue] Hue Bridge: request 4967: connect ECONNREFUSED 192.168.1.2:80",
-      "[12/05/2026, 04:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 04:09:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 04:24:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 04:24:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 04:39:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 04:39:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 04:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 04:54:12] [Alexa] WARNING: Duplicate device name Play",
-      "[12/05/2026, 05:09:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 05:09:12] [Alexa] WARNING: Duplicate device name Play",
       "[12/05/2026, 05:24:12] [Alexa] WARNING: Duplicate device name Pause",
       "[12/05/2026, 05:24:12] [Alexa] WARNING: Duplicate device name Play",
       "[12/05/2026, 05:39:12] [Alexa] WARNING: Duplicate device name Pause",
@@ -3500,16 +4034,162 @@
       "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Pause",
       "[12/05/2026, 11:39:12] [Alexa] WARNING: Duplicate device name Play",
       "[12/05/2026, 11:54:12] [Alexa] WARNING: Duplicate device name Pause",
-      "[12/05/2026, 11:54:12] [Alexa] WARNING: Duplicate device name Play"
+      "[12/05/2026, 11:54:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 12:09:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 12:09:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 12:24:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 12:24:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 12:39:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 12:39:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 12:54:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 12:54:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 13:09:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 13:09:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 13:24:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 13:24:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 13:39:12] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 13:39:12] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 13:41:01] [Sonos] warning: recommended version: node v24.14.0",
+      "[12/05/2026, 13:41:01] [Sonos] warning: recommended version: homebridge v1.11.2",
+      "[12/05/2026, 13:41:01] [Hue] warning: recommended version: node v24.14.0 LTS",
+      "[12/05/2026, 13:41:01] [Hue] warning: recommended version: homebridge v1.11.1",
+      "[12/05/2026, 13:41:03] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
+      "[12/05/2026, 13:41:05] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 13:41:05] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 13:41:08] [Sonos] warning: latest version: homebridge-zp v1.4.68",
+      "[12/05/2026, 13:41:08] [Hue] warning: latest version: homebridge-hue v0.15.6",
+      "(node:15302) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [Socket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
+      "(Use `node --trace-warnings ...` to show where the warning was created)",
+      "[12/05/2026, 13:56:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 13:56:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 14:01:31] [Hue] Hue Bridge: request 247: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:34] [Hue] Hue Bridge: request 248: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:39] [Hue] Hue Bridge: request 249: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:44] [Hue] Hue Bridge: request 250: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:49] [Hue] Hue Bridge: request 251: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:54] [Hue] Hue Bridge: request 252: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:01:59] [Hue] Hue Bridge: request 253: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:02:04] [Hue] Hue Bridge: request 254: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:02:09] [Hue] Hue Bridge: request 255: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:02:14] [Hue] Hue Bridge: request 256: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:02:19] [Hue] Hue Bridge: request 257: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:02:24] [Hue] Hue Bridge: request 258: connect ECONNREFUSED 192.168.1.2:80",
+      "[12/05/2026, 14:11:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 14:11:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 14:26:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 14:26:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 14:41:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 14:41:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 14:56:03] [WeatherPlus] Error retrieving OpenWeatherMap report",
+      "[12/05/2026, 14:56:03] [WeatherPlus] Error result: undefined",
+      "[12/05/2026, 14:56:03] [WeatherPlus] Error message: AggregateError",
+      "[12/05/2026, 14:56:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 14:56:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 15:11:22] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 15:11:22] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 15:14:10] [Sonos] warning: recommended version: node v24.14.0",
+      "[12/05/2026, 15:14:10] [Sonos] warning: recommended version: homebridge v1.11.2",
+      "[12/05/2026, 15:14:10] [Hue] warning: recommended version: node v24.14.0 LTS",
+      "[12/05/2026, 15:14:10] [Hue] warning: recommended version: homebridge v1.11.1",
+      "[12/05/2026, 15:14:12] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
+      "[12/05/2026, 15:14:14] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 15:14:14] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 15:14:19] [Hue] warning: latest version: homebridge-hue v0.15.6",
+      "[12/05/2026, 15:14:19] [Sonos] warning: latest version: homebridge-zp v1.4.68",
+      "(node:19092) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [Socket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
+      "(Use `node --trace-warnings ...` to show where the warning was created)",
+      "[12/05/2026, 15:29:30] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 15:29:30] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 15:44:30] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 15:44:30] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 15:59:57] [Sonos] warning: recommended version: node v24.14.0",
+      "[12/05/2026, 15:59:57] [Sonos] warning: recommended version: homebridge v1.11.2",
+      "[12/05/2026, 15:59:57] [Hue] warning: recommended version: node v24.14.0 LTS",
+      "[12/05/2026, 15:59:57] [Hue] warning: recommended version: homebridge v1.11.1",
+      "[12/05/2026, 15:59:59] [Hue] Hue Bridge: warning: not using recommended Hue bridge api version 1.75.0",
+      "[12/05/2026, 16:00:01] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Air Pressure': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 16:00:01] [homebridge-weather-plus] This plugin generated a warning from the characteristic 'Current Ambient Light Level': Characteristic not in required or optional characteristic section for service TemperatureSensor. Adding anyway.. See https://homebridge.io/w/JtMGR for more info.",
+      "[12/05/2026, 16:00:05] [Hue] warning: latest version: homebridge-hue v0.15.6",
+      "[12/05/2026, 16:00:05] [Sonos] warning: latest version: homebridge-zp v1.4.68",
+      "(node:21804) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 message listeners added to [Socket]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit",
+      "(Use `node --trace-warnings ...` to show where the warning was created)",
+      "[12/05/2026, 16:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 16:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 16:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 16:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 16:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 16:45:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 17:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 17:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 17:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 17:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 17:19:00] [Sonos] Office Speaker L: error: Attribute without value",
+      "[12/05/2026, 17:19:00] [Sonos] Office Speaker L: error: Attribute without value",
+      "[12/05/2026, 17:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 17:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 17:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 17:45:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 18:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 18:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 18:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 18:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 18:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 18:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 18:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 18:45:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 19:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 19:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 19:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 19:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 19:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 19:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 19:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 19:45:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 20:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 20:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 20:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 20:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 20:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 20:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 20:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 20:45:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 21:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 21:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 21:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 21:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 21:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 21:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 21:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 21:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 22:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 22:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 22:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 22:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 22:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 22:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 22:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 22:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 23:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 23:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 23:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 23:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 23:30:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 23:30:17] [Alexa] WARNING: Duplicate device name Play",
+      "[12/05/2026, 23:45:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[12/05/2026, 23:45:17] [Alexa] WARNING: Duplicate device name Play"
     ],
     "automationFires": {
       "Dummy - Day Music": 2,
+      "Dummy - Daytime Gradient Stop": 1,
       "Dummy - Fade Start Sunrise": 1,
+      "Dummy - Fade Start Sunset": 1,
+      "Dummy - Late Night Music": 1,
       "Dummy - Morning Music": 1,
-      "Dummy - Other Lights (Day)": 2,
+      "Dummy - Other Lights (Day)": 3,
       "Dummy - Other Lights (Evening)": 7,
-      "Dummy - Other Lights (Late Night)": 5,
+      "Dummy - Other Lights (Late Night)": 6,
       "Dummy - Other Lights (Off)": 1,
+      "Dummy - Sonos Off": 1,
       "Dummy - White Noise Sleep": 1,
       "SC - BR TV Off": 1,
       "SC - BR TV On": 1
@@ -3519,15 +4199,20 @@
       "Dummy - 20 Min Delay": 1,
       "Dummy - 25 Min Delay": 1,
       "Dummy - 50 Min Delay": 1,
-      "Dummy - Day Music": 2,
+      "Dummy - Anyone Home": 2,
+      "Dummy - Day Music": 3,
+      "Dummy - Daytime Gradient Stop": 1,
       "Dummy - Fade Start Sunrise": 1,
+      "Dummy - Fade Start Sunset": 1,
+      "Dummy - Late Night Music": 1,
       "Dummy - Morning Music": 1,
       "Dummy - Nanoleaf Off": 1,
-      "Dummy - Other Lights (Day)": 2,
+      "Dummy - Other Lights (Day)": 3,
       "Dummy - Other Lights (Evening)": 7,
-      "Dummy - Other Lights (Late Night)": 5,
+      "Dummy - Other Lights (Late Night)": 6,
       "Dummy - Other Lights (Off)": 1,
       "Dummy - Routine Start": 1,
+      "Dummy - Sonos Off": 1,
       "Dummy - White Noise Sleep": 1,
       "SC - BR TV Off": 1,
       "SC - BR TV On": 1
@@ -3572,11 +4257,17 @@
         "May 08 09:25:46 homebridge node[27478]: [climate] read office failed: HTTP 416: {\"messageId\":\"m1kyAfIxSoiE39HBXbB-kw\",\"timestamp\":\"2026-05-08T16:25:46.227589\",\"error\":{\"message\":\"Not connected device\",\"code\":\"1222\"}}",
         "May 10 06:05:47 homebridge node[27478]: [climate] read office failed: HTTP 416: {\"messageId\":\"B8863ow9f-A7JtCneJf0Lg\",\"timestamp\":\"2026-05-10T13:05:47.516208\",\"error\":{\"message\":\"Not connected device\",\"code\":\"1222\"}}",
         "May 11 20:33:48 homebridge node[27478]: [climate] read kitchen failed: HTTP 416: {\"messageId\":\"Iyfo90CRgjMj8O1KothbMQ\",\"timestamp\":\"2026-05-12T03:33:48.889430\",\"error\":{\"message\":\"Not connected device\",\"code\":\"1222\"}}",
-        "May 11 20:33:49 homebridge node[27478]: [climate] read office failed: HTTP 416: {\"messageId\":\"QvVlKlUVln6y5HhxJGPSdg\",\"timestamp\":\"2026-05-12T03:33:49.065019\",\"error\":{\"message\":\"Not connected device\",\"code\":\"1222\"}}"
+        "May 11 20:33:49 homebridge node[27478]: [climate] read office failed: HTTP 416: {\"messageId\":\"QvVlKlUVln6y5HhxJGPSdg\",\"timestamp\":\"2026-05-12T03:33:49.065019\",\"error\":{\"message\":\"Not connected device\",\"code\":\"1222\"}}",
+        "May 12 13:39:51 homebridge node[15240]: [climate] controller started (poll 60s, 1 ladder warnings)",
+        "May 12 13:41:35 homebridge node[15498]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 16:04:42 homebridge node[22431]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 16:07:05 homebridge node[22701]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 16:33:54 homebridge node[24388]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 16:54:18 homebridge node[25385]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 17:01:35 homebridge node[25709]: [climate] controller started (poll 60s, 0 ladder warnings)",
+        "May 12 23:57:38 homebridge node[8851]: [climate] controller started (poll 60s, 0 ladder warnings)"
       ],
       "sonos-commander": [
-        "Apr 28 15:26:36 homebridge node[21121]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
-        "Apr 28 16:25:13 homebridge node[21121]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 29 07:40:50 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 29 13:54:24 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 29 14:51:23 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
@@ -3646,19 +4337,27 @@
   "climateState": {
     "ok": true,
     "enabled": true,
-    "mode": "day",
-    "globalTargetF": 74,
-    "targetF": 74,
+    "mode": "night",
+    "globalTargetF": 70,
+    "targetF": 70,
     "slotTargets": {
-      "kitchen": 74,
-      "office": 74
+      "kitchen": 70,
+      "office": 70
     },
     "ladder": {
-      "name": "officeQuiet",
+      "name": "default",
       "rungs": [
         [
           "kitchen",
           "low"
+        ],
+        [
+          "office",
+          "medium"
+        ],
+        [
+          "office",
+          "high"
         ],
         [
           "kitchen",
@@ -3667,16 +4366,12 @@
         [
           "kitchen",
           "high"
-        ],
-        [
-          "office",
-          "medium"
         ]
       ]
     },
-    "pressureF": 0.3,
-    "engagedRungCount": 1,
-    "lastTickAt": 1778612369878,
+    "pressureF": 1.6,
+    "engagedRungCount": 2,
+    "lastTickAt": 1778655579448,
     "globalPause": {
       "paused": false,
       "until": 0
@@ -3684,25 +4379,78 @@
     "pauses": {
       "kitchen": {
         "paused": false,
-        "until": 1778561988936,
+        "until": 1778647596684,
         "reason": null
       },
       "office": {
-        "paused": false,
-        "until": 1778611549383,
-        "reason": null
+        "paused": true,
+        "until": 1778656116519,
+        "reason": "manual-override"
       }
     },
-    "overrideEvidence": {},
+    "overrideEvidence": {
+      "kitchen": {
+        "at": "2026-05-13T03:46:36.684Z",
+        "reasons": [
+          "fan LOW->MID"
+        ],
+        "wrote": {
+          "windStrength": "LOW",
+          "jobMode": "COOL",
+          "ageSec": {
+            "targetC": 240,
+            "windStrength": 300,
+            "power": 240,
+            "jobMode": 240
+          }
+        },
+        "observed": {
+          "targetC": 23.5,
+          "windStrength": "MID",
+          "power": "POWER_ON",
+          "jobMode": "COOL"
+        }
+      },
+      "office": {
+        "at": "2026-05-13T06:08:36.518Z",
+        "reasons": [
+          "fan HIGH->MID"
+        ],
+        "wrote": {
+          "windStrength": "HIGH",
+          "jobMode": "FAN",
+          "ageSec": {
+            "targetC": 119,
+            "windStrength": 239,
+            "power": 119,
+            "jobMode": 119
+          }
+        },
+        "observed": {
+          "targetC": 21,
+          "windStrength": "MID",
+          "power": "POWER_ON",
+          "jobMode": "FAN"
+        }
+      }
+    },
+    "breaker": {
+      "lastTrippedAt": null,
+      "lastTrippedSlot": null,
+      "lastTrippedCount": null,
+      "windowWrites": {},
+      "windowMinutes": 10,
+      "threshold": 30
+    },
     "cache": {
-      "fetchedAt": 1778612402392,
+      "fetchedAt": 1778655604811,
       "devices": {
-        "kitchen": {
+        "office": {
           "ok": true,
-          "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
+          "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
           "power": "POWER_ON",
           "jobMode": "FAN",
-          "windStrength": "LOW",
+          "windStrength": "MID",
           "unitNative": "C",
           "currentC": 23.5,
           "currentF": 74.3,
@@ -3733,12 +4481,12 @@
               }
             ],
             "filterInfo": {
-              "filterLifetime": 34,
-              "usedTime": 216
+              "filterLifetime": 0,
+              "usedTime": 250
             },
             "airFlow": {
-              "windStrength": "LOW",
-              "windStrengthDetail": "LOW"
+              "windStrength": "MID",
+              "windStrengthDetail": "MID"
             },
             "windDirection": {
               "rotateUpDown": true
@@ -3754,46 +4502,46 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778612402392
+          "fetchedAt": 1778655604707
         },
-        "office": {
+        "kitchen": {
           "ok": true,
-          "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
+          "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
           "power": "POWER_ON",
-          "jobMode": "COOL",
+          "jobMode": "FAN",
           "windStrength": "LOW",
           "unitNative": "C",
-          "currentC": 23,
-          "currentF": 73.4,
-          "targetC": 23.5,
-          "targetF": 74.3,
+          "currentC": 22,
+          "currentF": 71.6,
+          "targetC": 21,
+          "targetF": 69.8,
           "raw": {
             "runState": {
               "currentState": "NORMAL"
             },
             "airConJobMode": {
-              "currentJobMode": "COOL"
+              "currentJobMode": "FAN"
             },
             "temperature": {
-              "currentTemperature": 23,
-              "targetTemperature": 23.5,
+              "currentTemperature": 22,
+              "targetTemperature": 21,
               "unit": "C"
             },
             "temperatureInUnits": [
               {
-                "currentTemperature": 23,
-                "targetTemperature": 23.5,
+                "currentTemperature": 22,
+                "targetTemperature": 21,
                 "unit": "C"
               },
               {
-                "currentTemperature": 74,
-                "targetTemperature": 75,
+                "currentTemperature": 72,
+                "targetTemperature": 70,
                 "unit": "F"
               }
             ],
             "filterInfo": {
-              "filterLifetime": 0,
-              "usedTime": 250
+              "filterLifetime": 22,
+              "usedTime": 228
             },
             "airFlow": {
               "windStrength": "LOW",
@@ -3813,17 +4561,17 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778612402089
+          "fetchedAt": 1778655604811
         }
       }
     },
     "devices": {
-      "kitchen": {
+      "office": {
         "ok": true,
-        "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
+        "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
         "power": "POWER_ON",
         "jobMode": "FAN",
-        "windStrength": "LOW",
+        "windStrength": "MID",
         "unitNative": "C",
         "currentC": 23.5,
         "currentF": 74.3,
@@ -3854,12 +4602,12 @@
             }
           ],
           "filterInfo": {
-            "filterLifetime": 34,
-            "usedTime": 216
+            "filterLifetime": 0,
+            "usedTime": 250
           },
           "airFlow": {
-            "windStrength": "LOW",
-            "windStrengthDetail": "LOW"
+            "windStrength": "MID",
+            "windStrengthDetail": "MID"
           },
           "windDirection": {
             "rotateUpDown": true
@@ -3875,46 +4623,46 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778612402392
+        "fetchedAt": 1778655604707
       },
-      "office": {
+      "kitchen": {
         "ok": true,
-        "deviceId": "96a08693aeeed3f669d39c2b05b267b6be7439726a067fb143973c3932460ef7",
+        "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
         "power": "POWER_ON",
-        "jobMode": "COOL",
+        "jobMode": "FAN",
         "windStrength": "LOW",
         "unitNative": "C",
-        "currentC": 23,
-        "currentF": 73.4,
-        "targetC": 23.5,
-        "targetF": 74.3,
+        "currentC": 22,
+        "currentF": 71.6,
+        "targetC": 21,
+        "targetF": 69.8,
         "raw": {
           "runState": {
             "currentState": "NORMAL"
           },
           "airConJobMode": {
-            "currentJobMode": "COOL"
+            "currentJobMode": "FAN"
           },
           "temperature": {
-            "currentTemperature": 23,
-            "targetTemperature": 23.5,
+            "currentTemperature": 22,
+            "targetTemperature": 21,
             "unit": "C"
           },
           "temperatureInUnits": [
             {
-              "currentTemperature": 23,
-              "targetTemperature": 23.5,
+              "currentTemperature": 22,
+              "targetTemperature": 21,
               "unit": "C"
             },
             {
-              "currentTemperature": 74,
-              "targetTemperature": 75,
+              "currentTemperature": 72,
+              "targetTemperature": 70,
               "unit": "F"
             }
           ],
           "filterInfo": {
-            "filterLifetime": 0,
-            "usedTime": 250
+            "filterLifetime": 22,
+            "usedTime": 228
           },
           "airFlow": {
             "windStrength": "LOW",
@@ -3934,7 +4682,7 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778612402089
+        "fetchedAt": 1778655604811
       }
     }
   }
