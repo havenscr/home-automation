@@ -49,6 +49,62 @@ function isRateLimitError(errMsg) {
          /Exceeded User API/i.test(errMsg);
 }
 
+// Predicate: did LG reject the command because the AC is in a mode that doesn't
+// accept it? Code 2305 = COMMAND_NOT_SUPPORTED_IN_MODE per LG's SDK error table.
+// Identifying this explicitly lets us answer the long-standing question of whether
+// our "setpoint silently ignored in FAN mode" defensive code is actually preventing
+// 2305s, or whether 2305s never happen in the first place because the API does
+// silently accept-and-discard.
+function isModeRejectedError(errMsg) {
+  if (!errMsg) return false;
+  return /\b2305\b/.test(errMsg) ||
+         /COMMAND_NOT_SUPPORTED_IN_MODE/i.test(errMsg);
+}
+
+// Predicate: did LG reject the call because our PAT was revoked? Codes 1103
+// (INVALID_TOKEN) and 1218 (INVALID_TOKEN_AGAIN) per LG's SDK. If this fires,
+// every subsequent call will fail until the PAT is rotated -- we should pause
+// the climate loop and log loudly rather than silently retry every 60s.
+function isRevokedTokenError(errMsg) {
+  if (!errMsg) return false;
+  return /\b1103\b/.test(errMsg) ||
+         /\b1218\b/.test(errMsg) ||
+         /INVALID_TOKEN/i.test(errMsg);
+}
+
+// Normalize a /devices/{id}/state response into our internal shape.
+// Pure function -- no I/O, no state. Exported for tests.
+// LG's ThinQ Connect API exposes both Celsius and Fahrenheit fields on every
+// AC payload (verified against thinq-connect/pythinqconnect air_conditioner.py
+// profile_map). t.unit is the user's display preference, not the data format.
+// Prefer the native unit field when present and use cToF/fToC as a fallback
+// for older payloads that might only return one half.
+function normalizeDeviceState(raw) {
+  const r = raw && (raw.response || raw);
+  if (!r) return null;
+  const t = r.temperature || {};
+  const unit = t.unit || 'C';
+  const apiCurrentC = t.currentTemperatureC ?? (unit === 'C' ? t.currentTemperature : null);
+  const apiCurrentF = t.currentTemperatureF ?? (unit === 'F' ? t.currentTemperature : null);
+  const apiTargetC = t.targetTemperatureC ?? (unit === 'C' ? t.targetTemperature : null);
+  const apiTargetF = t.targetTemperatureF ?? (unit === 'F' ? t.targetTemperature : null);
+  const currentC = apiCurrentC ?? (apiCurrentF != null ? fToC(apiCurrentF) : null);
+  const currentF = apiCurrentF ?? (apiCurrentC != null ? cToF(apiCurrentC) : null);
+  const targetC = apiTargetC ?? (apiTargetF != null ? fToC(apiTargetF) : null);
+  const targetF = apiTargetF ?? (apiTargetC != null ? cToF(apiTargetC) : null);
+  return {
+    power: r.operation?.airConOperationMode || null,
+    jobMode: r.airConJobMode?.currentJobMode || null,
+    windStrength: r.airFlow?.windStrength || null,
+    unitNative: unit,
+    currentC,
+    currentF,
+    targetC,
+    targetF,
+    raw: r,
+  };
+}
+
 function cToF(c) { return c == null ? null : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function fToC(f) { return f == null ? null : Math.round(((f - 32) * 5 / 9) * 10) / 10; }
 function roundC(c) { return Math.round(c * 2) / 2; }
@@ -119,6 +175,10 @@ function createClimate({ getConfig, logActivity }) {
       'Accept': 'application/json',
     };
     if (body) headers['Content-Type'] = 'application/json';
+    // LG's official SDK auto-adds this header on control writes (POST). Without it,
+    // some control writes may fail state-consistency checks at LG's edge. See
+    // thinq-connect/pythinqconnect thinq_api.py async_post.
+    if (method === 'POST') headers['x-conditional-control'] = 'true';
 
     return new Promise((resolve, reject) => {
       const req = https.request({
@@ -146,25 +206,7 @@ function createClimate({ getConfig, logActivity }) {
     });
   }
 
-  function normalizeDeviceState(raw) {
-    const r = raw && (raw.response || raw);
-    if (!r) return null;
-    const t = r.temperature || {};
-    const unit = t.unit || 'C';
-    const currentC = unit === 'C' ? t.currentTemperature : fToC(t.currentTemperatureF ?? t.currentTemperature);
-    const targetC = unit === 'C' ? t.targetTemperature : fToC(t.targetTemperatureF ?? t.targetTemperature);
-    return {
-      power: r.operation?.airConOperationMode || null,
-      jobMode: r.airConJobMode?.currentJobMode || null,
-      windStrength: r.airFlow?.windStrength || null,
-      unitNative: unit,
-      currentC,
-      currentF: cToF(currentC),
-      targetC,
-      targetF: cToF(targetC),
-      raw: r,
-    };
-  }
+  // normalizeDeviceState lives at module scope below so it's exported and testable.
 
   function rateLimitedNow(slot) {
     const rl = rateLimit[slot];
@@ -190,6 +232,33 @@ function createClimate({ getConfig, logActivity }) {
     if (rateLimit[slot]) delete rateLimit[slot];
   }
 
+  // De-dup state for the revoked-token loud-log. Without this, every 60s poll
+  // would re-log the same "PAT revoked" message until rotated.
+  const revokedTokenState = { lastLoggedAt: 0 };
+  const REVOKED_TOKEN_PAUSE_MS = 12 * 60 * 60 * 1000;     // 12h pause -- long enough to give Reid time to rotate
+  const REVOKED_TOKEN_RELOG_MS = 60 * 60 * 1000;          // re-log once an hour while still revoked
+
+  function handleRevokedToken(errMsg, saveConfigFn) {
+    const cfg = getConfig().climate || (getConfig().climate = {});
+    if (!cfg.lastState) cfg.lastState = {};
+    const now = Date.now();
+    // Pause the climate loop for 12h so the rate-limit handler doesn't keep
+    // hammering a dead PAT. Reid clears via POST /api/climate/global/resume
+    // after rotating the PAT via the LG developer portal.
+    const currentPauseUntil = cfg.lastState.pausedUntil || 0;
+    if (currentPauseUntil < now + REVOKED_TOKEN_PAUSE_MS - 60_000) {
+      cfg.lastState.pausedUntil = now + REVOKED_TOKEN_PAUSE_MS;
+      cfg.lastState.pausedReason = `PAT revoked (${(errMsg || '').slice(0, 120)})`;
+      if (saveConfigFn) saveConfigFn();
+    }
+    // Loud log, rate-limited to once per hour while still in the revoked state.
+    if (now - revokedTokenState.lastLoggedAt >= REVOKED_TOKEN_RELOG_MS) {
+      revokedTokenState.lastLoggedAt = now;
+      if (logActivity) logActivity('climate',
+        `PAT REVOKED -- climate control paused 12h. Rotate via LG developer portal then POST /api/climate/global/resume. Error: ${(errMsg || '').slice(0, 200)}`);
+    }
+  }
+
   async function readDevice(slot, deviceId) {
     if (rateLimitedNow(slot)) {
       // Don't even hit the API. Return last cached value (if any) marked as stale.
@@ -207,6 +276,11 @@ function createClimate({ getConfig, logActivity }) {
       return cache.devices[slot];
     } catch (e) {
       trackRateLimit(slot, e.message);
+      if (isRevokedTokenError(e.message)) {
+        // Don't pass saveConfigFn here -- readDevice doesn't have one.
+        // handleRevokedToken's de-dup logic still ensures we only log once.
+        handleRevokedToken(e.message, null);
+      }
       cache.devices[slot] = { ok: false, deviceId, error: e.message, fetchedAt: Date.now() };
       if (logActivity) logActivity('climate', `read ${slot} failed: ${e.message}`);
       return cache.devices[slot];
@@ -482,6 +556,16 @@ function createClimate({ getConfig, logActivity }) {
       clearRateLimit(slot);
     } catch (e) {
       trackRateLimit(slot, e.message);
+      // Specific LG errors get clearer log lines so future audits can tell
+      // them apart from generic transient failures. The flow continues to throw
+      // -- callers handle the actual control flow -- but the log entry is more
+      // useful for the bi-weekly audit and the diagnostics tab.
+      if (isModeRejectedError(e.message)) {
+        if (logActivity) logActivity('climate',
+          `mode-rejected ${slot}: LG returned 2305 COMMAND_NOT_SUPPORTED_IN_MODE for ${JSON.stringify(intent)}; AC is in a mode that does not accept this write`);
+      } else if (isRevokedTokenError(e.message)) {
+        handleRevokedToken(e.message, saveConfigFn);
+      }
       throw e;
     }
     const cfg = getConfig().climate || (getConfig().climate = {});
@@ -912,4 +996,8 @@ function createClimate({ getConfig, logActivity }) {
   };
 }
 
-module.exports = { createClimate, cToF, fToC, WIND_MAP, isRateLimitError };
+module.exports = {
+  createClimate, cToF, fToC, WIND_MAP,
+  isRateLimitError, isModeRejectedError, isRevokedTokenError,
+  normalizeDeviceState,
+};

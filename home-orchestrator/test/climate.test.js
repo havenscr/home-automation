@@ -11,7 +11,11 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createClimate, cToF, fToC, WIND_MAP, isRateLimitError } = require('../climate.js');
+const {
+  createClimate, cToF, fToC, WIND_MAP,
+  isRateLimitError, isModeRejectedError, isRevokedTokenError,
+  normalizeDeviceState,
+} = require('../climate.js');
 
 // Minimal getConfig stub. Tests inject ladder shapes via this.
 function makeStub(climateConfig) {
@@ -235,4 +239,138 @@ test('isRateLimitError: matches a plain "thinq request timed out" as NOT a rate 
   // Network timeouts are a different failure mode. Should bubble as generic error,
   // not trigger our exponential backoff.
   assert.equal(isRateLimitError('thinq request timed out'), false);
+});
+
+// ─── isModeRejectedError ────────────────────────────────────────────────────
+test('isModeRejectedError: matches code 2305 from LG SDK', () => {
+  const real = 'HTTP 400: {"error":{"message":"Command not supported in this mode","code":"2305"}}';
+  assert.equal(isModeRejectedError(real), true);
+});
+
+test('isModeRejectedError: matches via SDK constant name', () => {
+  assert.equal(isModeRejectedError('error: COMMAND_NOT_SUPPORTED_IN_MODE'), true);
+});
+
+test('isModeRejectedError: does NOT match rate-limit or other errors', () => {
+  // Don't double-classify: rate-limit, not-connected, generic fail should NOT
+  // come back as mode-rejected.
+  assert.equal(isModeRejectedError('HTTP 401: {"error":{"code":"1314"}}'), false);
+  assert.equal(isModeRejectedError('HTTP 416: {"error":{"code":"1222"}}'), false);
+  assert.equal(isModeRejectedError('HTTP 400: {"error":{"code":"2214"}}'), false);
+});
+
+test('isModeRejectedError: handles null/empty', () => {
+  assert.equal(isModeRejectedError(null), false);
+  assert.equal(isModeRejectedError(''), false);
+});
+
+test('isModeRejectedError: word-boundary prevents substring matches', () => {
+  // 23052 should not match. messageId containing the digits should not match.
+  assert.equal(isModeRejectedError('{"messageId":"a2305b","code":"1111"}'), false);
+  // Actually \b2305\b would still match because "a2305b" -- wait, b is a word
+  // character so \b is between "a" and "2"... no, \b is the boundary between
+  // word and non-word chars, and digits are word chars. So inside "a2305b" the
+  // 2305 has word chars on both sides (a-word, b-word) so no \b. This is the
+  // correct behavior.
+  assert.equal(isModeRejectedError('{"timestamp":"23052024"}'), false);
+});
+
+// ─── isRevokedTokenError ────────────────────────────────────────────────────
+test('isRevokedTokenError: matches code 1103', () => {
+  const msg = 'HTTP 401: {"error":{"message":"Invalid token","code":"1103"}}';
+  assert.equal(isRevokedTokenError(msg), true);
+});
+
+test('isRevokedTokenError: matches code 1218', () => {
+  const msg = 'HTTP 401: {"error":{"message":"Invalid token again","code":"1218"}}';
+  assert.equal(isRevokedTokenError(msg), true);
+});
+
+test('isRevokedTokenError: matches INVALID_TOKEN constant name', () => {
+  assert.equal(isRevokedTokenError('error: INVALID_TOKEN'), true);
+  assert.equal(isRevokedTokenError('error: invalid_token (case insensitive)'), true);
+});
+
+test('isRevokedTokenError: does NOT match rate-limit', () => {
+  // Rate limit is 1314 and is its own category. Tokens have not been revoked.
+  assert.equal(isRevokedTokenError('HTTP 401: {"error":{"code":"1314"}}'), false);
+});
+
+test('isRevokedTokenError: handles null/empty', () => {
+  assert.equal(isRevokedTokenError(null), false);
+  assert.equal(isRevokedTokenError(''), false);
+});
+
+// ─── normalizeDeviceState (dual C/F payload shape) ──────────────────────────
+test('normalizeDeviceState: reads currentTemperatureF directly when present', () => {
+  // The shape LG's API actually returns per the SDK profile_map.
+  const raw = {
+    response: {
+      temperature: {
+        unit: 'F',
+        currentTemperatureC: 23.5,
+        currentTemperatureF: 74.3,
+        targetTemperatureC: 23.0,
+        targetTemperatureF: 73.4,
+      },
+      operation: { airConOperationMode: 'POWER_ON' },
+      airConJobMode: { currentJobMode: 'COOL' },
+      airFlow: { windStrength: 'MID' },
+    },
+  };
+  const s = normalizeDeviceState(raw);
+  assert.equal(s.currentF, 74.3, 'should read currentTemperatureF directly, not convert from C');
+  assert.equal(s.currentC, 23.5);
+  assert.equal(s.targetF, 73.4);
+  assert.equal(s.targetC, 23.0);
+  assert.equal(s.unitNative, 'F');
+  assert.equal(s.power, 'POWER_ON');
+  assert.equal(s.jobMode, 'COOL');
+  assert.equal(s.windStrength, 'MID');
+});
+
+test('normalizeDeviceState: legacy payload with only currentTemperature falls back', () => {
+  // Older payloads (or non-AC ThinQ devices) may return only one temperature
+  // field tagged with the unit. Our code falls back via cToF/fToC.
+  const raw = {
+    response: {
+      temperature: { unit: 'C', currentTemperature: 23.5, targetTemperature: 23.0 },
+    },
+  };
+  const s = normalizeDeviceState(raw);
+  assert.equal(s.currentC, 23.5);
+  assert.equal(s.targetC, 23.0);
+  // Computed via cToF.
+  assert.ok(Math.abs(s.currentF - 74.3) < 0.1, `expected ~74.3F, got ${s.currentF}`);
+});
+
+test('normalizeDeviceState: handles missing temperature object', () => {
+  const s = normalizeDeviceState({ response: { operation: { airConOperationMode: 'POWER_OFF' } } });
+  assert.equal(s.currentF, null);
+  assert.equal(s.currentC, null);
+  assert.equal(s.targetF, null);
+  assert.equal(s.power, 'POWER_OFF');
+});
+
+test('normalizeDeviceState: handles null/missing response wrapper', () => {
+  assert.equal(normalizeDeviceState(null), null);
+  // Accepts both {response: {...}} and the raw inner shape (no wrapper).
+  const noWrap = {
+    temperature: { unit: 'F', currentTemperatureF: 74 },
+  };
+  const s = normalizeDeviceState(noWrap);
+  assert.equal(s.currentF, 74);
+});
+
+test('normalizeDeviceState: F-only payload computes C via fToC fallback', () => {
+  const raw = {
+    response: {
+      temperature: { unit: 'F', currentTemperatureF: 74, targetTemperatureF: 72 },
+    },
+  };
+  const s = normalizeDeviceState(raw);
+  assert.equal(s.currentF, 74);
+  assert.ok(Math.abs(s.currentC - 23.3) < 0.1, `expected ~23.3C, got ${s.currentC}`);
+  assert.equal(s.targetF, 72);
+  assert.ok(Math.abs(s.targetC - 22.2) < 0.1, `expected ~22.2C, got ${s.targetC}`);
 });
