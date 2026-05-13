@@ -713,20 +713,29 @@ async function checkRoutineState(routine) {
 }
 
 // Lightweight client to home-orchestrator's /api/presence endpoint. Returns
-// the debounced anyoneHome state. Fails open (returns true) so a transient
+// the *instant* home state from the Dummy - Anyone Home switch, not the
+// 30-minute-away-debounced value -- arrival music routines fire ~16s before
+// the debounced flag flips, so they were always seeing presence=away and
+// skipping. ?fresh=1 forces an on-demand HAP poll if the orchestrator's
+// cache is older than 3s. Falls back to anyoneHome if rawDummyOn is absent
+// (older orchestrator deploys). Fails open (returns true) so a transient
 // network issue doesn't silently suppress all music routines.
 async function fetchAnyoneHome() {
   const http = require('http');
   return new Promise((resolve) => {
     const req = http.request({
-      hostname: 'localhost', port: 5006, path: '/api/presence',
-      method: 'GET', timeout: 3000,
+      hostname: 'localhost', port: 5006, path: '/api/presence?fresh=1',
+      method: 'GET', timeout: 5000,
     }, (res) => {
       let data = ''; res.on('data', c => data += c);
       res.on('end', () => {
         try {
           const j = JSON.parse(data);
-          resolve(j && j.anyoneHome !== false);
+          if (j && typeof j.rawDummyOn === 'boolean') {
+            resolve(j.rawDummyOn);
+          } else {
+            resolve(j && j.anyoneHome !== false);
+          }
         } catch (e) {
           console.log(`[Routine] presence check parse failed, defaulting to home: ${e.message}`);
           resolve(true);

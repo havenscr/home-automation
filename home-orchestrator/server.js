@@ -3563,7 +3563,55 @@ function startPresenceProbe() {
   setTimeout(() => { try { pollPresence(); } catch (e) {} }, 8 * 1000);
 }
 
-app.get('/api/presence', (req, res) => {
+// Pendant brightness watcher. Polls lights 61/62/63 (Kitchen Pendant
+// Middle/Left/Right) every 15s. Whenever an individual pendant's brightness
+// jumps by more than HUE_WATCH_DELTA between consecutive polls, log a
+// 'hue-watch' activity entry. Diagnostic-only -- captures what the Hue
+// plugin's group-level logs miss because per-light writes don't always
+// surface there. No mitigation, just visibility.
+const HUE_WATCH_LIGHTS = [61, 62, 63];
+const HUE_WATCH_POLL_MS = 15 * 1000;
+const HUE_WATCH_DELTA = 20;  // raw bri units; ~8% of 254
+const hueWatchState = { last: {} };
+
+async function pollHueWatch() {
+  for (const lid of HUE_WATCH_LIGHTS) {
+    try {
+      const r = await hueRequest('GET', `/lights/${lid}`);
+      if (!r || !r.state) continue;
+      const cur = { on: !!r.state.on, bri: r.state.bri || 0, xy: r.state.xy };
+      const prev = hueWatchState.last[lid];
+      hueWatchState.last[lid] = { ...cur, at: Date.now() };
+      if (!prev) continue;
+      if (prev.on !== cur.on) {
+        logActivity('hue-watch', `light ${lid} (${r.name}) ${prev.on ? 'ON->OFF' : 'OFF->ON'} bri=${cur.bri}`);
+        continue;
+      }
+      if (cur.on && Math.abs(cur.bri - prev.bri) >= HUE_WATCH_DELTA) {
+        const arrow = cur.bri > prev.bri ? 'UP' : 'DOWN';
+        logActivity('hue-watch', `light ${lid} (${r.name}) bri ${arrow} ${prev.bri}->${cur.bri} (${Math.round(prev.bri/254*100)}%->${Math.round(cur.bri/254*100)}%)`);
+      }
+    } catch (e) {
+      // network blip; skip this tick.
+    }
+  }
+}
+
+function startHueWatch() {
+  setInterval(() => { pollHueWatch().catch(() => {}); }, HUE_WATCH_POLL_MS);
+  setTimeout(() => { pollHueWatch().catch(() => {}); }, 5 * 1000);
+}
+
+app.get('/api/presence', async (req, res) => {
+  // ?fresh=1 forces a HAP refresh if the last poll is older than 3s. Callers
+  // like sonos-commander's arrival-music guard need the raw dummy state
+  // synchronously, not whatever the 60s background poll happened to catch.
+  if (req.query.fresh === '1') {
+    const age = presenceState.lastPolledAt ? Date.now() - presenceState.lastPolledAt : Infinity;
+    if (age > 3000) {
+      try { await pollPresence(); } catch (e) {}
+    }
+  }
   res.json({
     ok: true,
     anyoneHome: presenceState.debouncedHome,
@@ -3762,6 +3810,7 @@ async function start() {
   startAuditHealthProbe();
   startHomekitHealthProbe();
   startPresenceProbe();
+  startHueWatch();
 
   // Verify Hue bridge
   try {
