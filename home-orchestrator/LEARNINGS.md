@@ -1,5 +1,37 @@
 # Home Orchestrator - Technical Learnings
 
+## Sonos Boost - keep it, do not remove
+
+**Decision date: 2026-05-12. Status: decided, do not revisit unless something fundamental changes.**
+
+The question "should we remove the Sonos Boost and run all speakers on WiFi?" came up while auditing the `isBoost()` filter logic scattered through sonos-commander. Researched it properly via Sonos support docs + community forums + the LG-style "verify with primary sources" approach. Conclusion: **keep the Boost plugged in.**
+
+Why this is the right call specifically for our setup:
+- Sonos gave us the Boost as a remediation when we were having WiFi connection issues. The underlying conditions that caused those issues haven't gone away; the Boost is just masking them. Remove it and we're rolling the dice on whether the original problem comes back.
+- The Master Bedroom Playbar is a 2013 first-gen unit locked to S1 firmware `86.6-75110` (final S1 build, Sonos will never update it again). It's 2.4GHz-only, irreplaceable, and the most fragile speaker in the system. SonosNet keeps it on a dedicated mesh instead of competing with everything else on consumer WiFi.
+- The bedroom Netgear EAX15 extender has documented client-isolation behavior (we hit this with NetworkPresence -- the EAX15 hides phones from the Pi's L2 view). [Sonos's incompatible-hardware list](https://support.sonos.com/s/article/41?language=en_US) flags Netgear extenders in repeater mode as breaking Sonos discovery and grouping. Removing the Boost would route the Playbar through the EAX15, which would likely break grouping silently the same way it broke MAC detection.
+- The "benefits" of removing the Boost are all minor: free one outlet, drop ~5 lines of filter code, modernize the stack. None of those outweigh the risk of breaking a working system to fix a non-problem.
+
+What the Boost is doing for us:
+- Dedicated 2.4GHz SonosNet mesh, no contention with the ~50 other devices on the home WiFi
+- Wired backhaul from the router so the 2013 Playbar doesn't depend on the flaky bedroom extender
+- Bypasses the EAX15 client-isolation issue entirely
+
+What we'd need to fix BEFORE removing the Boost (recorded so future-me doesn't have to re-research):
+1. Confirm the Master Bedroom Playbar associates with the main AX1800, not the EAX15. Check Sonos app: Settings → System → Master Bedroom → About → signal strength + AP MAC.
+2. Either put the EAX15 into true AP mode with wired backhaul (we don't have ethernet to the bedroom) OR confirm AP isolation can be disabled in firmware (EAX15 V1.0.3.36US firmware does NOT expose this toggle -- we already checked 2026-05-12).
+3. Use a temp-wired BLE-capable speaker during the WiFi-credential propagation since the Playbar lacks BLE.
+
+Until those conditions are met, leave the Boost alone. The reversal path is trivial if we ever do want to test (unplug Boost → SonosNet stops → 5min later all speakers join WiFi → if it goes badly, plug Boost back in → SonosNet resumes automatically) but the test itself is disruptive.
+
+Sources verified at decision time:
+- [Sonos Boost end-of-sale](https://support.sonos.com/en/article/boost-end-of-sale)
+- [Switch Sonos between wireless/wired](https://support.sonos.com/en-us/article/switch-sonos-between-a-wireless-and-wired-setup)
+- [Sonos incompatible network hardware (Netgear extenders flagged)](https://support.sonos.com/s/article/41?language=en_US)
+- [Sonos community: dropouts on Gen1 hardware](https://en.community.sonos.com/speakers-229128/dropouts-on-gen-1-6925658)
+
+---
+
 ## Caseta LEAP Protocol (lutron-leap)
 
 ### Pairing Flow
