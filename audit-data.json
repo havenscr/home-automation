@@ -1,11 +1,11 @@
 {
-  "snapshotAt": "2026-05-14T07:00:05Z",
+  "snapshotAt": "2026-05-14T19:00:02Z",
   "lookbackDays": 14,
   "host": {
-    "uptime": "up 8 weeks, 5 days, 7 hours, 49 minutes",
+    "uptime": "up 8 weeks, 5 days, 19 hours, 49 minutes",
     "memMB": {
       "total": 921,
-      "available": 373
+      "available": 380
     },
     "diskFreeGB": 19
   },
@@ -13,17 +13,17 @@
     "home-orchestrator": {
       "active": true,
       "restarts": 33,
-      "memResidentMB": 44
+      "memResidentMB": 40
     },
     "sonos-commander": {
       "active": true,
       "restarts": 4,
-      "memResidentMB": 44
+      "memResidentMB": 43
     },
     "homebridge": {
       "active": true,
       "restarts": 11,
-      "memResidentMB": 84
+      "memResidentMB": 82
     }
   },
   "activityLog": {
@@ -4375,31 +4375,413 @@
         "ts": "2026-05-14T06:10:09.916Z",
         "type": "climate",
         "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T07:22:10.296Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-14T07:27:55.817Z",
+        "type": "hue-watch",
+        "message": "light 61 (Pendant Middle) bri DOWN 114->38 (45%->15%)"
+      },
+      {
+        "ts": "2026-05-14T07:27:55.835Z",
+        "type": "hue-watch",
+        "message": "light 62 (Pendant Left) bri DOWN 114->41 (45%->16%)"
+      },
+      {
+        "ts": "2026-05-14T07:27:55.853Z",
+        "type": "hue-watch",
+        "message": "light 63 (Pendant Right) bri DOWN 114->39 (45%->15%)"
+      },
+      {
+        "ts": "2026-05-14T07:32:55.832Z",
+        "type": "hue-watch",
+        "message": "light 61 (Pendant Middle) ON->OFF bri=38"
+      },
+      {
+        "ts": "2026-05-14T07:32:55.856Z",
+        "type": "hue-watch",
+        "message": "light 62 (Pendant Left) ON->OFF bri=41"
+      },
+      {
+        "ts": "2026-05-14T07:32:55.871Z",
+        "type": "hue-watch",
+        "message": "light 63 (Pendant Right) ON->OFF bri=39"
+      },
+      {
+        "ts": "2026-05-14T09:20:09.124Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T09:20:09.817Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T09:25:09.102Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T09:25:09.884Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T10:51:09.304Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T10:51:10.009Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T10:56:09.230Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T10:56:10.050Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T11:01:09.285Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T11:02:09.979Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T11:11:09.666Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T11:11:10.485Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T11:16:09.118Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T11:17:10.148Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T11:21:09.138Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T11:21:09.816Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T11:26:09.287Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T11:27:09.954Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T11:31:10.134Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T11:31:10.790Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T11:56:09.291Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T11:56:10.038Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T12:01:09.316Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T12:01:10.150Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T12:11:09.340Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T12:11:09.970Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T12:16:09.359Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T12:16:10.116Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T12:21:09.361Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T12:22:10.141Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T12:26:09.254Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T12:26:10.302Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T12:31:09.324Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T12:32:10.029Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T12:36:09.405Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T12:36:10.137Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T12:41:09.264Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T12:42:10.125Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T12:51:09.309Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T12:51:10.125Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T12:56:09.285Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T12:57:10.123Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T13:06:09.371Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T13:06:10.015Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T13:11:09.373Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T13:12:09.973Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T13:16:09.204Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T13:16:09.933Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T13:31:09.318Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T13:31:09.969Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T13:46:09.349Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.7F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T13:46:10.129Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T13:51:09.277Z",
+        "type": "climate",
+        "message": "ladder=default pressure=1.6F rungs=2/5"
+      },
+      {
+        "ts": "2026-05-14T13:52:10.104Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"MID\"}"
+      },
+      {
+        "ts": "2026-05-14T14:30:09.984Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"COOL\"}"
+      },
+      {
+        "ts": "2026-05-14T14:31:09.613Z",
+        "type": "climate",
+        "message": "ladder=default pressure=2.5F rungs=3/5"
+      },
+      {
+        "ts": "2026-05-14T14:31:10.360Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"HIGH\"}"
+      },
+      {
+        "ts": "2026-05-14T14:36:09.387Z",
+        "type": "climate",
+        "message": "ladder=default pressure=0.0F rungs=1/5"
+      },
+      {
+        "ts": "2026-05-14T14:36:10.105Z",
+        "type": "climate",
+        "message": "write office: {\"windStrength\":\"LOW\"}"
+      },
+      {
+        "ts": "2026-05-14T14:55:00.906Z",
+        "type": "fade",
+        "message": "Started \"Sunrise Wake-Up\" (15 min)",
+        "routineId": "sunrise_default",
+        "durationMin": 15
+      },
+      {
+        "ts": "2026-05-14T15:00:10.195Z",
+        "type": "climate",
+        "message": "write kitchen: {\"targetC\":23.5,\"targetF\":74}"
+      },
+      {
+        "ts": "2026-05-14T15:00:11.001Z",
+        "type": "climate",
+        "message": "write kitchen: {\"jobMode\":\"FAN\"}"
+      },
+      {
+        "ts": "2026-05-14T15:10:00.958Z",
+        "type": "fade",
+        "message": "Routine \"Sunrise Wake-Up\" completed",
+        "routineId": "sunrise_default",
+        "durationMin": 15
+      },
+      {
+        "ts": "2026-05-14T15:10:11.922Z",
+        "type": "hue-watch",
+        "message": "light 61 (Pendant Middle) OFF->ON bri=38"
+      },
+      {
+        "ts": "2026-05-14T15:10:11.941Z",
+        "type": "hue-watch",
+        "message": "light 62 (Pendant Left) OFF->ON bri=41"
+      },
+      {
+        "ts": "2026-05-14T15:10:11.957Z",
+        "type": "hue-watch",
+        "message": "light 63 (Pendant Right) OFF->ON bri=39"
+      },
+      {
+        "ts": "2026-05-14T15:30:08.064Z",
+        "type": "homekit-health",
+        "message": "Dummy - Routine Start recovered (last 7d hit 3/7)"
+      },
+      {
+        "ts": "2026-05-14T15:30:08.065Z",
+        "type": "homekit-health",
+        "message": "Dummy - Fade Start Sunrise recovered (last 7d hit 3/7)"
+      },
+      {
+        "ts": "2026-05-14T16:25:57.088Z",
+        "type": "hue-watch",
+        "message": "light 61 (Pendant Middle) bri UP 38->178 (15%->70%)"
+      },
+      {
+        "ts": "2026-05-14T16:25:57.104Z",
+        "type": "hue-watch",
+        "message": "light 62 (Pendant Left) bri UP 41->178 (16%->70%)"
+      },
+      {
+        "ts": "2026-05-14T16:25:57.121Z",
+        "type": "hue-watch",
+        "message": "light 63 (Pendant Right) bri UP 39->178 (15%->70%)"
+      },
+      {
+        "ts": "2026-05-14T16:30:08.081Z",
+        "type": "homekit-health",
+        "message": "Dummy - Day Music recovered (last 7d hit 3/7)"
+      },
+      {
+        "ts": "2026-05-14T17:00:09.628Z",
+        "type": "climate",
+        "message": "ladder=officeQuiet pressure=0.0F rungs=1/4"
       }
     ],
     "sonos-commander": [
-      {
-        "ts": "2026-04-30T15:20:13.711Z",
-        "type": "routine",
-        "message": "Executed: Morning Music",
-        "played": "Workday Lounge",
-        "volume": 5,
-        "shuffle": true
-      },
-      {
-        "ts": "2026-04-30T15:40:44.251Z",
-        "type": "routine",
-        "message": "Executed: Day Music",
-        "played": "Poolside: Miami Chill",
-        "volume": 10,
-        "shuffle": false
-      },
-      {
-        "ts": "2026-04-30T16:21:48.808Z",
-        "type": "routine",
-        "message": "Executed: PC On (Vol 10)",
-        "action": "tvVolume"
-      },
       {
         "ts": "2026-04-30T20:41:57.431Z",
         "type": "routine",
@@ -5184,124 +5566,35 @@
         "played": "Autumn Folk",
         "volume": 10,
         "shuffle": false
+      },
+      {
+        "ts": "2026-05-14T07:32:58.910Z",
+        "type": "routine",
+        "message": "Executed: White Noise Sleep",
+        "played": "Brown Noise + Rain Sound Machine (12 Hours - Ad Free)",
+        "volume": 22,
+        "rooms": [
+          "Master Bedroom",
+          "Bathroom"
+        ],
+        "shuffle": false
+      },
+      {
+        "ts": "2026-05-14T16:26:05.441Z",
+        "type": "routine",
+        "message": "Executed: Day Music",
+        "played": "Poolside: Miami Chill",
+        "volume": 10,
+        "shuffle": false
       }
     ]
   },
   "routineCompletions": {
-    "sunrise_default": 1,
+    "sunrise_default": 2,
     "sunset_transition": 1
   },
   "homebridgeLog": {
     "errors": [
-      "[13/05/2026, 03:29:49] [Hue] Hue Bridge: request 8287: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 03:29:54] [Hue] Hue Bridge: request 8288: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 03:29:59] [Hue] Hue Bridge: request 8289: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 03:30:04] [Hue] Hue Bridge: request 8290: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 03:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 03:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 03:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 03:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 04:00:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 04:00:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 04:01:34] [Hue] Hue Bridge: request 8668: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:01:39] [Hue] Hue Bridge: request 8669: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:01:44] [Hue] Hue Bridge: request 8670: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:01:49] [Hue] Hue Bridge: request 8671: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:01:54] [Hue] Hue Bridge: request 8672: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:01:59] [Hue] Hue Bridge: request 8673: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:04] [Hue] Hue Bridge: request 8674: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:09] [Hue] Hue Bridge: request 8675: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:14] [Hue] Hue Bridge: request 8676: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:19] [Hue] Hue Bridge: request 8677: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:24] [Hue] Hue Bridge: request 8678: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:02:29] [Hue] Hue Bridge: request 8679: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 04:15:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 04:15:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 04:30:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 04:30:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 04:45:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 04:45:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 05:00:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 05:00:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 05:15:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 05:15:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 05:30:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 05:30:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 05:45:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 05:45:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 06:00:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 06:00:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 06:15:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 06:15:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 06:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 06:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 06:45:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 06:45:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 07:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 07:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 07:15:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 07:15:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 07:30:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 07:30:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 07:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 07:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 08:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 08:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 08:15:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 08:15:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 08:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 08:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 08:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 08:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 09:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 09:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 09:15:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 09:15:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 09:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 09:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 09:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 09:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 10:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 10:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 10:15:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 10:15:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 10:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 10:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 10:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 10:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 11:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 11:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 11:15:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 11:15:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 11:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 11:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 11:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 11:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 12:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 12:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 12:15:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 12:15:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 12:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 12:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 12:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 12:45:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 13:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 13:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 13:15:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 13:15:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 13:30:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 13:30:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 13:45:17] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 13:45:17] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 14:00:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 14:00:18] [Alexa] WARNING: Duplicate device name Play",
-      "[13/05/2026, 14:01:30] [Hue] Hue Bridge: request 15870: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:34] [Hue] Hue Bridge: request 15871: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:39] [Hue] Hue Bridge: request 15872: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:44] [Hue] Hue Bridge: request 15873: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:49] [Hue] Hue Bridge: request 15874: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:54] [Hue] Hue Bridge: request 15875: connect ECONNREFUSED 192.168.1.2:80",
-      "[13/05/2026, 14:01:59] [Hue] Hue Bridge: request 15876: connect ECONNREFUSED 192.168.1.2:80",
       "[13/05/2026, 14:02:04] [Hue] Hue Bridge: request 15877: connect ECONNREFUSED 192.168.1.2:80",
       "[13/05/2026, 14:02:09] [Hue] Hue Bridge: request 15878: connect ECONNREFUSED 192.168.1.2:80",
       "[13/05/2026, 14:02:14] [Hue] Hue Bridge: request 15879: connect ECONNREFUSED 192.168.1.2:80",
@@ -5392,51 +5685,160 @@
       "[13/05/2026, 23:30:18] [Alexa] WARNING: Duplicate device name Pause",
       "[13/05/2026, 23:30:18] [Alexa] WARNING: Duplicate device name Play",
       "[13/05/2026, 23:45:18] [Alexa] WARNING: Duplicate device name Pause",
-      "[13/05/2026, 23:45:18] [Alexa] WARNING: Duplicate device name Play"
+      "[13/05/2026, 23:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 00:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 00:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 00:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 00:15:17] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 00:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 00:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 00:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 00:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 01:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 01:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 01:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 01:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 01:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 01:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 01:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 01:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 02:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 02:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 02:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 02:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 02:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 02:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 02:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 02:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 03:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 03:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 03:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 03:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 03:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 03:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 03:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 03:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 04:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 04:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 04:01:34] [Hue] Hue Bridge: request 25959: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:01:39] [Hue] Hue Bridge: request 25960: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:01:44] [Hue] Hue Bridge: request 25961: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:01:49] [Hue] Hue Bridge: request 25962: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:01:54] [Hue] Hue Bridge: request 25963: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:01:59] [Hue] Hue Bridge: request 25964: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:02:04] [Hue] Hue Bridge: request 25965: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:02:09] [Hue] Hue Bridge: request 25966: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:02:14] [Hue] Hue Bridge: request 25967: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:02:19] [Hue] Hue Bridge: request 25968: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:02:24] [Hue] Hue Bridge: request 25969: connect ECONNREFUSED 192.168.1.2:80",
+      "[14/05/2026, 04:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 04:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 04:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 04:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 04:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 04:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 05:00:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 05:00:17] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 05:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 05:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 05:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 05:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 05:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 05:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 06:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 06:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 06:15:17] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 06:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 06:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 06:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 06:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 06:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 07:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 07:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 07:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 07:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 07:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 07:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 07:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 07:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 08:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 08:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 08:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 08:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 08:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 08:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 08:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 08:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 09:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 09:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 09:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 09:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 09:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 09:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 09:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 09:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 10:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 10:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 10:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 10:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 10:25:59] [Apple TV Enhanced] [E] Apple TV - BR (46:16:44:9A:6C:D9): Rocket Remote: 2026-05-14 10:25:59 ERROR [pyatv.scripts.atvremote]: Could not find any Apple TV on current network",
+      "[14/05/2026, 10:26:11] [Apple TV Enhanced] [E] Apple TV - BR (46:16:44:9A:6C:D9): Rocket Remote: 2026-05-14 10:26:11 ERROR [pyatv.scripts.atvremote]: Could not find any Apple TV on current network",
+      "[14/05/2026, 10:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 10:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 10:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 10:45:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 11:00:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 11:00:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 11:15:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 11:15:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 11:30:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 11:30:18] [Alexa] WARNING: Duplicate device name Play",
+      "[14/05/2026, 11:45:18] [Alexa] WARNING: Duplicate device name Pause",
+      "[14/05/2026, 11:45:18] [Alexa] WARNING: Duplicate device name Play"
     ],
     "automationFires": {
-      "Dummy - Day Music": 3,
-      "Dummy - Day Music (No TV)": 1,
-      "Dummy - Daytime Gradient Start": 2,
-      "Dummy - Daytime Gradient Stop": 2,
-      "Dummy - Evening Music": 2,
-      "Dummy - Fade Start Sunrise": 2,
-      "Dummy - Fade Start Sunset": 2,
-      "Dummy - Late Night Music": 4,
-      "Dummy - Morning Music": 2,
-      "Dummy - Other Lights (Day)": 6,
-      "Dummy - Other Lights (Evening)": 7,
-      "Dummy - Other Lights (Late Night)": 10,
-      "Dummy - Other Lights (Off)": 4,
-      "Dummy - Sonos Off": 2,
-      "Dummy - White Noise Sleep": 2,
-      "Dummy - Workday Music": 1,
-      "SC - BR TV Off": 1,
-      "SC - BR TV On": 1
-    },
-    "stateToggles": {
-      "Dummy - 15 Min Delay": 2,
-      "Dummy - 20 Min Delay": 2,
-      "Dummy - 25 Min Delay": 2,
-      "Dummy - 50 Min Delay": 2,
-      "Dummy - Anyone Home": 3,
       "Dummy - Day Music": 4,
       "Dummy - Day Music (No TV)": 1,
       "Dummy - Daytime Gradient Start": 2,
       "Dummy - Daytime Gradient Stop": 2,
       "Dummy - Evening Music": 2,
-      "Dummy - Fade Start Sunrise": 2,
+      "Dummy - Fade Start Sunrise": 3,
       "Dummy - Fade Start Sunset": 2,
       "Dummy - Late Night Music": 4,
       "Dummy - Morning Music": 2,
-      "Dummy - Nanoleaf Off": 4,
-      "Dummy - Other Lights (Day)": 6,
+      "Dummy - Other Lights (Day)": 7,
       "Dummy - Other Lights (Evening)": 7,
-      "Dummy - Other Lights (Late Night)": 10,
-      "Dummy - Other Lights (Off)": 4,
-      "Dummy - Routine Start": 2,
+      "Dummy - Other Lights (Late Night)": 12,
+      "Dummy - Other Lights (Off)": 5,
       "Dummy - Sonos Off": 2,
-      "Dummy - White Noise Sleep": 2,
+      "Dummy - White Noise Sleep": 3,
+      "Dummy - Workday Music": 1,
+      "SC - BR TV Off": 1,
+      "SC - BR TV On": 1
+    },
+    "stateToggles": {
+      "Dummy - 15 Min Delay": 3,
+      "Dummy - 20 Min Delay": 3,
+      "Dummy - 25 Min Delay": 3,
+      "Dummy - 50 Min Delay": 3,
+      "Dummy - Anyone Home": 3,
+      "Dummy - Day Music": 5,
+      "Dummy - Day Music (No TV)": 1,
+      "Dummy - Daytime Gradient Start": 2,
+      "Dummy - Daytime Gradient Stop": 2,
+      "Dummy - Evening Music": 2,
+      "Dummy - Fade Start Sunrise": 3,
+      "Dummy - Fade Start Sunset": 2,
+      "Dummy - Late Night Music": 4,
+      "Dummy - Morning Music": 2,
+      "Dummy - Nanoleaf Off": 5,
+      "Dummy - Other Lights (Day)": 7,
+      "Dummy - Other Lights (Evening)": 7,
+      "Dummy - Other Lights (Late Night)": 12,
+      "Dummy - Other Lights (Off)": 5,
+      "Dummy - Routine Start": 3,
+      "Dummy - Sonos Off": 2,
+      "Dummy - White Noise Sleep": 3,
       "Dummy - Workday Music": 1,
       "SC - BR TV Off": 1,
       "SC - BR TV On": 1
@@ -5494,8 +5896,6 @@
         "May 13 00:30:07 homebridge node[12449]: [climate] controller started (poll 60s, 0 ladder warnings)"
       ],
       "sonos-commander": [
-        "Apr 30 08:20:06 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
-        "Apr 30 08:40:39 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 30 14:35:52 homebridge node[20817]:   Retry failed: Master Bedroom: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>402</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 30 21:31:57 homebridge node[20817]: [Routine] tvVolume: Bathroom error: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>701</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
         "Apr 30 23:06:02 homebridge node[20817]: [Routine] tvVolume: Bathroom error: upnp: statusCode 500 & upnpErrorCode <s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\"><s:Body><s:Fault><faultcode>s:Client</faultcode><faultstring>UPnPError</faultstring><detail><UPnPError xmlns=\"urn:schemas-upnp-org:control-1-0\"><errorCode>701</errorCode></UPnPError></detail></s:Fault></s:Body></s:Envelope>",
@@ -5559,41 +5959,37 @@
   "climateState": {
     "ok": true,
     "enabled": true,
-    "mode": "night",
-    "globalTargetF": 70,
-    "targetF": 70,
+    "mode": "day",
+    "globalTargetF": 74,
+    "targetF": 74,
     "slotTargets": {
-      "kitchen": 70,
-      "office": 70
+      "kitchen": 74,
+      "office": 76
     },
     "ladder": {
-      "name": "default",
+      "name": "officeQuiet",
       "rungs": [
         [
           "kitchen",
           "low"
         ],
         [
-          "office",
-          "medium"
-        ],
-        [
-          "office",
-          "high"
-        ],
-        [
           "kitchen",
           "medium"
         ],
         [
           "kitchen",
           "high"
+        ],
+        [
+          "office",
+          "medium"
         ]
       ]
     },
     "pressureF": 0,
     "engagedRungCount": 1,
-    "lastTickAt": 1778741949146,
+    "lastTickAt": 1778785149458,
     "globalPause": {
       "paused": false,
       "until": 0
@@ -5668,46 +6064,46 @@
       "threshold": 30
     },
     "cache": {
-      "fetchedAt": 1778742005540,
+      "fetchedAt": 1778785202635,
       "devices": {
         "kitchen": {
           "ok": true,
           "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
           "power": "POWER_ON",
-          "jobMode": "COOL",
+          "jobMode": "FAN",
           "windStrength": "LOW",
           "unitNative": "C",
-          "currentC": 20,
-          "currentF": 68,
-          "targetC": 21,
-          "targetF": 69.8,
+          "currentC": 23,
+          "currentF": 73.4,
+          "targetC": 23.5,
+          "targetF": 74.3,
           "raw": {
             "runState": {
               "currentState": "NORMAL"
             },
             "airConJobMode": {
-              "currentJobMode": "COOL"
+              "currentJobMode": "FAN"
             },
             "temperature": {
-              "currentTemperature": 20,
-              "targetTemperature": 21,
+              "currentTemperature": 23,
+              "targetTemperature": 23.5,
               "unit": "C"
             },
             "temperatureInUnits": [
               {
-                "currentTemperature": 20,
-                "targetTemperature": 21,
+                "currentTemperature": 23,
+                "targetTemperature": 23.5,
                 "unit": "C"
               },
               {
-                "currentTemperature": 68,
-                "targetTemperature": 70,
+                "currentTemperature": 74,
+                "targetTemperature": 75,
                 "unit": "F"
               }
             ],
             "filterInfo": {
-              "filterLifetime": 248,
-              "usedTime": 2
+              "filterLifetime": 236,
+              "usedTime": 14
             },
             "airFlow": {
               "windStrength": "LOW",
@@ -5727,7 +6123,7 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778742004127
+          "fetchedAt": 1778785202635
         },
         "office": {
           "ok": true,
@@ -5736,8 +6132,8 @@
           "jobMode": "FAN",
           "windStrength": "LOW",
           "unitNative": "C",
-          "currentC": 18,
-          "currentF": 64.4,
+          "currentC": 23.5,
+          "currentF": 74.3,
           "targetC": 21,
           "targetF": 69.8,
           "raw": {
@@ -5748,18 +6144,18 @@
               "currentJobMode": "FAN"
             },
             "temperature": {
-              "currentTemperature": 18,
+              "currentTemperature": 23.5,
               "targetTemperature": 21,
               "unit": "C"
             },
             "temperatureInUnits": [
               {
-                "currentTemperature": 18,
+                "currentTemperature": 23.5,
                 "targetTemperature": 21,
                 "unit": "C"
               },
               {
-                "currentTemperature": 64,
+                "currentTemperature": 75,
                 "targetTemperature": 70,
                 "unit": "F"
               }
@@ -5786,7 +6182,7 @@
               "relativeStopTimer": "UNSET"
             }
           },
-          "fetchedAt": 1778742005540
+          "fetchedAt": 1778785202138
         }
       }
     },
@@ -5795,40 +6191,40 @@
         "ok": true,
         "deviceId": "3a3fd88e1adc30ba48f1ba412f3d1fda4e1d2d3d894301d0ef2a15392fd3a32b",
         "power": "POWER_ON",
-        "jobMode": "COOL",
+        "jobMode": "FAN",
         "windStrength": "LOW",
         "unitNative": "C",
-        "currentC": 20,
-        "currentF": 68,
-        "targetC": 21,
-        "targetF": 69.8,
+        "currentC": 23,
+        "currentF": 73.4,
+        "targetC": 23.5,
+        "targetF": 74.3,
         "raw": {
           "runState": {
             "currentState": "NORMAL"
           },
           "airConJobMode": {
-            "currentJobMode": "COOL"
+            "currentJobMode": "FAN"
           },
           "temperature": {
-            "currentTemperature": 20,
-            "targetTemperature": 21,
+            "currentTemperature": 23,
+            "targetTemperature": 23.5,
             "unit": "C"
           },
           "temperatureInUnits": [
             {
-              "currentTemperature": 20,
-              "targetTemperature": 21,
+              "currentTemperature": 23,
+              "targetTemperature": 23.5,
               "unit": "C"
             },
             {
-              "currentTemperature": 68,
-              "targetTemperature": 70,
+              "currentTemperature": 74,
+              "targetTemperature": 75,
               "unit": "F"
             }
           ],
           "filterInfo": {
-            "filterLifetime": 248,
-            "usedTime": 2
+            "filterLifetime": 236,
+            "usedTime": 14
           },
           "airFlow": {
             "windStrength": "LOW",
@@ -5848,7 +6244,7 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778742004127
+        "fetchedAt": 1778785202635
       },
       "office": {
         "ok": true,
@@ -5857,8 +6253,8 @@
         "jobMode": "FAN",
         "windStrength": "LOW",
         "unitNative": "C",
-        "currentC": 18,
-        "currentF": 64.4,
+        "currentC": 23.5,
+        "currentF": 74.3,
         "targetC": 21,
         "targetF": 69.8,
         "raw": {
@@ -5869,18 +6265,18 @@
             "currentJobMode": "FAN"
           },
           "temperature": {
-            "currentTemperature": 18,
+            "currentTemperature": 23.5,
             "targetTemperature": 21,
             "unit": "C"
           },
           "temperatureInUnits": [
             {
-              "currentTemperature": 18,
+              "currentTemperature": 23.5,
               "targetTemperature": 21,
               "unit": "C"
             },
             {
-              "currentTemperature": 64,
+              "currentTemperature": 75,
               "targetTemperature": 70,
               "unit": "F"
             }
@@ -5907,7 +6303,7 @@
             "relativeStopTimer": "UNSET"
           }
         },
-        "fetchedAt": 1778742005540
+        "fetchedAt": 1778785202138
       }
     }
   }
