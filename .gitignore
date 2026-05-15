@@ -3,3 +3,6 @@ node_modules/
 *.bak
 .DS_Store
 Thumbs.db
+
+# Claude Code per-machine permission allowlist
+.claude/settings.local.json
