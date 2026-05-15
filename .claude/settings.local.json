@@ -40,7 +40,7 @@
       "WebFetch(domain:developer.samsung.com)",
       "WebFetch(domain:tavicu.github.io)",
       "Bash(xxd:*)",
-      "Bash(powershell -NoProfile -Command \"Get-Content -Path ''C:\\\\Users\\\\haven\\\\OneDrive - Havens Consulting Inc\\\\Documents\\\\GitHub\\\\home-automation\\\\Homekit Backups\\\\My Home 2026-02-14 14.04.hbk'' -Encoding Byte -TotalCount 4 | ForEach-Object { $_ToString\\(''X2''\\) }\")",
+      "Bash(powershell -NoProfile -Command \"Get-Content -Path ''C:\\\\GitHub\\\\home-automation\\\\Homekit Backups\\\\My Home 2026-02-14 14.04.hbk'' -Encoding Byte -TotalCount 4 | ForEach-Object { $_ToString\\(''X2''\\) }\")",
       "Bash(python3:*)",
       "Bash(python:*)",
       "Bash(cd:*)",
