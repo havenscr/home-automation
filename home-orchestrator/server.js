@@ -3574,6 +3574,17 @@ const HUE_WATCH_POLL_MS = 15 * 1000;
 const HUE_WATCH_DELTA = 20;  // raw bri units; ~8% of 254
 const hueWatchState = { last: {} };
 
+// Group-broadcast miss healer. Watches Hue rooms whose member bulbs
+// occasionally drop the group "on" Zigbee broadcast (observed: BR Front Right
+// and BR Back Right missed the arrival routine on 2026-05-15). On a clean
+// off->on edge at the group level, any reachable member that didn't follow
+// gets a per-bulb retry. Only triggers on the edge, so manual wall-switch
+// or app-level off commands are never fought.
+const HUE_GROUP_HEAL = [
+  { groupId: '3', lights: [38, 39, 40, 41], label: 'Bedroom ceiling' },
+];
+const groupHealState = {};  // groupId -> { groupOn: bool }
+
 async function pollHueWatch() {
   for (const lid of HUE_WATCH_LIGHTS) {
     try {
@@ -3593,6 +3604,31 @@ async function pollHueWatch() {
       }
     } catch (e) {
       // network blip; skip this tick.
+    }
+  }
+  for (const grp of HUE_GROUP_HEAL) {
+    try {
+      const g = await hueRequest('GET', `/groups/${grp.groupId}`);
+      if (!g || !g.action) continue;
+      const groupOn = !!g.action.on;
+      const prev = groupHealState[grp.groupId];
+      groupHealState[grp.groupId] = { groupOn };
+      // Only act on the off->on edge so we never fight a deliberate off.
+      if (!prev || prev.groupOn || !groupOn) continue;
+      const targetBri = g.action.bri || 254;
+      for (const lid of grp.lights) {
+        try {
+          const r = await hueRequest('GET', `/lights/${lid}`);
+          if (!r || !r.state) continue;
+          if (r.state.on || !r.state.reachable) continue;
+          await hueLightState(String(lid), { on: true, bri: targetBri });
+          logActivity('hue-watch', `group-miss heal: ${grp.label} light ${lid} (${r.name}) was OFF after group ON -> retry on bri=${targetBri}`);
+        } catch (e) {
+          // per-bulb failure; skip.
+        }
+      }
+    } catch (e) {
+      // group fetch failed; skip this tick.
     }
   }
 }
