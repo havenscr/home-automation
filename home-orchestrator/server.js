@@ -3638,6 +3638,159 @@ function startHueWatch() {
   setTimeout(() => { pollHueWatch().catch(() => {}); }, 5 * 1000);
 }
 
+// Hue origin tracer. The pendant/color-zone brightness bump on evening +
+// late-night arrivals (observed 2026-05-15 22:06) doesn't show up in the
+// orchestrator's own logs because the writer is external -- HomeKit, IFTTT,
+// the Hue app, or a bridge-side rule. This watcher polls the bridge for
+// scene `lastupdated`, rule `lasttriggered`, and group `action` snapshots,
+// logging any change so the next time the bump happens we have a wall-clock
+// breadcrumb trail showing which scene/rule/direct-write was responsible.
+// Active only during the problem window (17:00-02:00 local) to keep noise
+// down; the bug never reproduces in the morning.
+const HUE_ORIGIN_POLL_MS = 2 * 1000;  // tight enough to time-correlate to whitelist 1s resolution
+const HUE_ORIGIN_GROUPS = [3, 11, 12];  // BR room, Color entertainment, Evening Static
+const HUE_ORIGIN_RECENT_SCENE_WINDOW_MS = 30 * 1000;  // dedupe-detect window
+const HUE_ORIGIN_WHITELIST_POLL_MS = 4 * 1000;  // whitelist on a separate slower cadence
+const hueOriginState = {
+  scenes: {},        // id -> { name, lastupdated, owner, recentRecallAt: [ts...] }
+  rules: {},         // id -> { name, lasttriggered }
+  groups: {},        // id -> { name, action: {on, bri, ct, xy} }
+  whitelist: {},     // keyid -> { name, lastUse }
+  lastWhitelistPoll: 0,
+  primed: false,     // first poll just snapshots, doesn't log
+  primedWhitelist: false,
+};
+
+function isHueOriginWindow() {
+  const h = new Date().getHours();
+  return h >= 17 || h < 2;
+}
+
+async function pollHueOrigins() {
+  if (!isHueOriginWindow()) return;
+  // Scenes -- detect recall via lastupdated change.
+  try {
+    const scenes = await hueRequest('GET', '/scenes');
+    if (scenes && typeof scenes === 'object') {
+      for (const [sid, s] of Object.entries(scenes)) {
+        const prev = hueOriginState.scenes[sid];
+        const cur = {
+          name: s.name || sid,
+          lastupdated: s.lastupdated || null,
+          owner: (s.appdata && (s.appdata.data || s.appdata.appName)) || s.owner || 'unknown',
+        };
+        if (prev && prev.lastupdated && cur.lastupdated && prev.lastupdated !== cur.lastupdated) {
+          const recent = (prev.recentRecallAt || []).filter(t => Date.now() - t < HUE_ORIGIN_RECENT_SCENE_WINDOW_MS);
+          recent.push(Date.now());
+          cur.recentRecallAt = recent;
+          const dupTag = recent.length > 1 ? ` [STACKED ${recent.length}x in ${HUE_ORIGIN_RECENT_SCENE_WINDOW_MS / 1000}s]` : '';
+          logActivity('hue-scene', `"${cur.name}" recalled by ${cur.owner}${dupTag}`);
+        } else {
+          cur.recentRecallAt = prev ? prev.recentRecallAt : [];
+        }
+        hueOriginState.scenes[sid] = cur;
+      }
+    }
+  } catch (e) { /* skip tick */ }
+  // Rules -- detect bridge-side rule fire via lasttriggered change.
+  try {
+    const rules = await hueRequest('GET', '/rules');
+    if (rules && typeof rules === 'object') {
+      for (const [rid, r] of Object.entries(rules)) {
+        const prev = hueOriginState.rules[rid];
+        const cur = { name: r.name || rid, lasttriggered: r.lasttriggered || null };
+        if (prev && prev.lasttriggered && cur.lasttriggered && prev.lasttriggered !== cur.lasttriggered) {
+          logActivity('hue-rule', `"${cur.name}" triggered (bridge-side rule, owner=${r.owner || 'unknown'})`);
+        }
+        hueOriginState.rules[rid] = cur;
+      }
+    }
+  } catch (e) { /* skip tick */ }
+  // Whitelist -- on slower cadence, detect which Hue API key (which app) last
+  // touched the bridge. When a key's `last use date` advances within the same
+  // window as a scene recall / direct write, we've identified the writer.
+  // This is the single most useful signal for figuring out who is actually
+  // changing brightness from outside the orchestrator.
+  if (Date.now() - hueOriginState.lastWhitelistPoll >= HUE_ORIGIN_WHITELIST_POLL_MS) {
+    hueOriginState.lastWhitelistPoll = Date.now();
+    try {
+      const cfg = await hueRequest('GET', '/config');
+      if (cfg && cfg.whitelist && typeof cfg.whitelist === 'object') {
+        for (const [kid, info] of Object.entries(cfg.whitelist)) {
+          const name = info.name || kid.slice(0, 12);
+          const lastUse = info['last use date'] || null;
+          const prev = hueOriginState.whitelist[kid];
+          if (hueOriginState.primedWhitelist && prev && prev.lastUse && lastUse && prev.lastUse !== lastUse) {
+            // Filter out the orchestrator itself -- we know we just polled.
+            const isSelf = kid === config.hue.apiKey;
+            if (!isSelf) logActivity('hue-key', `"${name}" used (last use ${lastUse}, keyid ${kid.slice(0, 12)}...)`);
+          }
+          hueOriginState.whitelist[kid] = { name, lastUse };
+        }
+        hueOriginState.primedWhitelist = true;
+      }
+    } catch (e) { /* skip */ }
+  }
+  // Groups -- detect direct group writes (anything that changes action.bri
+  // without a corresponding scene recall in the same window).
+  for (const gid of HUE_ORIGIN_GROUPS) {
+    try {
+      const g = await hueRequest('GET', `/groups/${gid}`);
+      if (!g || !g.action) continue;
+      const prev = hueOriginState.groups[gid];
+      const cur = {
+        name: g.name || String(gid),
+        on: !!g.action.on,
+        bri: g.action.bri || 0,
+        ct: g.action.ct || null,
+      };
+      if (hueOriginState.primed && prev) {
+        const briChanged = Math.abs((prev.bri || 0) - cur.bri) >= 20;
+        const onChanged = prev.on !== cur.on;
+        if (briChanged || onChanged) {
+          // Did any scene recall happen in the last poll window? If so, the
+          // bri change is probably the scene's doing -- not a direct write.
+          const recentSceneRecall = Object.values(hueOriginState.scenes).some(s =>
+            (s.recentRecallAt || []).some(t => Date.now() - t < HUE_ORIGIN_POLL_MS + 2000)
+          );
+          const tag = recentSceneRecall ? '(scene-driven)' : '(DIRECT WRITE -- no scene recall)';
+          logActivity('hue-group', `group ${gid} (${cur.name}) action changed: on=${prev.on}->${cur.on} bri=${prev.bri}->${cur.bri} ${tag}`);
+        }
+      }
+      hueOriginState.groups[gid] = cur;
+    } catch (e) { /* skip group */ }
+  }
+  // Per-light tracking -- catches per-bulb direct writes (HomeKit can issue
+  // /lights/{id}/state without touching scenes or group action). Watches
+  // pendants + a subset of the color zone since those are the bug locus.
+  const HUE_ORIGIN_LIGHTS = [61, 62, 63, 25, 26, 28, 29, 33, 30, 32, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 56, 60];
+  try {
+    const allLights = await hueRequest('GET', '/lights');
+    if (allLights && typeof allLights === 'object') {
+      for (const lid of HUE_ORIGIN_LIGHTS) {
+        const l = allLights[String(lid)];
+        if (!l || !l.state) continue;
+        const cur = { on: !!l.state.on, bri: l.state.bri || 0 };
+        const prev = hueOriginState.groups[`L${lid}`];
+        if (hueOriginState.primed && prev) {
+          const briJump = Math.abs(prev.bri - cur.bri) >= 25;
+          const onFlip = prev.on !== cur.on;
+          if (briJump || onFlip) {
+            logActivity('hue-light', `light ${lid} (${l.name}) on=${prev.on}->${cur.on} bri=${prev.bri}->${cur.bri}`);
+          }
+        }
+        hueOriginState.groups[`L${lid}`] = cur;
+      }
+    }
+  } catch (e) { /* skip */ }
+  hueOriginState.primed = true;
+}
+
+function startHueOriginTrace() {
+  setInterval(() => { pollHueOrigins().catch(() => {}); }, HUE_ORIGIN_POLL_MS);
+  setTimeout(() => { pollHueOrigins().catch(() => {}); }, 8 * 1000);
+}
+
 app.get('/api/presence', async (req, res) => {
   // ?fresh=1 forces a HAP refresh if the last poll is older than 3s. Callers
   // like sonos-commander's arrival-music guard need the raw dummy state
@@ -3847,6 +4000,7 @@ async function start() {
   startHomekitHealthProbe();
   startPresenceProbe();
   startHueWatch();
+  startHueOriginTrace();
 
   // Verify Hue bridge
   try {
